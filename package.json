@@ -53,6 +53,7 @@
   "private": true,
   "scripts": {
     "build": "vite build",
+    "postbuild": "node tools/postbuild.mjs",
     "dev": "vite --strictPort",
     "preview": "vite preview",
     "test": "vitest",

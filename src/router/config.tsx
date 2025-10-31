@@ -1,8 +1,6 @@
 
 import { lazy, Suspense } from 'react';
 import { RouteObject } from 'react-router-dom';
-// Importação direta para teste
-import AdminProdutosCadastrarPage from '../pages/admin/produtos/cadastrar/page';
 
 // Componente de loading
 const LoadingFallback = () => (

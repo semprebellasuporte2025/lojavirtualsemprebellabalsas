@@ -9,7 +9,6 @@ import SEOHead from '../../components/feature/SEOHead';
 import { supabase, Produto } from '../../lib/supabase';
 import { useNavigate, Link } from 'react-router-dom';
 import Newsletter from '../../components/feature/Newsletter';
-import RouteRefreshWrapper from '../../components/base/RouteRefreshWrapper';
 
 export default function HomePage() {
   const [recentProducts, setRecentProducts] = useState<Produto[]>([]);
