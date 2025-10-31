@@ -1,0 +1,10 @@
+User-agent: *
+Disallow: /paineladmin
+Disallow: /checkout
+Disallow: /minha-conta
+Disallow: /carrinho
+Allow: /
+Allow: /home
+Allow: /produto
+Allow: /product
+Sitemap: https://example.com/sitemap.xml

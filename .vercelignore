@@ -1,0 +1,17 @@
+# Excluir arquivos/pastas não necessários para deploy
+node_modules/
+out/
+dist/
+.env
+.env.*
+
+# Pastas de documentação e scripts locais
+scripts/
+docs/
+supabase/
+stack/
+
+# Temporários e logs
+*.zip
+*.log
+supabase/.temp/

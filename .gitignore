@@ -1,0 +1,34 @@
+# Node/Vite
+node_modules/
+out/
+dist/
+
+# Env files
+.env
+.env.local
+.env.*.local
+
+# Vercel/Deploy
+.vercel/
+
+# Logs & coverage
+logs/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+coverage/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Supabase temp
+supabase/.temp/
+
+# Backups & archives
+*.zip
+
+# Infra local (docker-compose, n8n etc.)
+stack/
