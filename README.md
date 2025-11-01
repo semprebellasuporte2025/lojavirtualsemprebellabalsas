@@ -142,4 +142,6 @@ Para suporte, entre em contato através do email: suporte@semprebella.com
 
 ---
 
+**🚀 Deploy Automático Ativo** - Última atualização: 22/01/2025
+
 Desenvolvido com ❤️ para SempreBella
