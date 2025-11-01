@@ -33,7 +33,7 @@ export default function CategoriaPage() {
 
   useEffect(() => {
     carregarProdutos();
-  }, [categoria]);
+  }, [categoria, searchParams]);
 
   const carregarFiltros = async () => {
     try {
@@ -83,9 +83,12 @@ export default function CategoriaPage() {
     try {
       setLoading(true);
 
+      // Verificar se é uma busca por produtos em destaque
+      const isDestaque = searchParams.get('destaque') === 'true';
+
       // Descobrir ID da categoria, se houver nome informado
       let categoriaId: string | null = null;
-      if (categoria) {
+      if (categoria && !isDestaque) {
         const { data: catRows, error: catErr } = await supabase
           .from('categorias')
           .select('id')
@@ -105,11 +108,16 @@ export default function CategoriaPage() {
         .from('products_with_ratings')
         .select(`*, categorias(nome), variantes_produto(cor, cor_hex, tamanho)`)
         .eq('ativo', true);
-      if (categoriaId) {
+      
+      if (isDestaque) {
+        query = query.eq('destaque', true);
+      } else if (categoriaId) {
         query = query.eq('categoria_id', categoriaId);
       }
 
-      const { data, error } = await query.limit(24);
+      const { data, error } = await query
+        .order('created_at', { ascending: false })
+        .limit(24);
 
       // Fallback caso a view falhe
       let result = data as Produto[] | null;
@@ -118,10 +126,16 @@ export default function CategoriaPage() {
           .from('produtos')
           .select(`*, categorias(nome), variantes_produto(cor, cor_hex, tamanho)`)
           .eq('ativo', true);
-        if (categoriaId) {
+        
+        if (isDestaque) {
+          fallback = fallback.eq('destaque', true);
+        } else if (categoriaId) {
           fallback = fallback.eq('categoria_id', categoriaId);
         }
-        const { data: fallbackData, error: fallbackError } = await fallback.limit(24);
+        
+        const { data: fallbackData, error: fallbackError } = await fallback
+          .order('created_at', { ascending: false })
+          .limit(24);
         if (fallbackError) throw fallbackError;
         result = fallbackData as Produto[];
       }
@@ -175,7 +189,10 @@ export default function CategoriaPage() {
       const precoB = b.preco_promocional || b.preco;
       return precoB - precoA;
     }
-    return 0;
+    // Ordenação padrão: mais recente primeiro (created_at DESC)
+    const dateA = new Date(a.created_at || 0).getTime();
+    const dateB = new Date(b.created_at || 0).getTime();
+    return dateB - dateA;
   });
 
   const handleProductClick = (id: string) => {

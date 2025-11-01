@@ -24,7 +24,8 @@ export default function BestSellers() {
         .select('*')
         .eq('ativo', true)
         .eq('destaque', true)
-        .limit(9)
+        .order('created_at', { ascending: false })
+        .limit(12)
         .abortSignal(signal);
 
       if (produtosError) throw produtosError;
@@ -98,7 +99,7 @@ export default function BestSellers() {
   };
 
   const handleVerMais = () => {
-    window.REACT_APP_NAVIGATE('/categoria');
+    navigate('/categoria?destaque=true');
   };
 
   const getCoresUnicas = (variantes: any[]) => {
@@ -136,16 +137,8 @@ export default function BestSellers() {
   return (
     <section className="py-16 bg-white">
       <div className="container mx-auto px-4 sm:px-6 md:px-8 lg:px-12 xl:px-16 2xl:px-20">
-        <div className="flex justify-between items-center mb-8">
+        <div className="mb-8">
           <h2 className="text-3xl font-bold text-gray-800">Queridinhos</h2>
-          {hasMore && (
-            <button
-              onClick={handleVerMais}
-              className="px-6 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-colors whitespace-nowrap"
-            >
-              Ver Mais
-            </button>
-          )}
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6" data-product-shop>
@@ -244,6 +237,17 @@ export default function BestSellers() {
             );
           })}
         </div>
+
+        {hasMore && (
+          <div className="flex justify-end mt-8">
+            <button
+              onClick={handleVerMais}
+              className="px-6 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-colors whitespace-nowrap"
+            >
+              Ver Mais
+            </button>
+          </div>
+        )}
       </div>
     </section>
   );

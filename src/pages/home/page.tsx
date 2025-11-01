@@ -40,39 +40,26 @@ export default function HomePage() {
 
   const carregarProdutosRecentes = async (signal: AbortSignal) => {
     try {
-      // Tenta carregar pela view com avaliações
-      let { data, error } = await supabase
-        .from('products_with_ratings')
+      // Usar diretamente a tabela produtos para evitar problemas com a view
+      const { data, error } = await supabase
+        .from('produtos')
         .select('*, categorias(nome), variantes_produto(cor, cor_hex)')
         .eq('ativo', true)
-        .eq('recem_chegado', true)
         .order('created_at', { ascending: false })
         .limit(12)
         .abortSignal(signal);
 
-      // Fallback para a tabela base caso a view não exista
       if (error) {
-        if ((error as any)?.name === 'AbortError') {
-          console.log('Fetch abortado: HomePage');
-          return;
+          if ((error as any)?.name === 'AbortError') {
+            console.log('Fetch abortado: HomePage');
+            return;
+          }
+          throw error;
         }
-        const fallback = await supabase
-          .from('produtos')
-          .select('*, categorias(nome), variantes_produto(cor, cor_hex)')
-          .eq('ativo', true)
-          .eq('recem_chegado', true)
-          .order('created_at', { ascending: false })
-          .limit(12)
-          .abortSignal(signal);
-        if (fallback.error && (fallback.error as any)?.name !== 'AbortError') {
-          throw fallback.error;
-        }
-        data = fallback.data;
-      }
 
-      if (!signal.aborted) {
-        setRecentProducts((data || []) as Produto[]);
-      }
+        if (!signal.aborted) {
+          setRecentProducts((data || []) as Produto[]);
+        }
     } catch (error: any) {
       if (error && error.message && !error.message.includes('AbortError')) {
         console.error('Erro ao carregar produtos recentes:', error);
