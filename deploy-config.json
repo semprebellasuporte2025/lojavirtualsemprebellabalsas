@@ -1,0 +1,63 @@
+{
+  "name": "SempreBella E-commerce",
+  "description": "Configuração para deploy automático no Vercel via GitHub",
+  "github": {
+    "repository": "https://github.com/SEU_USUARIO/semprebella-ecommerce",
+    "branch": "main",
+    "auto_deploy": true
+  },
+  "vercel": {
+    "framework": "vite",
+    "build_command": "npm run build",
+    "output_directory": "dist",
+    "install_command": "npm ci",
+    "dev_command": "npm run dev -- --port 3000"
+  },
+  "environment_variables": {
+    "production": {
+      "VITE_PUBLIC_SUPABASE_URL": "https://seu-projeto.supabase.co",
+      "VITE_PUBLIC_SUPABASE_ANON_KEY": "sua_chave_anonima_aqui",
+      "SITE_URL": "https://seu-dominio.vercel.app"
+    },
+    "preview": {
+      "VITE_PUBLIC_SUPABASE_URL": "https://seu-projeto.supabase.co",
+      "VITE_PUBLIC_SUPABASE_ANON_KEY": "sua_chave_anonima_aqui",
+      "SITE_URL": "https://preview-seu-dominio.vercel.app"
+    }
+  },
+  "github_secrets": {
+    "required": [
+      "VERCEL_TOKEN",
+      "VERCEL_ORG_ID", 
+      "VERCEL_PROJECT_ID",
+      "VITE_PUBLIC_SUPABASE_URL",
+      "VITE_PUBLIC_SUPABASE_ANON_KEY",
+      "SITE_URL"
+    ],
+    "instructions": {
+      "VERCEL_TOKEN": "Obtenha em: https://vercel.com/account/tokens",
+      "VERCEL_ORG_ID": "Encontre em: Vercel Dashboard > Settings > General",
+      "VERCEL_PROJECT_ID": "Encontre em: Vercel Project > Settings > General",
+      "VITE_PUBLIC_SUPABASE_URL": "URL do seu projeto Supabase",
+      "VITE_PUBLIC_SUPABASE_ANON_KEY": "Chave anônima do Supabase",
+      "SITE_URL": "URL final do seu site (ex: https://semprebella.vercel.app)"
+    }
+  },
+  "setup_instructions": {
+    "1": "Crie um repositório no GitHub",
+    "2": "Conecte o repositório local: git remote add origin URL_DO_REPOSITORIO",
+    "3": "Faça push: git push -u origin main",
+    "4": "Acesse vercel.com e importe o repositório GitHub",
+    "5": "Configure as variáveis de ambiente no Vercel Dashboard",
+    "6": "Configure os secrets no GitHub: Settings > Secrets and variables > Actions",
+    "7": "O deploy será automático a cada push na branch main"
+  },
+  "features": {
+    "auto_deploy": "Deploy automático via GitHub Actions",
+    "preview_deployments": "Deploy de preview para pull requests",
+    "environment_separation": "Variáveis separadas para produção e preview",
+    "security_headers": "Headers de segurança configurados",
+    "cache_optimization": "Cache otimizado para assets estáticos",
+    "spa_routing": "Roteamento SPA configurado"
+  }
+}

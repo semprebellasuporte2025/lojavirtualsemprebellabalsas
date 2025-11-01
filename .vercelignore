@@ -1,17 +1,54 @@
-# Excluir arquivos/pastas não necessários para deploy
+# Dependencies
 node_modules/
-out/
-dist/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment files
 .env
-.env.*
+.env.local
+.env.*.local
 
-# Pastas de documentação e scripts locais
-scripts/
-docs/
-supabase/
-stack/
+# Development files
+.vscode/
+.idea/
+*.swp
+*.swo
 
-# Temporários e logs
-*.zip
+# Build outputs (except dist for Vercel)
+out/
+build/
+
+# Logs
+logs/
 *.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Documentation
+docs/
+README.md
+
+# Scripts and tools
+scripts/
+tools/
+
+# Supabase local files
 supabase/.temp/
+supabase/.branches/
+supabase/config.toml
+
+# Test files
+**/*.test.*
+**/*.spec.*
+coverage/
+
+# Temporary files
+*.tmp
+*.temp
