@@ -498,26 +498,54 @@ export default function ProductInfo({ produto, onAddToCart }: ProductInfoProps) 
           role="dialog"
         >
           <div
-            className="bg-white rounded-lg shadow-lg max-w-3xl w-full overflow-hidden"
+            className="bg-white rounded-lg shadow-lg w-full max-w-sm sm:max-w-md md:max-w-2xl lg:max-w-3xl max-h-[90vh] overflow-hidden flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between p-4 border-b">
+            <div className="flex items-center justify-between p-4 border-b flex-shrink-0">
               <h2 className="text-lg font-semibold text-gray-900">Guia de tamanhos</h2>
               <button
                 type="button"
                 onClick={() => setIsSizeGuideOpen(false)}
-                className="text-gray-500 hover:text-gray-700 cursor-pointer"
+                className="text-gray-500 hover:text-gray-700 cursor-pointer p-2 rounded-full hover:bg-gray-100 transition-colors"
                 aria-label="Fechar guia de tamanhos"
               >
                 <i className="ri-close-line text-2xl"></i>
               </button>
             </div>
-            <div className="p-4">
-              <img
-                src="https://cproxdqrraiujnewbsvp.supabase.co/storage/v1/object/sign/semprebellaimg/Captura%20de%20tela%202025-10-26%20082436.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9kNWU3YWZhNC1kYmRlLTQ3YWQtOTE4NS0xZWNkY2RjZmI2OTciLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJzZW1wcmViZWxsYWltZy9DYXB0dXJhIGRlIHRlbGEgMjAyNS0xMC0yNiAwODI0MzYucG5nIiwiaWF0IjoxNzYxNDgxNzAyLCJleHAiOjMxNzA4OTk0NTcwMn0.QpBvRrUrDbQc9uGv7nTyVK4JgMH5t_-dXXwHaWTk59Q"
-                alt="Guia de tamanhos"
-                className="w-full h-auto object-contain"
-              />
+            <div className="p-4 overflow-y-auto flex-1">
+              <div className="w-full">
+                <img
+                  src="https://cproxdqrraiujnewbsvp.supabase.co/storage/v1/object/sign/semprebellaimg/Captura%20de%20tela%202025-10-26%20082436.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9kNWU3YWZhNC1kYmRlLTQ3YWQtOTE4NS0xZWNkY2RjZmI2OTciLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJzZW1wcmViZWxsYWltZy9DYXB0dXJhIGRlIHRlbGEgMjAyNS0xMC0yNiAwODI0MzYucG5nIiwiaWF0IjoxNzYxNDgxNzAyLCJleHAiOjMxNzA4OTk0NTcwMn0.QpBvRrUrDbQc9uGv7nTyVK4JgMH5t_-dXXwHaWTk59Q"
+                  alt="Guia de tamanhos"
+                  className="w-full h-auto object-contain"
+                  loading="lazy"
+                />
+              </div>
+              
+              {/* Informações adicionais para mobile */}
+              <div className="mt-6 sm:hidden">
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <h3 className="text-sm font-semibold text-gray-900 mb-3">Dicas importantes:</h3>
+                  <ul className="text-sm text-gray-600 space-y-2">
+                    <li className="flex items-start">
+                      <i className="ri-checkbox-circle-line text-pink-600 mr-2 mt-0.5 flex-shrink-0"></i>
+                      Meça sempre com o corpo relaxado
+                    </li>
+                    <li className="flex items-start">
+                      <i className="ri-checkbox-circle-line text-pink-600 mr-2 mt-0.5 flex-shrink-0"></i>
+                      Use uma fita métrica flexível
+                    </li>
+                    <li className="flex items-start">
+                      <i className="ri-checkbox-circle-line text-pink-600 mr-2 mt-0.5 flex-shrink-0"></i>
+                      Em caso de dúvida, escolha o tamanho maior
+                    </li>
+                    <li className="flex items-start">
+                      <i className="ri-checkbox-circle-line text-pink-600 mr-2 mt-0.5 flex-shrink-0"></i>
+                      Entre em contato conosco para mais informações
+                    </li>
+                  </ul>
+                </div>
+              </div>
             </div>
           </div>
         </div>

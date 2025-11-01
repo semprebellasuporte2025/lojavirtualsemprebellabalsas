@@ -103,7 +103,7 @@ export default function ProductPage() {
         <div className="min-h-screen bg-white">
           <Header />
 
-          <div className="container mx-auto px-10 sm:px-14 lg:px-20 xl:px-36 2xl:px-56 py-8">
+          <div className="container mx-auto px-4 sm:px-6 md:px-10 lg:px-20 xl:px-36 2xl:px-56 py-8">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
               {/* Passa sempre um nome e garante imagens válidas para evitar falhas */}
               <ProductGallery 

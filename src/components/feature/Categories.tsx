@@ -196,46 +196,38 @@ export default function Categories({ initialCategorias, catalogLoading }: { init
               </div>
             </div>
 
-            {/* Mobile: Slider sem loop infinito */}
-            <div className="flex md:hidden justify-center relative">
-              <div className="w-full max-w-sm overflow-hidden"> {/* Adicionado overflow-hidden */}
-                <div 
-                  className="flex transition-transform duration-500 ease-in-out"
-                  style={{ 
-                    transform: `translateX(-${currentIndex * 100}%)`,
-                    width: `${categorias.length * 100}%`
-                  }}
-                >
-                  {categorias.map((categoria, index) => (
-                    <div
-                      key={categoria.id}
-                      onClick={() => handleCategoryClick(categoria.nome)}
-                      className="flex flex-col items-center cursor-pointer group w-full flex-shrink-0 px-4"
-                    >
-                      <div className="relative w-40 h-40 rounded-full overflow-hidden mb-4 shadow-md group-hover:shadow-xl transition-all mx-auto"> {/* Adicionado mx-auto */}
-                        <img
-                          src={categoria.imagem_url || '/placeholder-category.svg'}
-                          alt={categoria.nome}
-                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                          loading="lazy" // Adicionado lazy loading
-                        />
-                      </div>
-                      <h3 className="text-xl font-bold text-gray-800 group-hover:text-pink-600 transition-colors text-center">
-                        {categoria.nome}
-                      </h3>
-                      {categoria.descricao && (
-                        <p className="text-sm text-gray-600 text-center mt-2 line-clamp-2 max-w-[200px]"> {/* Limitado largura */}
-                          {categoria.descricao}
-                        </p>
-                      )}
+            {/* Mobile: Layout estático em grid */}
+            <div className="md:hidden">
+              <div className="grid grid-cols-2 gap-6 max-w-md mx-auto">
+                {categorias.map((categoria) => (
+                  <div
+                    key={categoria.id}
+                    onClick={() => handleCategoryClick(categoria.nome)}
+                    className="flex flex-col items-center cursor-pointer group"
+                  >
+                    <div className="relative w-32 h-32 rounded-full overflow-hidden mb-3 shadow-md group-hover:shadow-xl transition-all">
+                      <img
+                        src={categoria.imagem_url || '/placeholder-category.svg'}
+                        alt={categoria.nome}
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                        loading="lazy"
+                      />
                     </div>
-                  ))}
-                </div>
+                    <h3 className="text-lg font-bold text-gray-800 group-hover:text-pink-600 transition-colors text-center">
+                      {categoria.nome}
+                    </h3>
+                    {categoria.descricao && (
+                      <p className="text-xs text-gray-600 text-center mt-1 line-clamp-2">
+                        {categoria.descricao}
+                      </p>
+                    )}
+                  </div>
+                ))}
               </div>
             </div>
           </div>
 
-          {/* Botão anterior para desktop */}
+          {/* Botões de navegação apenas para desktop */}
           {currentIndex > 0 && (
             <button
               onClick={handlePrev}
@@ -254,50 +246,6 @@ export default function Categories({ initialCategorias, catalogLoading }: { init
               <i className="ri-arrow-right-s-line text-2xl text-pink-600"></i>
             </button>
           )}
-
-          {/* Botões de navegação para mobile - abaixo das categorias */}
-          <div className="flex md:hidden justify-center items-center gap-4 mt-8">
-            <button
-              onClick={handlePrev}
-              disabled={currentIndex === 0}
-              className={`w-10 h-10 rounded-full shadow-lg flex items-center justify-center transition-colors ${
-                currentIndex === 0 
-                  ? 'bg-gray-200 cursor-not-allowed' 
-                  : 'bg-white hover:bg-pink-50 cursor-pointer'
-              }`}
-            >
-              <i className={`ri-arrow-left-s-line text-xl ${
-                currentIndex === 0 ? 'text-gray-400' : 'text-pink-600'
-              }`}></i>
-            </button>
-            
-            {/* Indicadores de página */}
-            <div className="flex gap-2">
-              {categorias.map((_, index) => (
-                <button
-                  key={index}
-                  onClick={() => scrollToIndex(index)}
-                  className={`w-2 h-2 rounded-full transition-colors ${
-                    currentIndex === index ? 'bg-pink-600' : 'bg-gray-300'
-                  }`}
-                />
-              ))}
-            </div>
-
-            <button
-              onClick={handleNext}
-              disabled={currentIndex === categorias.length - 1}
-              className={`w-10 h-10 rounded-full shadow-lg flex items-center justify-center transition-colors ${
-                currentIndex === categorias.length - 1 
-                  ? 'bg-gray-200 cursor-not-allowed' 
-                  : 'bg-white hover:bg-pink-50 cursor-pointer'
-              }`}
-            >
-              <i className={`ri-arrow-right-s-line text-xl ${
-                currentIndex === categorias.length - 1 ? 'text-gray-400' : 'text-pink-600'
-              }`}></i>
-            </button>
-          </div>
         </div>
       </div>
     </section>
