@@ -21,21 +21,21 @@ export default function Categories({ initialCategorias, catalogLoading }: { init
     }
   }, [initialCategorias, catalogLoading]); // Removida refreshKey para evitar loop infinito
 
-  // Auto-slide para mobile
-  useEffect(() => {
-    const isMobile = window.innerWidth < 768;
-    if (isMobile && categorias.length > 0) {
-      autoSlideRef.current = setInterval(() => {
-        setCurrentIndex(prev => (prev + 1) % categorias.length);
-      }, 4000); // Muda a cada 4 segundos
-
-      return () => {
-        if (autoSlideRef.current) {
-          clearInterval(autoSlideRef.current);
-        }
-      };
-    }
-  }, [categorias.length]);
+  // Remover auto-slide para mobile
+  // useEffect(() => {
+  //   const isMobile = window.innerWidth < 768;
+  //   if (isMobile && categorias.length > 0) {
+  //     autoSlideRef.current = setInterval(() => {
+  //       setCurrentIndex(prev => (prev + 1) % categorias.length);
+  //     }, 4000); // Muda a cada 4 segundos
+  //
+  //     return () => {
+  //       if (autoSlideRef.current) {
+  //         clearInterval(autoSlideRef.current);
+  //       }
+  //     };
+  //   }
+  // }, [categorias.length]);
 
   const carregarCategorias = async () => {
     try {
@@ -68,8 +68,8 @@ export default function Categories({ initialCategorias, catalogLoading }: { init
   const handlePrev = () => {
     const isMobile = window.innerWidth < 768;
     if (isMobile) {
-      // Loop infinito para mobile
-      setCurrentIndex(prev => prev === 0 ? categorias.length - 1 : prev - 1);
+      // Navegação linear para mobile (sem loop infinito)
+      setCurrentIndex(prev => prev > 0 ? prev - 1 : 0);
     } else {
       // Lógica desktop
       const newIndex = currentIndex > 0 ? currentIndex - 1 : 0;
@@ -80,8 +80,8 @@ export default function Categories({ initialCategorias, catalogLoading }: { init
   const handleNext = () => {
     const isMobile = window.innerWidth < 768;
     if (isMobile) {
-      // Loop infinito para mobile
-      setCurrentIndex(prev => (prev + 1) % categorias.length);
+      // Navegação linear para mobile (sem loop infinito)
+      setCurrentIndex(prev => prev < categorias.length - 1 ? prev + 1 : categorias.length - 1);
     } else {
       // Lógica desktop
       const maxIndex = Math.max(0, categorias.length - 4);
@@ -241,9 +241,16 @@ export default function Categories({ initialCategorias, catalogLoading }: { init
           <div className="flex md:hidden justify-center items-center gap-4 mt-8">
             <button
               onClick={handlePrev}
-              className="w-10 h-10 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-pink-50 transition-colors cursor-pointer"
+              disabled={currentIndex === 0}
+              className={`w-10 h-10 rounded-full shadow-lg flex items-center justify-center transition-colors ${
+                currentIndex === 0 
+                  ? 'bg-gray-200 cursor-not-allowed' 
+                  : 'bg-white hover:bg-pink-50 cursor-pointer'
+              }`}
             >
-              <i className="ri-arrow-left-s-line text-xl text-pink-600"></i>
+              <i className={`ri-arrow-left-s-line text-xl ${
+                currentIndex === 0 ? 'text-gray-400' : 'text-pink-600'
+              }`}></i>
             </button>
             
             {/* Indicadores de página */}
@@ -261,9 +268,16 @@ export default function Categories({ initialCategorias, catalogLoading }: { init
 
             <button
               onClick={handleNext}
-              className="w-10 h-10 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-pink-50 transition-colors cursor-pointer"
+              disabled={currentIndex === categorias.length - 1}
+              className={`w-10 h-10 rounded-full shadow-lg flex items-center justify-center transition-colors ${
+                currentIndex === categorias.length - 1 
+                  ? 'bg-gray-200 cursor-not-allowed' 
+                  : 'bg-white hover:bg-pink-50 cursor-pointer'
+              }`}
             >
-              <i className="ri-arrow-right-s-line text-xl text-pink-600"></i>
+              <i className={`ri-arrow-right-s-line text-xl ${
+                currentIndex === categorias.length - 1 ? 'text-gray-400' : 'text-pink-600'
+              }`}></i>
             </button>
           </div>
         </div>
