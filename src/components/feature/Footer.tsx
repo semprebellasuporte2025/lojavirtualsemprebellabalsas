@@ -42,7 +42,7 @@ export default function Footer() {
             <ul className="space-y-2 md:space-y-1">
               <li>
                 <Link 
-                  to="/home"
+                  to="/"
                   className="text-gray-300 hover:text-pink-400 transition-colors cursor-pointer"
                 >
                   Início

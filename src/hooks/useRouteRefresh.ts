@@ -25,8 +25,7 @@ export function useRouteEntry(targetPath: string, callback: () => void) {
   const location = useLocation();
 
   useEffect(() => {
-    if (location.pathname === targetPath || 
-        (targetPath === '/home' && (location.pathname === '/' || location.pathname === '/home'))) {
+    if (location.pathname === targetPath) {
       callback();
     }
   }, [location.pathname, targetPath, callback]);

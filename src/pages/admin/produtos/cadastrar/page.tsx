@@ -4,7 +4,8 @@ import AdminLayout from '../../../../components/feature/AdminLayout';
 import { supabase, clearInvalidSession, ensureSession, insertWithTimeout } from '../../../../lib/supabase';
 import { useToast } from '../../../../hooks/useToast';
 import RichTextEditor from '../../../../components/base/RichTextEditor';
-import { AVAILABLE_COLORS, AVAILABLE_SIZES, findClosestColorName, ColorOption } from '../../../../constants/colors';
+import { AVAILABLE_COLORS, AVAILABLE_SIZES, findClosestColorName } from '../../../../constants/colors';
+import type { ColorOption } from '../../../../constants/colors';
 
 interface ProductVariation {
   id: string;
@@ -34,6 +35,8 @@ const CadastrarProdutoCopy = () => {
     altura: '',
     largura: '',
     profundidade: '',
+    estoque: '',
+    estoque_minimo: '',
     ativo: true,
     destaque: false,
     recemChegado: false
@@ -149,21 +152,74 @@ const CadastrarProdutoCopy = () => {
 
       console.log('[CadastrarProduto] 📤 Enviando dados para n8n:', produtoData);
 
-      // Enviar para o webhook do n8n
-      const response = await fetch('https://portaln8n.semprebellabalsas.com.br/webhook/cadastra_produto', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(produtoData)
-      });
+      // Buscar categoria_id pelo nome
+      const { data: categoriaData, error: categoriaError } = await supabase
+        .from('categorias')
+        .select('id')
+        .eq('nome', formData.categoria)
+        .single();
 
-      if (!response.ok) {
-        throw new Error(`Erro HTTP: ${response.status} - ${response.statusText}`);
+      if (categoriaError) {
+        showToast('Categoria não encontrada', 'error');
+        setIsLoading(false);
+        isSavingRef.current = false;
+        return;
       }
 
-      const result = await response.json();
-      console.log('[CadastrarProduto] ✅ Resposta do n8n:', result);
+      // Inserir produto principal
+      const { data: produtoDataInsert, error: produtoError } = await supabase
+        .from('produtos')
+        .insert({
+          nome: formData.nome,
+          categoria_id: categoriaData.id,
+          preco: parseFloat(formData.preco),
+          preco_promocional: formData.precoPromocional ? parseFloat(formData.precoPromocional) : null,
+          descricao: formData.descricao,
+          material: formData.material || null,
+          referencia: formData.referencia,
+          peso: parseFloat(formData.peso),
+          altura: formData.altura ? parseFloat(formData.altura) : null,
+          largura: formData.largura ? parseFloat(formData.largura) : null,
+          profundidade: formData.profundidade ? parseFloat(formData.profundidade) : null,
+          estoque: formData.estoque ? parseInt(formData.estoque) : 0,
+          estoque_minimo: formData.estoque_minimo ? parseInt(formData.estoque_minimo) : 0,
+          imagens: images,
+          ativo: formData.ativo,
+          destaque: formData.destaque,
+          recem_chegado: formData.recemChegado,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .select();
+
+      if (produtoError) {
+        console.error('Erro ao inserir produto:', produtoError);
+        throw produtoError;
+      }
+
+      const produtoId = produtoDataInsert[0].id;
+      console.log('[CadastrarProduto] ✅ Produto inserido com ID:', produtoId);
+
+      // Inserir variações do produto
+      const variacoesParaInserir = variations.map(variation => ({
+        produto_id: produtoId,
+        tamanho: variation.size,
+        cor: variation.color,
+        cor_hex: variation.colorHex,
+        estoque: variation.stock,
+        sku: variation.sku || `${formData.referencia}-${variation.size}-${variation.color.replace(/\s+/g, '').toUpperCase()}`
+      }));
+
+      const { error: variacoesError } = await supabase
+        .from('variantes_produto')
+        .insert(variacoesParaInserir);
+
+      if (variacoesError) {
+        console.error('Erro ao inserir variações:', variacoesError);
+        throw variacoesError;
+      }
+
+      console.log('[CadastrarProduto] ✅ Variações inseridas com sucesso');
 
       // Sucesso
       showToast('Produto cadastrado com sucesso!', 'success');
@@ -450,6 +506,8 @@ const CadastrarProdutoCopy = () => {
       altura: '',
       largura: '',
       profundidade: '',
+      estoque: '',
+      estoque_minimo: '',
       ativo: true,
       destaque: false,
       recemChegado: false
@@ -470,7 +528,7 @@ const CadastrarProdutoCopy = () => {
   return (
     <AdminLayout>
       <div className="p-6">
-        <h1 className="text-2xl font-bold mb-4">Cadastrar Novo Produto (CÓPIA)</h1>
+        <h1 className="text-2xl font-bold mb-4">Cadastrar Novo Produto</h1>
         <form onSubmit={handleSubmit}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Coluna da Esquerda */}
@@ -549,7 +607,7 @@ const CadastrarProdutoCopy = () => {
                 <label htmlFor="descricao" className="block text-sm font-medium text-gray-700">Descrição</label>
                 <RichTextEditor
                   id="descricao"
-                  initialValue={formData.descricao}
+                  value={formData.descricao}
                   onChange={(value) => setFormData({ ...formData, descricao: value })}
                 />
               </div>
@@ -612,6 +670,14 @@ const CadastrarProdutoCopy = () => {
                   <div>
                     <label htmlFor="profundidade" className="block text-sm font-medium text-gray-700">Profundidade (cm)</label>
                     <input type="number" id="profundidade" name="profundidade" value={formData.profundidade} onChange={(e) => setFormData({ ...formData, profundidade: e.target.value })} ref={profundidadeRef} onBlur={() => document.getElementById('descricao')?.focus()} onKeyDown={(e) => { if (e.key === 'Enter') document.getElementById('descricao')?.focus(); }} className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
+                  </div>
+                  <div>
+                    <label htmlFor="estoque" className="block text-sm font-medium text-gray-700">Estoque</label>
+                    <input type="number" id="estoque" name="estoque" value={formData.estoque} onChange={(e) => setFormData({ ...formData, estoque: e.target.value })} className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" min="0" />
+                  </div>
+                  <div>
+                    <label htmlFor="estoque_minimo" className="block text-sm font-medium text-gray-700">Estoque Mínimo</label>
+                    <input type="number" id="estoque_minimo" name="estoque_minimo" value={formData.estoque_minimo} onChange={(e) => setFormData({ ...formData, estoque_minimo: e.target.value })} className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" min="0" />
                   </div>
                 </div>
               </div>

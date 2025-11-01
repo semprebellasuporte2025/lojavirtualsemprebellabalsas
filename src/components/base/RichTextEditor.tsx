@@ -11,11 +11,10 @@ import {
   $getSelection, 
   FORMAT_TEXT_COMMAND,
   FORMAT_ELEMENT_COMMAND,
-  EditorState,
   $createParagraphNode,
-  $createTextNode,
-  LexicalEditor
+  $createTextNode
 } from 'lexical';
+import type { EditorState, LexicalEditor } from 'lexical';
 import { $generateHtmlFromNodes, $generateNodesFromDOM } from '@lexical/html';
 
 interface RichTextEditorProps {

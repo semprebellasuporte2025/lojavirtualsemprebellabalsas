@@ -3,7 +3,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate, Link, NavLink } from 'react-router-dom';
 import { useCart } from '../../hooks/useCart';
 import { useAuth } from '../../hooks/useAuth';
-import { supabase, Categoria } from '../../lib/supabase';
+import { supabase } from '../../lib/supabase';
+import type { Categoria } from '../../lib/supabase';
 
 export default function Header() {
   const cartItemCount = useCart((state) => state.getTotalItems());
@@ -76,7 +77,7 @@ export default function Header() {
           <div className="flex items-center justify-between py-4">
             {/* Logo */}
             <button 
-              onClick={() => navigate('/home')}
+              onClick={() => navigate('/')}
               className="text-3xl font-bold text-pink-600 cursor-pointer"
               style={{ fontFamily: '"Pacifico", serif' }}
             >
@@ -133,7 +134,7 @@ export default function Header() {
                         onClick={async () => {
                           await signOut();
                           setIsDropdownOpen(false);
-                          navigate('/home');
+                          navigate('/');
                         }} 
                         className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                       >
@@ -154,7 +155,7 @@ export default function Header() {
           <ul className="flex flex-col md:flex-row md:items-center md:justify-center md:space-x-8 py-4">
             <li>
               <button 
-                onClick={() => navigate('/home')}
+                onClick={() => navigate('/')}
                 className="block py-2 text-gray-700 hover:text-pink-600 font-medium cursor-pointer whitespace-nowrap"
               >
                 Início

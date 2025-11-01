@@ -3,7 +3,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../../../../hooks/useToast';
 import Toast from '../../../../components/base/Toast';
-import { supabase, Produto } from '../../../../lib/supabase';
+import { supabase } from '../../../../lib/supabase';
+import type { Produto } from '../../../../lib/supabase';
 import AdminLayout from '../../../../components/feature/AdminLayout';
 import ConfirmationModal from '../../../../components/feature/modal/ConfirmationModal';
 
@@ -20,6 +21,8 @@ export default function ListarProdutosPage() {
   const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [produtoToDelete, setProdutoToDelete] = useState<string | null>(null);
+  const [pageSize, setPageSize] = useState<number>(20);
+  const [currentPage, setCurrentPage] = useState<number>(1);
 
   useEffect(() => {
     carregarProdutos();
@@ -30,7 +33,18 @@ export default function ListarProdutosPage() {
       setLoading(true);
       const { data, error } = await supabase
         .from('produtos')
-        .select('*, categorias(nome)')
+        .select(`
+          *, 
+          categorias(nome),
+          variantes_produto(
+            id,
+            tamanho,
+            cor,
+            cor_hex,
+            estoque,
+            sku
+          )
+        `)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -45,7 +59,10 @@ export default function ListarProdutosPage() {
 
   const filteredProdutos = produtos.filter(produto => {
     const matchSearch = produto.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                       (produto.sku && produto.sku.toLowerCase().includes(searchTerm.toLowerCase()));
+                       (produto.sku && produto.sku.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                       (produto.variantes_produto && produto.variantes_produto.some(variante => 
+                         variante.sku && variante.sku.toLowerCase().includes(searchTerm.toLowerCase())
+                       ));
     const matchCategoria = !filterCategoria || produto.categoria_id === filterCategoria;
     const matchStatus = !filterStatus || 
                        (filterStatus === 'ativo' && produto.ativo) ||
@@ -54,6 +71,21 @@ export default function ListarProdutosPage() {
                        (filterStatus === 'sem-estoque' && produto.estoque === 0);
     return matchSearch && matchCategoria && matchStatus;
   });
+
+  // Paginação (client-side)
+  const totalFiltered = filteredProdutos.length;
+  const totalPages = Math.max(1, Math.ceil(totalFiltered / pageSize));
+  useEffect(() => {
+    // Resetar para primeira página quando filtros ou pageSize mudarem
+    setCurrentPage(1);
+  }, [searchTerm, filterCategoria, filterStatus, pageSize]);
+  useEffect(() => {
+    // Garantir que a página atual esteja dentro dos limites
+    setCurrentPage(prev => Math.min(prev, totalPages));
+  }, [totalPages]);
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = Math.min(startIndex + pageSize, totalFiltered);
+  const paginatedProdutos = filteredProdutos.slice(startIndex, endIndex);
 
   const handleDelete = (id: string) => {
     setProdutoToDelete(id);
@@ -370,7 +402,7 @@ export default function ListarProdutosPage() {
                 </tr>
               </thead>
               <tbody>
-                {filteredProdutos.map((produto) => (
+                {paginatedProdutos.map((produto) => (
                   <tr 
                     key={produto.id} 
                     onClick={() => handleRowClick(produto.id)}
@@ -393,7 +425,22 @@ export default function ListarProdutosPage() {
                         </div>
                       </div>
                     </td>
-                    <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">{produto.sku || '-'}</td>
+                    <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
+                      {produto.variantes_produto && produto.variantes_produto.length > 0 ? (
+                        <div className="space-y-1">
+                          {produto.variantes_produto.map((variante, index) => (
+                            <div key={variante.id} className="text-xs">
+                              {variante.sku || '-'}
+                              {index < produto.variantes_produto.length - 1 && produto.variantes_produto.length > 1 && (
+                                <span className="text-gray-400"> | </span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        produto.sku || '-'
+                      )}
+                    </td>
                     <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
                       {produto.categorias?.nome || '-'}
                     </td>
@@ -468,7 +515,7 @@ export default function ListarProdutosPage() {
               </tbody>
             </table>
 
-            {filteredProdutos.length === 0 && (
+            {paginatedProdutos.length === 0 && (
               <div className="text-center py-12 text-gray-500 dark:text-gray-400">
                 <i className="ri-shopping-bag-line text-5xl mb-3"></i>
                 <p className="text-lg">Nenhum produto encontrado</p>
@@ -477,7 +524,7 @@ export default function ListarProdutosPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {filteredProdutos.map((produto) => (
+            {paginatedProdutos.map((produto) => (
               <div
                 key={produto.id}
                 className="bg-white dark:bg-gray-700 rounded-lg shadow-md overflow-hidden border border-gray-200 dark:border-gray-600 hover:shadow-lg transition-shadow"
@@ -539,7 +586,7 @@ export default function ListarProdutosPage() {
               </div>
             ))}
 
-            {filteredProdutos.length === 0 && (
+            {paginatedProdutos.length === 0 && (
               <div className="text-center py-12 text-gray-500 dark:text-gray-400 col-span-full">
                 <i className="ri-shopping-bag-line text-5xl mb-3"></i>
                 <p className="text-lg">Nenhum produto encontrado</p>
@@ -548,8 +595,57 @@ export default function ListarProdutosPage() {
           </div>
         )}
 
-        <div className="mt-6 flex justify-between items-center text-sm text-gray-600 dark:text-gray-400">
-          <p>Mostrando {filteredProdutos.length} de {produtos.length} produtos</p>
+        {/* Controles de paginação */}
+        <div className="mt-6 flex flex-col md:flex-row md:items-center md:justify-between gap-3 text-sm text-gray-600 dark:text-gray-400">
+          <p>
+            Mostrando {totalFiltered === 0 ? 0 : startIndex + 1}
+            –{endIndex} de {totalFiltered} produtos
+          </p>
+          {totalFiltered > 20 && (
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <select
+                  value={pageSize}
+                  onChange={(e) => setPageSize(parseInt(e.target.value, 10))}
+                  className="px-3 py-2 pr-8 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent dark:bg-gray-700 dark:text-white appearance-none cursor-pointer"
+                >
+                  <option value={20}>20 por página</option>
+                  <option value={50}>50 por página</option>
+                  <option value={100}>100 por página</option>
+                </select>
+                <i className="ri-arrow-down-s-line absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none"></i>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className={`px-3 py-2 rounded-lg whitespace-nowrap transition-colors cursor-pointer ${
+                    currentPage === 1
+                      ? 'bg-gray-100 text-gray-400 dark:bg-gray-700 dark:text-gray-500'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-white'
+                  }`}
+                  title="Anterior"
+                >
+                  <i className="ri-arrow-left-s-line mr-1"></i>
+                  Anterior
+                </button>
+                <span className="px-2">Página {currentPage} de {totalPages}</span>
+                <button
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className={`px-3 py-2 rounded-lg whitespace-nowrap transition-colors cursor-pointer ${
+                    currentPage === totalPages
+                      ? 'bg-gray-100 text-gray-400 dark:bg-gray-700 dark:text-gray-500'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-white'
+                  }`}
+                  title="Próxima"
+                >
+                  Próxima
+                  <i className="ri-arrow-right-s-line ml-1"></i>
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </AdminLayout>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { supabase, Produto } from '../../lib/supabase';
+import { supabase } from '../../lib/supabase';
+import type { Produto } from '../../lib/supabase';
 import { Link } from 'react-router-dom';
 
 const ObrigadoInscricaoPage: React.FC = () => {

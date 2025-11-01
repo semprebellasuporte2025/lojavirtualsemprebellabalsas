@@ -7,6 +7,8 @@ export const formatarMoeda = (valor: number) => {
 
 export const getFormaPagamentoNome = (forma: string) => {
   switch (forma) {
+    case 'credit':
+      return 'Cartão de Crédito';
     case 'credito':
       return 'Cartão de Crédito';
     case 'debito':
@@ -15,6 +17,9 @@ export const getFormaPagamentoNome = (forma: string) => {
       return 'PIX';
     case 'boleto':
       return 'Boleto';
+    case 'dinheiro':
+    case 'cash':
+      return 'Dinheiro';
     default:
       return forma;
   }

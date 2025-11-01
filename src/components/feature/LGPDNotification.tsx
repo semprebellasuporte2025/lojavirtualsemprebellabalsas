@@ -9,7 +9,7 @@ export default function LGPDNotification() {
   useEffect(() => {
     const lgpdAccepted = localStorage.getItem('lgpd-accepted');
     const path = location.pathname;
-    const isHome = path === '/' || path === '/home';
+    const isHome = path === '/';
 
     const navEntries = typeof performance !== 'undefined' && 'getEntriesByType' in performance
       ? performance.getEntriesByType('navigation')

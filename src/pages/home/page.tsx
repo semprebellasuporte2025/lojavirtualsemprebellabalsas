@@ -6,7 +6,8 @@ import Categories from '../../components/feature/Categories';
 import BestSellers from '../../components/feature/BestSellers';
 import CategorySection from '../../components/feature/CategorySection';
 import SEOHead from '../../components/feature/SEOHead';
-import { supabase, Produto } from '../../lib/supabase';
+import { supabase } from '../../lib/supabase';
+import type { Produto } from '../../lib/supabase';
 import { useNavigate, Link } from 'react-router-dom';
 import Newsletter from '../../components/feature/Newsletter';
 
@@ -24,86 +25,53 @@ export default function HomePage() {
     };
   }, []);
 
+  // Incrementa contador local de visitas à Home
+  useEffect(() => {
+    try {
+      const key = 'home_visit_count';
+      const raw = localStorage.getItem(key);
+      const current = raw ? parseInt(raw, 10) : 0;
+      const next = Number.isFinite(current) ? current + 1 : 1;
+      localStorage.setItem(key, String(next));
+    } catch (err) {
+      console.warn('Contador de visitas local indisponível:', (err as any)?.message);
+    }
+  }, []);
+
   const carregarProdutosRecentes = async (signal: AbortSignal) => {
     try {
-      const { data: produtosBase, error: produtosError } = await supabase
-        .from('produtos')
-        .select('*')
+      // Tenta carregar pela view com avaliações
+      let { data, error } = await supabase
+        .from('products_with_ratings')
+        .select('*, categorias(nome), variantes_produto(cor, cor_hex)')
         .eq('ativo', true)
         .eq('recem_chegado', true)
         .order('created_at', { ascending: false })
         .limit(12)
         .abortSignal(signal);
 
-      if (produtosError) {
-        if (produtosError.name === 'AbortError') {
+      // Fallback para a tabela base caso a view não exista
+      if (error) {
+        if ((error as any)?.name === 'AbortError') {
           console.log('Fetch abortado: HomePage');
           return;
         }
-        throw produtosError;
-      }
-
-      const produtos = produtosBase || [];
-      if (produtos.length === 0) {
-        if (!signal.aborted) setRecentProducts([]);
-        return;
-      }
-
-      const produtoIds = produtos.map(p => p.id);
-
-      const { data: variantesData, error: variantesError } = await supabase
-        .from('variantes_produto')
-        .select('produto_id, cor, cor_hex')
-        .in('produto_id', produtoIds)
-        .abortSignal(signal);
-
-      if (variantesError) {
-        if (variantesError.name === 'AbortError') {
-          console.log('Fetch abortado: HomePage');
-          return;
+        const fallback = await supabase
+          .from('produtos')
+          .select('*, categorias(nome), variantes_produto(cor, cor_hex)')
+          .eq('ativo', true)
+          .eq('recem_chegado', true)
+          .order('created_at', { ascending: false })
+          .limit(12)
+          .abortSignal(signal);
+        if (fallback.error && (fallback.error as any)?.name !== 'AbortError') {
+          throw fallback.error;
         }
-        throw variantesError;
+        data = fallback.data;
       }
-
-      const { data: categoriasData, error: categoriasError } = await supabase
-        .from('categorias')
-        .select('id, nome')
-        .abortSignal(signal);
-
-      if (categoriasError) {
-        if (categoriasError.name === 'AbortError') {
-          console.log('Fetch abortado: HomePage');
-          return;
-        }
-        throw categoriasError;
-      }
-
-      const categoriaMap = new Map<string, { id: string; nome: string }>();
-      (categoriasData || []).forEach(cat => categoriaMap.set(cat.id, cat));
-
-      const categoriaOutro = (categoriasData || []).find(cat => cat.nome === 'Outro');
-
-      const variantesMap = new Map<string, Array<{ cor?: string; cor_hex?: string }>>();
-      (variantesData || []).forEach((v) => {
-        const arr = variantesMap.get(v.produto_id) || [];
-        arr.push({ cor: v.cor, cor_hex: v.cor_hex });
-        variantesMap.set(v.produto_id, arr);
-      });
-
-      const enriquecidos = produtos.map((p) => {
-        let categoria = categoriaMap.get(p.categoria_id);
-        if (!categoria) {
-          categoria = categoriaOutro;
-        }
-        return {
-          ...p,
-          categorias: categoria,
-          variantes_produto: variantesMap.get(p.id) || []
-        };
-      }).filter(Boolean) as Produto[];
 
       if (!signal.aborted) {
-        setRecentProducts(enriquecidos);
+        setRecentProducts((data || []) as Produto[]);
       }
     } catch (error: any) {
       if (error && error.message && !error.message.includes('AbortError')) {
@@ -201,11 +169,14 @@ export default function HomePage() {
 
                           <div className="flex items-center gap-1 mb-3">
                             <div className="flex text-yellow-400">
-                              {[...Array(5)].map((_, i) => (
+                              {[...Array(Math.round((produto as any).average_rating || 0))].map((_, i) => (
                                 <i key={i} className="ri-star-fill text-xs"></i>
                               ))}
+                              {[...Array(5 - Math.round((produto as any).average_rating || 0))].map((_, i) => (
+                                <i key={i} className="ri-star-line text-xs"></i>
+                              ))}
                             </div>
-                            <span className="text-xs text-gray-500 ml-1">(127)</span>
+                            <span className="text-xs text-gray-500 ml-1">({(produto as any).review_count || 0})</span>
                           </div>
 
                           {cores.length > 0 && (

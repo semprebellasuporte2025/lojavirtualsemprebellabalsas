@@ -1,6 +1,6 @@
 import jsPDF from 'jspdf';
 import JsBarcode from 'jsbarcode';
-import { Venda } from '@/pages/admin/vendas/listar/page';
+import type { Venda } from '@/domain/vendas';
 
 export const generateEtiqueta = (venda: Venda) => {
   try {

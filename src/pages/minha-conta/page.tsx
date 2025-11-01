@@ -661,7 +661,7 @@ export default function MinhaContaPage() {
                             </div>
                             <div className="p-3 md:p-4 border rounded-lg">
                                 <div className="font-semibold mb-2">Pagamento</div>
-                                <div className="text-sm text-gray-700">{selectedOrder.forma_pagamento === 'credit' ? 'Cartão de Crédito' : selectedOrder.forma_pagamento === 'pix' ? 'PIX' : selectedOrder.forma_pagamento === 'boleto' ? 'Boleto Bancário' : selectedOrder.forma_pagamento || '-'}</div>
+                                <div className="text-sm text-gray-700">{selectedOrder.forma_pagamento === 'credit' ? 'Cartão de Crédito' : selectedOrder.forma_pagamento === 'pix' ? 'PIX' : selectedOrder.forma_pagamento === 'dinheiro' ? 'Dinheiro' : selectedOrder.forma_pagamento || '-'}</div>
                                 {(() => {
                                     const subtotalCalc = typeof selectedOrder.subtotal === 'number' && selectedOrder.subtotal > 0
                                         ? selectedOrder.subtotal

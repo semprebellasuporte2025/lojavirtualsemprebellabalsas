@@ -419,20 +419,20 @@ export default function CheckoutForm({ cartItems, subtotal, shippingData, total 
                   <div className="text-sm text-gray-600">Aprovação imediata</div>
                 </div>
               </label>
-              
+
               <label className="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
                 <input
                   type="radio"
                   name="payment"
-                  value="boleto"
-                  checked={formData.paymentMethod === 'boleto'}
+                  value="dinheiro"
+                  checked={formData.paymentMethod === 'dinheiro'}
                   onChange={(e) => setFormData({ ...formData, paymentMethod: e.target.value })}
                   className="mr-3"
                 />
-                <i className="ri-file-text-line text-xl mr-3 text-gray-600"></i>
+                <i className="ri-money-dollar-circle-line text-xl mr-3 text-gray-600"></i>
                 <div>
-                  <div className="font-medium">Boleto Bancário</div>
-                  <div className="text-sm text-gray-600">Vencimento em 3 dias úteis</div>
+                  <div className="font-medium">Dinheiro</div>
+                  <div className="text-sm text-gray-600">Pagamento na entrega</div>
                 </div>
               </label>
             </div>

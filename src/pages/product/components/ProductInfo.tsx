@@ -317,7 +317,9 @@ export default function ProductInfo({ produto, onAddToCart }: ProductInfoProps) 
               <i className="ri-add-line text-xl"></i>
             </button>
           </div>
-          <span className="text-sm text-gray-600">{product.stock} unidades disponíveis</span>
+          {(product.stock ?? 0) > 0 && (
+            <span className="text-sm text-gray-600">{product.stock} unidades disponíveis</span>
+          )}
         </div>
       </div>
 

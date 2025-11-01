@@ -4,33 +4,7 @@ import { supabase } from '../../../../lib/supabase';
 import AdminLayout from '../../../../components/feature/AdminLayout';
 import { useToast } from '@/hooks/useToast';
 import { generateEtiqueta } from '@/lib/pdfGenerator';
-
-interface ItemPedido {
-  id: string;
-  produto_id: string;
-  nome: string;
-  quantidade: number;
-  preco_unitario: number;
-  subtotal: number;
-  tamanho?: string;
-  cor?: string;
-  imagem?: string;
-}
-
-interface Venda {
-  id: string;
-  numero_pedido: string;
-  cliente_nome: string;
-  cliente_email: string;
-  total: number;
-  status: string;
-  forma_pagamento: string;
-  created_at: string;
-  itens_count: number;
-  numero_rastreio: string | null;
-  itens_pedido: ItemPedido[];
-  endereco_entrega: any;
-}
+import type { Venda, ItemPedido } from '@/domain/vendas';
 
 export default function ListarVendas() {
   const { showToast } = useToast();

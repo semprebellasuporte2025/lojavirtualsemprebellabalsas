@@ -1,6 +1,7 @@
 
 import { useState, useEffect, useRef } from 'react';
-import { supabase, Categoria } from '../../lib/supabase';
+import { supabase } from '../../lib/supabase';
+import type { Categoria } from '../../lib/supabase';
 
 export default function Categories({ initialCategorias, catalogLoading }: { initialCategorias?: Categoria[]; catalogLoading?: boolean }) {
   const [categorias, setCategorias] = useState<Categoria[]>([]);

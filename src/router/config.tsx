@@ -1,6 +1,6 @@
 
 import { lazy, Suspense } from 'react';
-import { RouteObject } from 'react-router-dom';
+import type { RouteObject } from 'react-router-dom';
 
 // Componente de loading
 const LoadingFallback = () => (
@@ -70,10 +70,6 @@ const routes: RouteObject[] = [
   {
     path: '/checkout',
     element: <Suspense fallback={<LoadingFallback />}><CheckoutPage /></Suspense>,
-  },
-  {
-    path: '/home',
-    element: <Suspense fallback={<LoadingFallback />}><HomePage /></Suspense>,
   },
   {
     path: '/categoria/:categoria',

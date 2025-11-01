@@ -8,7 +8,8 @@ import ProductInfo from './components/ProductInfo';
 import ProductTabs from './components/ProductTabs';
 import RelatedProducts from './components/RelatedProducts';
 import SEOHead from '../../components/feature/SEOHead';
-import { supabase, Produto } from '../../lib/supabase';
+import { supabase } from '../../lib/supabase';
+import type { Produto } from '../../lib/supabase';
 import ErrorBoundary from '../../components/base/ErrorBoundary';
 import { useCart } from '../../hooks/useCart';
 

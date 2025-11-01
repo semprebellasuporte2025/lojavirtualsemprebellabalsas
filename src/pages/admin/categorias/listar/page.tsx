@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useToast } from '../../../../hooks/useToast';
 import Toast from '../../../../components/base/Toast';
 import { supabaseWithAuth } from '../../../../lib/supabaseAuth';
-import { Categoria } from '../../../../lib/supabase';
+import type { Categoria } from '../../../../lib/supabase';
 import AdminLayout from '../../../../components/feature/AdminLayout';
 import ConfirmationModal from '../../../../components/feature/modal/ConfirmationModal';
 

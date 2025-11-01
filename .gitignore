@@ -32,3 +32,28 @@ supabase/.temp/
 
 # Infra local (docker-compose, n8n etc.)
 stack/
+
+# Build outputs
+build/
+*.tsbuildinfo
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Temporary files
+*.tmp
+*.temp
+
+# Package manager
+.pnpm-store/
+.yarn/
+yarn.lock
+pnpm-lock.yaml
+
+# Supabase
+supabase/config.toml
+supabase/.branches/
+supabase/.temp/

@@ -77,26 +77,66 @@ export default function CadastrarUsuarioPage() {
     setFormData(prev => ({ ...prev, telefone: formatted }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    showToast('Usuário cadastrado com sucesso!', 'success');
-    // Limpar formulário
-    setFormData({
-      nome: '',
-      email: '',
-      senha: '',
-      confirmarSenha: '',
-      telefone: '',
-      cpf: '',
-      tipo: '',
-      departamento: '',
-      cargo: '',
-      dataAdmissao: '',
-      salario: '',
-      observacoes: '',
-      ativo: true,
-      receberNotificacoes: true
-    });
+    
+    // Validações
+    if (formData.senha !== formData.confirmarSenha) {
+      showToast('As senhas não coincidem', 'error');
+      return;
+    }
+
+    if (formData.senha.length < 6) {
+      showToast('A senha deve ter pelo menos 6 caracteres', 'error');
+      return;
+    }
+
+    try {
+      // Chamar a função de cadastro do Supabase
+      const response = await fetch('https://cproxdqrraiujnewbsvp.supabase.co/functions/v1/cadastrar-admin', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_PUBLIC_SUPABASE_ANON_KEY}`
+        },
+        body: JSON.stringify({
+          nome: formData.nome,
+          email: formData.email,
+          senha: formData.senha,
+          tipo: formData.tipo || 'admin',
+          departamento: formData.departamento || 'Administração',
+          cargo: formData.cargo || 'Administrador'
+        })
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        showToast('Usuário cadastrado com sucesso!', 'success');
+        // Limpar formulário
+        setFormData({
+          nome: '',
+          email: '',
+          senha: '',
+          confirmarSenha: '',
+          telefone: '',
+          cpf: '',
+          tipo: '',
+          departamento: '',
+          cargo: '',
+          dataAdmissao: '',
+          salario: '',
+          observacoes: '',
+          ativo: true,
+          receberNotificacoes: true
+        });
+      } else {
+        showToast(result.error || 'Erro ao cadastrar usuário', 'error');
+      }
+    } catch (error) {
+      console.error('Erro ao cadastrar usuário:', error);
+      showToast('Erro ao cadastrar usuário', 'error');
+    }
   };
 
   return (

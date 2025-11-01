@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import AdminLayout from '../../components/feature/AdminLayout';
 import { useToast } from '../../hooks/useToast';
-import { AVAILABLE_COLORS, AVAILABLE_SIZES, findClosestColorName, ColorOption } from '../../constants/colors';
+import { AVAILABLE_COLORS, AVAILABLE_SIZES, findClosestColorName } from '../../constants/colors';
+import type { ColorOption } from '../../constants/colors';
 
 interface ProductVariation {
   id: string;

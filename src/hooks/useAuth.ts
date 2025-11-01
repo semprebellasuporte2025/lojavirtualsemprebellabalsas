@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { User, Session } from '@supabase/supabase-js';
+import type { User, Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 
 export interface AuthState {
@@ -25,6 +25,7 @@ export const useAuth = () => {
     let isCheckingAdmin = false;
     let safetyTimer: number | null = null;
     let activityTimer: number | null = null;
+    let adminCheckCache: {[key: string]: {result: any, timestamp: number}} = {};
 
     // Sistema de detecção de atividade para manter sessão ativa
     const updateLastActivity = () => {
@@ -67,18 +68,32 @@ export const useAuth = () => {
     updateLastActivity();
 
     const checkAdminStatus = async (userId: string): Promise<{isAdmin: boolean, adminName?: string}> => {
+      // Verificar cache (válido por 30 segundos)
+      const cacheKey = userId;
+      const cached = adminCheckCache[cacheKey];
+      if (cached && Date.now() - cached.timestamp < 30000) {
+        console.log('[Auth] Usando cache para verificação admin');
+        return cached.result;
+      }
+
       if (isCheckingAdmin) {
-        console.log('[Auth] Verificação admin já em andamento, retornando false');
+        console.log('[Auth] Verificação admin já em andamento, aguardando...');
+        // Aguardar um pouco e tentar novamente
+        await new Promise(resolve => setTimeout(resolve, 100));
+        if (adminCheckCache[cacheKey]) {
+          return adminCheckCache[cacheKey].result;
+        }
         return {isAdmin: false};
       }
+      
       isCheckingAdmin = true;
       
       try {
         console.log('[Auth] Verificando status admin para userId:', userId);
         
-        // Timeout de 5 segundos para verificação admin
+        // Timeout reduzido para 3 segundos
         const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error('Timeout na verificação admin')), 5000);
+          setTimeout(() => reject(new Error('Timeout na verificação admin')), 3000);
         });
         
         const queryPromise = supabase
@@ -95,11 +110,23 @@ export const useAuth = () => {
           adminName: adminData?.nome
         };
         
+        // Armazenar no cache
+        adminCheckCache[cacheKey] = {
+          result,
+          timestamp: Date.now()
+        };
+        
         console.log('[Auth] Resultado verificação admin:', result);
         return result;
       } catch (error) {
         console.error('[Auth] Erro na verificação admin:', error);
-        return {isAdmin: false};
+        const fallbackResult = {isAdmin: false};
+        // Armazenar resultado de fallback no cache por um tempo menor
+        adminCheckCache[cacheKey] = {
+          result: fallbackResult,
+          timestamp: Date.now() - 25000 // Cache por apenas 5 segundos em caso de erro
+        };
+        return fallbackResult;
       } finally {
         isCheckingAdmin = false;
       }
@@ -122,13 +149,16 @@ export const useAuth = () => {
         if (session?.user) {
           const adminStatus = await checkAdminStatus(session.user.id);
           
+          // Usar sempre "Karina Arruda" como nome de exibição
+          const displayName = 'Karina Arruda';
+          
           if (safetyTimer) clearTimeout(safetyTimer);
           setAuthState({
             user: session.user,
             session,
             loading: false,
-            isAdmin: adminStatus.isAdmin,
-            adminName: adminStatus.adminName,
+            isAdmin: adminStatus.isAdmin || session.user.email === 'semprebellasuporte2025@gmail.com',
+            adminName: displayName,
           });
         } else {
           if (safetyTimer) clearTimeout(safetyTimer);
@@ -168,33 +198,28 @@ export const useAuth = () => {
           return;
         }
 
+        // Evitar processamento duplicado para o mesmo usuário
+        if (session?.user && authState.user?.id === session.user.id && authState.isAdmin !== undefined) {
+          console.log('[Auth] Usuário já processado, pulando verificação');
+          return;
+        }
+
         if (session?.user) {
           console.log('[Auth] Processando login para:', session.user.email);
-          
-          // Fallback especial para email admin específico
-          if (session.user.email === 'semprebellasuporte2025@gmail.com') {
-            console.log('[Auth] Email admin específico detectado, definindo como admin');
-            setAuthState({
-              user: session.user,
-              session,
-              loading: false,
-              isAdmin: true,
-              adminName: 'Admin Principal',
-            });
-            console.log('[Auth] ✅ Estado atualizado com sucesso (admin específico)');
-            return;
-          }
           
           try {
             const adminStatus = await checkAdminStatus(session.user.id);
             console.log('[Auth] Status admin verificado:', adminStatus);
             
+            // Usar sempre "Karina Arruda" como nome de exibição
+            const displayName = 'Karina Arruda';
+            
             setAuthState({
               user: session.user,
               session,
               loading: false,
-              isAdmin: adminStatus.isAdmin,
-              adminName: adminStatus.adminName,
+              isAdmin: adminStatus.isAdmin || session.user.email === 'semprebellasuporte2025@gmail.com',
+              adminName: displayName,
             });
             
             console.log('[Auth] ✅ Estado atualizado com sucesso');

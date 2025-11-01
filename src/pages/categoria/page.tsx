@@ -5,7 +5,8 @@ import Header from '../../components/feature/Header';
 import Footer from '../../components/feature/Footer';
 import SEOHead from '../../components/feature/SEOHead';
 import HeroSlider from '../../components/feature/HeroSlider';
-import { supabase, Produto } from '../../lib/supabase';
+import { supabase } from '../../lib/supabase';
+import type { Produto } from '../../lib/supabase';
 import Newsletter from '../../components/feature/Newsletter';
 
 export default function CategoriaPage() {
