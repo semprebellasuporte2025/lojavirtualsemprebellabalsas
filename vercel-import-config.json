@@ -1,0 +1,93 @@
+{
+  "name": "semprebella-ecommerce",
+  "framework": "vite",
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "installCommand": "npm ci",
+  "devCommand": "npm run dev",
+  "nodeVersion": "18.x",
+  "regions": ["gru1"],
+  "environmentVariables": {
+    "production": [
+      {
+        "key": "VITE_PUBLIC_SUPABASE_URL",
+        "value": "https://seu-projeto.supabase.co",
+        "type": "plain",
+        "target": ["production"]
+      },
+      {
+        "key": "VITE_PUBLIC_SUPABASE_ANON_KEY",
+        "value": "sua-chave-anonima-aqui",
+        "type": "plain",
+        "target": ["production"]
+      },
+      {
+        "key": "SUPABASE_SERVICE_ROLE_KEY",
+        "value": "sua-service-role-key-aqui",
+        "type": "secret",
+        "target": ["production"]
+      },
+      {
+        "key": "VITE_ORDER_WEBHOOK_URL",
+        "value": "https://seu-dominio.vercel.app/api/webhook/orders",
+        "type": "plain",
+        "target": ["production"]
+      },
+      {
+        "key": "SITE_URL",
+        "value": "https://seu-dominio.vercel.app",
+        "type": "plain",
+        "target": ["production"]
+      }
+    ],
+    "preview": [
+      {
+        "key": "VITE_PUBLIC_SUPABASE_URL",
+        "value": "https://seu-projeto.supabase.co",
+        "type": "plain",
+        "target": ["preview"]
+      },
+      {
+        "key": "VITE_PUBLIC_SUPABASE_ANON_KEY",
+        "value": "sua-chave-anonima-aqui",
+        "type": "plain",
+        "target": ["preview"]
+      },
+      {
+        "key": "SUPABASE_SERVICE_ROLE_KEY",
+        "value": "sua-service-role-key-aqui",
+        "type": "secret",
+        "target": ["preview"]
+      },
+      {
+        "key": "VITE_ORDER_WEBHOOK_URL",
+        "value": "https://preview-seu-dominio.vercel.app/api/webhook/orders",
+        "type": "plain",
+        "target": ["preview"]
+      },
+      {
+        "key": "SITE_URL",
+        "value": "https://preview-seu-dominio.vercel.app",
+        "type": "plain",
+        "target": ["preview"]
+      }
+    ]
+  },
+  "github": {
+    "repository": "https://github.com/semprebellasuporte2025/lojavirtualsemprebellabalsas",
+    "branch": "main",
+    "autoDeployments": true,
+    "productionBranch": "main"
+  },
+  "domains": [
+    {
+      "name": "semprebella.vercel.app",
+      "redirect": null
+    }
+  ],
+  "functions": {
+    "src/pages/api/**/*.ts": {
+      "runtime": "@vercel/node"
+    }
+  }
+}
