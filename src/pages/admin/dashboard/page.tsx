@@ -9,6 +9,7 @@ interface DashboardStats {
   totalPedidos: number;
   faturamentoTotal: number;
   totalClientes: number;
+  totalProdutos: number;
   ticketMedio: number;
 }
 
@@ -32,17 +33,31 @@ interface PedidoRecente {
   created_at: string;
 }
 
+interface BusinessSummary {
+  produtosAtivos: number;
+  taxaEntrega: number;
+  regiaoPrincipal: string;
+  produtosEstoqueBaixo: number;
+}
+
 export default function DashboardPage() {
   const { user } = useAuth(); // Obter o usuário do hook de autenticação
   const [stats, setStats] = useState<DashboardStats>({
     totalPedidos: 0,
     faturamentoTotal: 0,
     totalClientes: 0,
+    totalProdutos: 0,
     ticketMedio: 0
   });
   const [vendasMensais, setVendasMensais] = useState<VendasMensais[]>([]);
   const [formasPagamento, setFormasPagamento] = useState<FormaPagamento[]>([]);
   const [pedidosRecentes, setPedidosRecentes] = useState<PedidoRecente[]>([]);
+  const [businessSummary, setBusinessSummary] = useState<BusinessSummary>({
+    produtosAtivos: 0,
+    taxaEntrega: 0,
+    regiaoPrincipal: 'Balsas - MA',
+    produtosEstoqueBaixo: 0
+  });
   const [loading, setLoading] = useState(true); // Adicionar o estado de loading
 
   useEffect(() => {
@@ -56,23 +71,47 @@ export default function DashboardPage() {
 
   const carregarDados = async () => {
     try {
-      // Carregar estatísticas gerais
+      // Carregar estatísticas gerais usando a nova função
       const { data: statsData, error: statsError } = await supabase.rpc('get_dashboard_stats');
-      if (statsError) throw statsError;
-      if (statsData && statsData.length > 0) {
+      
+      if (statsError) {
+        console.error('Erro ao carregar estatísticas:', statsError);
+        // Fallback para consultas diretas se a função não existir
+        const { count: totalPedidos } = await supabase
+          .from('pedidos')
+          .select('*', { count: 'exact', head: true });
+        
+        const { count: totalClientes } = await supabase
+          .from('clientes')
+          .select('*', { count: 'exact', head: true });
+
+        const { count: totalProdutos } = await supabase
+          .from('produtos')
+          .select('*', { count: 'exact', head: true });
+
+        setStats({
+          totalPedidos: totalPedidos || 0,
+          faturamentoTotal: 0,
+          totalClientes: totalClientes || 0,
+          totalProdutos: totalProdutos || 0,
+          ticketMedio: 0
+        });
+      } else if (statsData && statsData.length > 0) {
         const stat = statsData[0];
         setStats({
           totalPedidos: stat.total_pedidos || 0,
           faturamentoTotal: parseFloat(stat.faturamento_total || '0'),
           totalClientes: stat.total_clientes || 0,
+          totalProdutos: stat.total_produtos || 0,
           ticketMedio: parseFloat(stat.ticket_medio || '0')
         });
       }
 
       // Carregar vendas mensais
       const { data: vendasData, error: vendasError } = await supabase.rpc('get_vendas_mensais');
-      if (vendasError) throw vendasError;
-      if (vendasData) {
+      if (vendasError) {
+        console.error('Erro ao carregar vendas mensais:', vendasError);
+      } else if (vendasData) {
         const vendas = vendasData.map((item: any) => ({
           mes: new Date(item.mes).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }),
           vendas: item.vendas_mes,
@@ -82,9 +121,10 @@ export default function DashboardPage() {
       }
 
       // Carregar formas de pagamento
-      const { data: pagamentoData, error: pagamentoError } = await supabase.rpc('get_formas_pagamento');
-      if (pagamentoError) throw pagamentoError;
-      if (pagamentoData) {
+      const { data: pagamentoData, error: pagamentoError } = await supabase.rpc('get_formas_pagamento_stats');
+      if (pagamentoError) {
+        console.error('Erro ao carregar formas de pagamento:', pagamentoError);
+      } else if (pagamentoData) {
         const formas = pagamentoData.map((item: any) => ({
           forma: item.forma_pagamento,
           quantidade: item.quantidade,
@@ -94,10 +134,62 @@ export default function DashboardPage() {
       }
 
       // Carregar pedidos recentes
-      const { data: pedidosData, error: pedidosError } = await supabase.rpc('get_pedidos_recentes');
-      if (pedidosError) throw pedidosError;
-      if (pedidosData) {
+      const { data: pedidosData, error: pedidosError } = await supabase.rpc('get_pedidos_recentes', { limite: 10 });
+      if (pedidosError) {
+        console.error('Erro ao carregar pedidos recentes:', pedidosError);
+      } else if (pedidosData) {
         setPedidosRecentes(pedidosData);
+      }
+
+      // Carregar resumo do negócio
+      const { data: businessData, error: businessError } = await supabase.rpc('get_business_summary');
+      if (businessError) {
+        console.error('Erro ao carregar resumo do negócio:', businessError);
+        console.log('Função get_business_summary não encontrada ou com erro. Usando consulta direta...');
+        
+        // Fallback: consultas diretas
+        const { count: produtosAtivosCount } = await supabase
+          .from('produtos')
+          .select('*', { count: 'exact', head: true })
+          .gt('estoque', 0);
+          
+        const { count: produtosEstoqueBaixoCount } = await supabase
+          .from('produtos')
+          .select('*', { count: 'exact', head: true })
+          .lte('estoque', 5)
+          .gte('estoque', 0);
+        
+        // Calcular taxa de entrega usando pedidos
+        const { count: pedidosEntregues } = await supabase
+          .from('pedidos')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'entregue');
+          
+        const { count: totalPedidos } = await supabase
+          .from('pedidos')
+          .select('*', { count: 'exact', head: true })
+          .neq('status', 'cancelado');
+        
+        const taxaEntrega = totalPedidos > 0 ? 
+          Math.round((pedidosEntregues / totalPedidos) * 100 * 10) / 10 : 0;
+        
+        console.log('Fallback - Pedidos entregues:', pedidosEntregues, 'Total pedidos:', totalPedidos, 'Taxa:', taxaEntrega);
+        
+        setBusinessSummary({
+          produtosAtivos: produtosAtivosCount || 0,
+          taxaEntrega: taxaEntrega,
+          regiaoPrincipal: 'Balsas - MA',
+          produtosEstoqueBaixo: produtosEstoqueBaixoCount || 0
+        });
+      } else if (businessData && businessData.length > 0) {
+        const business = businessData[0];
+        console.log('Dados do resumo do negócio carregados:', business);
+        setBusinessSummary({
+          produtosAtivos: business.produtos_ativos || 0,
+          taxaEntrega: parseFloat(business.taxa_entrega_percentual || '0'),
+          regiaoPrincipal: business.regiao_principal || 'Balsas - MA',
+          produtosEstoqueBaixo: business.produtos_estoque_baixo || 0
+        });
       }
 
     } catch (error) {
@@ -141,11 +233,11 @@ export default function DashboardPage() {
         <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Faturamento Total</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.faturamentoTotal > 0 ? formatarMoeda(stats.faturamentoTotal) : 'R$ 0,00'}</p>
+              <p className="text-sm font-medium text-gray-600">Produtos Cadastrados</p>
+              <p className="text-2xl font-bold text-gray-900">{stats.totalProdutos}</p>
             </div>
-            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-              <i className="ri-money-dollar-circle-line text-green-600 text-xl"></i>
+            <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+              <i className="ri-box-3-line text-purple-600 text-xl"></i>
             </div>
           </div>
         </div>
@@ -170,6 +262,18 @@ export default function DashboardPage() {
             </div>
             <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
               <i className="ri-bar-chart-line text-purple-600 text-xl"></i>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Faturamento Total</p>
+              <p className="text-2xl font-bold text-gray-900">{stats.faturamentoTotal > 0 ? formatarMoeda(stats.faturamentoTotal) : 'R$ 0,00'}</p>
+            </div>
+            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+              <i className="ri-money-dollar-circle-line text-green-600 text-xl"></i>
             </div>
           </div>
         </div>
@@ -267,10 +371,25 @@ export default function DashboardPage() {
                 </div>
                 <div>
                   <p className="font-medium text-gray-900">Produtos Ativos</p>
-                  <p className="text-sm text-gray-600">Catálogo disponível</p>
+                  <p className="text-sm text-gray-600">Com estoque disponível</p>
                 </div>
               </div>
-              <span className="text-lg font-bold text-gray-900">32</span>
+              <span className="text-lg font-bold text-gray-900">{businessSummary.produtosAtivos}</span>
+            </div>
+
+            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+              <div className="flex items-center">
+                <div className={`w-10 h-10 rounded-lg flex items-center justify-center mr-3 ${businessSummary.produtosEstoqueBaixo > 0 ? 'bg-yellow-100' : 'bg-green-100'}`}>
+                  <i className={`${businessSummary.produtosEstoqueBaixo > 0 ? 'ri-alert-line text-yellow-600' : 'ri-check-line text-green-600'}`}></i>
+                </div>
+                <div>
+                  <p className="font-medium text-gray-900">Estoque Baixo</p>
+                  <p className="text-sm text-gray-600">Produtos para repor</p>
+                </div>
+              </div>
+              <span className={`text-lg font-bold ${businessSummary.produtosEstoqueBaixo > 0 ? 'text-yellow-600' : 'text-green-600'}`}>
+                {businessSummary.produtosEstoqueBaixo}
+              </span>
             </div>
 
             <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
@@ -283,7 +402,9 @@ export default function DashboardPage() {
                   <p className="text-sm text-gray-600">Pedidos entregues</p>
                 </div>
               </div>
-              <span className="text-lg font-bold text-green-600">100%</span>
+              <span className={`text-lg font-bold ${businessSummary.taxaEntrega >= 95 ? 'text-green-600' : businessSummary.taxaEntrega >= 80 ? 'text-yellow-600' : 'text-red-600'}`}>
+                {businessSummary.taxaEntrega.toFixed(1)}%
+              </span>
             </div>
 
             <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
@@ -293,23 +414,10 @@ export default function DashboardPage() {
                 </div>
                 <div>
                   <p className="font-medium text-gray-900">Região Principal</p>
-                  <p className="text-sm text-gray-600">Área de atuação</p>
+                  <p className="text-sm text-gray-600">Maior volume de vendas</p>
                 </div>
               </div>
-              <span className="text-sm font-bold text-gray-900">Balsas - MA</span>
-            </div>
-
-            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-              <div className="flex items-center">
-                <div className="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center mr-3">
-                  <i className="ri-alert-line text-yellow-600"></i>
-                </div>
-                <div>
-                  <p className="font-medium text-gray-900">Estoque Baixo</p>
-                  <p className="text-sm text-gray-600">Produtos para repor</p>
-                </div>
-              </div>
-              <span className="text-lg font-bold text-yellow-600">1</span>
+              <span className="text-sm font-bold text-gray-900">{businessSummary.regiaoPrincipal}</span>
             </div>
           </div>
         </div>

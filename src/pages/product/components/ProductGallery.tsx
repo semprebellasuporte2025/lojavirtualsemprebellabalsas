@@ -89,10 +89,19 @@ export default function ProductGallery({ images, productName }: ProductGalleryPr
         />
         
         {/* Zoom Indicator - apenas desktop */}
-        {isZoomed && window.innerWidth >= 640 && (
+        {window.innerWidth >= 640 && (
           <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm px-3 py-2 rounded-lg text-sm font-medium">
-            <i className="ri-zoom-in-line mr-1"></i>
-            Zoom ativo
+            {isZoomed ? (
+              <>
+                <i className="ri-zoom-in-line mr-1"></i>
+                Zoom ativo
+              </>
+            ) : (
+              <>
+                <i className="ri-zoom-in-line mr-1"></i>
+                Clique para ampliar
+              </>
+            )}
           </div>
         )}
 

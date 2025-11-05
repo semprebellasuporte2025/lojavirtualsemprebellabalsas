@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabase';
 import { useAuth } from '../../../hooks/useAuth';
 import { useCart } from '../../../hooks/useCart';
@@ -28,6 +28,10 @@ export default function CheckoutForm({ cartItems, subtotal, shippingData, total 
   const [loading, setLoading] = useState(false);
   const [orderComplete, setOrderComplete] = useState(false);
   const [orderId, setOrderId] = useState('');
+  const [clienteInfo, setClienteInfo] = useState<{ id?: string; nome?: string; cpf?: string; email?: string } | null>(null);
+  const [cpfInput, setCpfInput] = useState('');
+  const [isCepLoading, setIsCepLoading] = useState(false);
+  const [cepError, setCepError] = useState<string | null>(null);
   
   const [formData, setFormData] = useState({
     cep: '',
@@ -37,30 +41,93 @@ export default function CheckoutForm({ cartItems, subtotal, shippingData, total 
     bairro: '',
     cidade: '',
     estado: '',
-    paymentMethod: 'credit'
+    paymentMethod: 'pix'
   });
 
-  const handleCepChange = async (cep: string) => {
-    const cleanCep = cep.replace(/\D/g, '');
-    setFormData({ ...formData, cep: cleanCep });
-    
-    if (cleanCep.length === 8) {
-      try {
-        const response = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
-        const data = await response.json();
-        
-        if (!data.erro) {
-          setFormData(prev => ({
-            ...prev,
-            endereco: data.logradouro || '',
-            bairro: data.bairro || '',
-            cidade: data.localidade || '',
-            estado: data.uf || ''
-          }));
-        }
-      } catch (error) {
-        console.error('Erro ao buscar CEP:', error);
+  // Helpers CPF
+  const formatCPF = (value: string) => {
+    const numbers = (value || '').replace(/\D/g, '').slice(0, 11);
+    return numbers
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+  };
+
+  const validateCPF = (cpf: string) => {
+    const numbers = (cpf || '').replace(/\D/g, '');
+    if (!numbers || numbers.length !== 11) return false;
+    if (/^(\d)\1{10}$/.test(numbers)) return false;
+    let sum = 0;
+    for (let i = 0; i < 9; i++) sum += parseInt(numbers.charAt(i)) * (10 - i);
+    let check1 = 11 - (sum % 11);
+    if (check1 >= 10) check1 = 0;
+    if (check1 !== parseInt(numbers.charAt(9))) return false;
+    sum = 0;
+    for (let i = 0; i < 10; i++) sum += parseInt(numbers.charAt(i)) * (11 - i);
+    let check2 = 11 - (sum % 11);
+    if (check2 >= 10) check2 = 0;
+    return check2 === parseInt(numbers.charAt(10));
+  };
+
+  // Helpers CEP
+  const formatCEP = (value: string) => {
+    const digits = (value || '').replace(/\D/g, '').slice(0, 8);
+    return digits.replace(/(\d{5})(\d{1,3})$/, '$1-$2');
+  };
+
+  const fetchCepData = async (digits: string) => {
+    const cleanCep = (digits || '').replace(/\D/g, '');
+    if (cleanCep.length !== 8) return;
+    setIsCepLoading(true);
+    setCepError(null);
+    try {
+      const response = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
+      const data = await response.json();
+      if (data?.erro) {
+        setCepError('CEP não encontrado. Verifique e tente novamente.');
+        return;
       }
+      setFormData(prev => ({
+        ...prev,
+        endereco: data.logradouro || prev.endereco,
+        bairro: data.bairro || prev.bairro,
+        cidade: data.localidade || prev.cidade,
+        estado: (data.uf || prev.estado || '').toUpperCase(),
+      }));
+    } catch (error) {
+      console.error('Erro ao buscar CEP:', error);
+      setCepError('Erro ao consultar o CEP. Tente novamente.');
+    } finally {
+      setIsCepLoading(false);
+    }
+  };
+
+  // Carregar dados do cliente para exibir nome e CPF
+  useEffect(() => {
+    const loadCliente = async () => {
+      if (!user) return;
+      const { data: cliente, error } = await supabase
+        .from('clientes')
+        .select('id, nome, email, cpf')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if (!error && cliente) {
+        setClienteInfo(cliente);
+        setCpfInput(cliente.cpf || '');
+      } else {
+        // Caso não tenha cadastro, deixa para handleSubmit criar mínimo
+        setClienteInfo({ nome: (user as any)?.user_metadata?.nome || 'Cliente', email: user.email || undefined });
+      }
+    };
+    loadCliente();
+  }, [user]);
+
+  const handleCepChange = async (cep: string) => {
+    const cleanCep = (cep || '').replace(/\D/g, '').slice(0, 8);
+    setCepError(null);
+    setFormData({ ...formData, cep: cleanCep });
+    if (cleanCep.length === 8) {
+      await fetchCepData(cleanCep);
     }
   };
 
@@ -78,9 +145,9 @@ export default function CheckoutForm({ cartItems, subtotal, shippingData, total 
       // Obter cliente (clientes.id) a partir do user_id (auth user id)
       const { data: cliente, error: clienteError } = await supabase
         .from('clientes')
-        .select('id, nome, email')
+        .select('id, nome, email, cpf')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
       let clienteId = cliente?.id as string | undefined;
       if (clienteError || !clienteId) {
@@ -95,6 +162,24 @@ export default function CheckoutForm({ cartItems, subtotal, shippingData, total 
           throw new Error('Erro ao identificar cliente');
         }
         clienteId = novoCliente?.id as string | undefined;
+      }
+
+      // Atualizar CPF se não existir e o usuário informou
+      const cpfDigits = (cpfInput || '').replace(/\D/g, '');
+      if ((!cliente?.cpf || cliente?.cpf === '') && cpfDigits) {
+        if (!validateCPF(cpfDigits)) {
+          throw new Error('CPF inválido. Verifique e tente novamente.');
+        }
+        const { error: cpfUpdateErr } = await supabase
+          .from('clientes')
+          .update({ cpf: cpfDigits })
+          .eq('id', clienteId!);
+        if (cpfUpdateErr) {
+          console.warn('Falha ao salvar CPF do cliente:', cpfUpdateErr.message);
+        } else {
+          cliente = { ...(cliente || {}), cpf: cpfDigits } as any;
+          setClienteInfo(prev => ({ ...(prev || {}), cpf: cpfDigits }));
+        }
       }
 
       // Converter número para inteiro para evitar erro de tipo
@@ -117,39 +202,85 @@ export default function CheckoutForm({ cartItems, subtotal, shippingData, total 
         cidade: formData.cidade,
         estado: formData.estado
       };
-
-      const { data: enderecoPrim, error: enderecoPrimError } = await supabase
-        .from('enderecos')
-        .insert([payloadClienteId])
-        .select()
-        .single();
-
-      if (enderecoPrimError) {
-        console.error('Erro ao criar endereço (clientes.id):', {
-          message: enderecoPrimError.message,
-          details: (enderecoPrimError as any)?.details,
-          code: (enderecoPrimError as any)?.code
-        });
-        // Fallback com auth.uid()
-        const payloadAuthUid = { ...payloadClienteId, cliente_id: user.id };
-        const { data: enderecoSec, error: enderecoSecError } = await supabase
+      // Tentar reutilizar endereço existente (evita duplicação)
+      let enderecoPrim: any | null = null;
+      try {
+        const { data: existente, error: existErr } = await supabase
           .from('enderecos')
-          .insert(payloadAuthUid)
+          .select('id, cliente_id, cep, endereco, numero, complemento, bairro, cidade, estado')
+          .eq('cliente_id', clienteId!)
+          .eq('cep', formData.cep)
+          .eq('endereco', formData.endereco)
+          .eq('numero', numeroInt)
+          .eq('bairro', formData.bairro)
+          .eq('cidade', formData.cidade)
+          .eq('estado', formData.estado)
+          .limit(1);
+        if (!existErr && existente && existente.length > 0) {
+          enderecoPrim = existente[0];
+        }
+      } catch (err) {
+        console.warn('Falha ao verificar endereço existente, prosseguindo com inserção:', err);
+      }
+
+      if (enderecoPrim) {
+        endereco = enderecoPrim;
+      } else {
+        const { data: novoEndereco, error: enderecoPrimError } = await supabase
+          .from('enderecos')
+          .insert([payloadClienteId])
           .select()
           .single();
 
-        if (enderecoSecError) {
-          console.error('Erro ao criar endereço (auth.uid fallback):', {
-            message: enderecoSecError.message,
-            details: (enderecoSecError as any)?.details,
-            code: (enderecoSecError as any)?.code
+        if (enderecoPrimError) {
+          console.error('Erro ao criar endereço (clientes.id):', {
+            message: enderecoPrimError.message,
+            details: (enderecoPrimError as any)?.details,
+            code: (enderecoPrimError as any)?.code
           });
-          throw new Error(enderecoSecError.message || 'Erro ao salvar endereço');
+          // Fallback com auth.uid() e também tentar reutilizar
+          const payloadAuthUid = { ...payloadClienteId, cliente_id: user.id };
+
+          // Buscar existente com auth.uid
+          try {
+            const { data: existenteAuth, error: existAuthErr } = await supabase
+              .from('enderecos')
+              .select('id, cliente_id, cep, endereco, numero, complemento, bairro, cidade, estado')
+              .eq('cliente_id', user.id)
+              .eq('cep', formData.cep)
+              .eq('endereco', formData.endereco)
+              .eq('numero', numeroInt)
+              .eq('bairro', formData.bairro)
+              .eq('cidade', formData.cidade)
+              .eq('estado', formData.estado)
+              .limit(1);
+            if (!existAuthErr && existenteAuth && existenteAuth.length > 0) {
+              usedAuthUid = true;
+              endereco = existenteAuth[0];
+            }
+          } catch (_) {}
+
+        if (!endereco) {
+          const { data: enderecoSec, error: enderecoSecError } = await supabase
+            .from('enderecos')
+            .insert(payloadAuthUid)
+            .select()
+            .single();
+
+          if (enderecoSecError) {
+            console.error('Erro ao criar endereço (auth.uid fallback):', {
+              message: enderecoSecError.message,
+              details: (enderecoSecError as any)?.details,
+              code: (enderecoSecError as any)?.code
+            });
+            throw new Error(enderecoSecError.message || 'Erro ao salvar endereço');
+          }
+          usedAuthUid = true;
+          endereco = enderecoSec;
         }
-        usedAuthUid = true;
-        endereco = enderecoSec;
-      } else {
-        endereco = enderecoPrim;
+        } else {
+          endereco = novoEndereco;
+        }
       }
 
       const finalClienteId = usedAuthUid ? user.id : clienteId;
@@ -287,6 +418,53 @@ export default function CheckoutForm({ cartItems, subtotal, shippingData, total 
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
       <div className="lg:col-span-2">
         <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Dados do Cliente */}
+          <div className="bg-white rounded-lg shadow-sm border p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              <i className="ri-user-line mr-2"></i>
+              Dados do Cliente
+            </h3>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Nome Completo</label>
+                <input
+                  type="text"
+                  value={
+                    clienteInfo?.nome || (user as any)?.user_metadata?.nome || ''
+                  }
+                  readOnly
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-sm"
+                  placeholder="Nome do cliente"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">CPF</label>
+                {clienteInfo?.cpf ? (
+                  <input
+                    type="text"
+                    value={formatCPF(clienteInfo.cpf)}
+                    readOnly
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-sm"
+                  />
+                ) : (
+                  <input
+                    type="text"
+                    value={formatCPF(cpfInput)}
+                    onChange={(e) => setCpfInput(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent text-sm"
+                    placeholder="000.000.000-00"
+                    maxLength={14}
+                  />
+                )}
+                {!clienteInfo?.cpf && cpfInput && !validateCPF(cpfInput) && (
+                  <p className="text-xs text-red-600 mt-1">CPF inválido</p>
+                )}
+              </div>
+            </div>
+          </div>
+
           <div className="bg-white rounded-lg shadow-sm border p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">
               <i className="ri-truck-line mr-2"></i>
@@ -296,15 +474,26 @@ export default function CheckoutForm({ cartItems, subtotal, shippingData, total 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">CEP</label>
-                <input
-                  type="text"
-                  required
-                  value={formData.cep}
-                  onChange={(e) => handleCepChange(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent text-sm"
-                  placeholder="00000-000"
-                  maxLength={9}
-                />
+                <div className="relative">
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    pattern="\d{5}-?\d{3}"
+                    required
+                    value={formatCEP(formData.cep)}
+                    onChange={(e) => handleCepChange(e.target.value)}
+                    onBlur={() => fetchCepData(formData.cep)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent text-sm pr-10"
+                    placeholder="00000-000"
+                    maxLength={9}
+                  />
+                  {isCepLoading && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+                  )}
+                </div>
+                {cepError && (
+                  <p className="text-xs text-red-600 mt-1">{cepError}</p>
+                )}
               </div>
               
               <div>
@@ -388,22 +577,7 @@ export default function CheckoutForm({ cartItems, subtotal, shippingData, total 
             </h3>
             
             <div className="space-y-3">
-              <label className="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
-                <input
-                  type="radio"
-                  name="payment"
-                  value="credit"
-                  checked={formData.paymentMethod === 'credit'}
-                  onChange={(e) => setFormData({ ...formData, paymentMethod: e.target.value })}
-                  className="mr-3"
-                />
-                <i className="ri-bank-card-line text-xl mr-3 text-gray-600"></i>
-                <div>
-                  <div className="font-medium">Cartão de Crédito</div>
-                  <div className="text-sm text-gray-600">Parcelamento em até 12x</div>
-                </div>
-              </label>
-              
+              {/* PIX primeiro */}
               <label className="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
                 <input
                   type="radio"
@@ -420,6 +594,24 @@ export default function CheckoutForm({ cartItems, subtotal, shippingData, total 
                 </div>
               </label>
 
+              {/* Cartão de Crédito */}
+              <label className="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+                <input
+                  type="radio"
+                  name="payment"
+                  value="credit"
+                  checked={formData.paymentMethod === 'credit'}
+                  onChange={(e) => setFormData({ ...formData, paymentMethod: e.target.value })}
+                  className="mr-3"
+                />
+                <i className="ri-bank-card-line text-xl mr-3 text-gray-600"></i>
+                <div>
+                  <div className="font-medium">Cartão de Crédito</div>
+                  <div className="text-sm text-gray-600">Parcelamento em até 12x</div>
+                </div>
+              </label>
+
+              {/* Dinheiro */}
               <label className="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
                 <input
                   type="radio"

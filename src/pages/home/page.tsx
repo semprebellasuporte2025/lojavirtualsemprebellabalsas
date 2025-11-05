@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import Header from '../../components/feature/Header';
 import Footer from '../../components/feature/Footer';
-import HeroSlider from '../../components/feature/HeroSlider';
+import BannerSlider from '../../components/feature/BannerSlider';
 import Categories from '../../components/feature/Categories';
 import BestSellers from '../../components/feature/BestSellers';
 import CategorySection from '../../components/feature/CategorySection';
@@ -50,16 +50,16 @@ export default function HomePage() {
         .abortSignal(signal);
 
       if (error) {
-          if ((error as any)?.name === 'AbortError') {
-            console.log('Fetch abortado: HomePage');
-            return;
-          }
-          throw error;
+        if ((error as any)?.name === 'AbortError') {
+          console.log('Fetch abortado: HomePage');
+          return;
         }
+        throw error;
+      }
 
-        if (!signal.aborted) {
-          setRecentProducts((data || []) as Produto[]);
-        }
+      if (!signal.aborted) {
+        setRecentProducts((data || []) as Produto[]);
+      }
     } catch (error: any) {
       if (error && error.message && !error.message.includes('AbortError')) {
         console.error('Erro ao carregar produtos recentes:', error);
@@ -102,7 +102,7 @@ export default function HomePage() {
       <div className="min-h-screen bg-white">
         <Header />
         
-          <HeroSlider />
+          <BannerSlider />
           <Categories />
           
           {!loading && recentProducts.length > 0 && (
@@ -143,18 +143,18 @@ export default function HomePage() {
                           <img
                             src={produto.imagens?.[0] || '/placeholder-product.svg'}
                             alt={produto.nome}
-                            className="w-full h-80 object-cover object-top group-hover:scale-105 transition-transform duration-300"
+                            className="w-full h-96 object-contain object-top group-hover:scale-105 transition-transform duration-300 bg-gray-50"
                           />
                         </div>
 
-                        <div className="p-4">
+                        <div className="p-3">
                           <p className="text-xs text-gray-500 mb-1 uppercase tracking-wide">{categoriaNome}</p>
                           
-                          <h3 className="text-sm font-medium text-gray-800 mb-2 line-clamp-2 min-h-[40px]">
+                          <h3 className="text-sm font-medium text-gray-800 mb-1 line-clamp-2">
                             {produto.nome}
                           </h3>
 
-                          <div className="flex items-center gap-1 mb-3">
+                          <div className="flex items-center gap-1 mb-1">
                             <div className="flex text-yellow-400">
                               {[...Array(Math.round((produto as any).average_rating || 0))].map((_, i) => (
                                 <i key={i} className="ri-star-fill text-xs"></i>
@@ -168,8 +168,8 @@ export default function HomePage() {
 
                           {cores.length > 0 && (
                             <>
-                              <p className="text-xs text-gray-600 mb-3">Cores disponíveis:</p>
-                              <div className="flex gap-3 mb-4">
+                              <p className="text-xs text-gray-600 mb-1">Cores disponíveis:</p>
+                              <div className="flex gap-3 mb-2">
                                 {cores.map((cor, index) => (
                                   <div key={index} className="relative group">
                                     <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-0.5 rounded-full bg-white text-gray-800 border border-gray-300 text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none shadow-sm">
@@ -186,7 +186,7 @@ export default function HomePage() {
                             </>
                           )}
 
-                          <div className="mb-4">
+                          <div className="mt-2">
                             {produto.preco_promocional ? (
                               <div className="flex items-center gap-2">
                                 <span className="text-gray-400 line-through text-sm">

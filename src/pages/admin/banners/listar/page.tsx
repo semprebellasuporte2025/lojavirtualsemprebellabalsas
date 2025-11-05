@@ -1,71 +1,150 @@
 
-import { useState } from 'react';
-import AdminLayout from '../../../../components/feature/AdminLayout';
-import { useToast } from '../../../../hooks/useToast';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { supabase } from '@/lib/supabase';
+import AdminLayout from '@/components/feature/AdminLayout';
+import { useToast } from '@/hooks/useToast';
+import ConfirmationModal from '@/components/feature/modal/ConfirmationModal';
 
 interface Banner {
-  id: number;
+  id: string;
   titulo: string;
   subtitulo: string;
-  imagem: string;
-  link: string;
-  ordem: number;
+  imagem_url: string;
+  link_destino: string;
+  ordem_exibicao: number;
   ativo: boolean;
 }
 
 export default function ListarBannersPage() {
+  const navigate = useNavigate();
   const { showToast } = useToast();
 
-  const [banners, setBanners] = useState<Banner[]>([
-    {
-      id: 1,
-      titulo: 'Promoção de Verão',
-      subtitulo: 'Até 50% de desconto',
-      imagem: 'https://readdy.ai/api/search-image?query=Summer%20sale%20banner%20with%20vibrant%20colors%2C%20beach%20theme%2C%20tropical%20elements%2C%20modern%20e-commerce%20design%2C%20clean%20background%20with%20product%20highlights%2C%20professional%20marketing%20banner&width=400&height=150&seq=banner1&orientation=landscape',
-      link: '/promocao-verao',
-      ordem: 1,
-      ativo: true
-    },
-    {
-      id: 2,
-      titulo: 'Novos Produtos',
-      subtitulo: 'Confira as novidades',
-      imagem: 'https://readdy.ai/api/search-image?query=New%20products%20banner%20with%20modern%20minimalist%20design%2C%20elegant%20product%20showcase%2C%20clean%20white%20background%2C%20professional%20e-commerce%20banner%2C%20fresh%20and%20contemporary%20style&width=400&height=150&seq=banner2&orientation=landscape',
-      link: '/novidades',
-      ordem: 2,
-      ativo: true
-    },
-    {
-      id: 3,
-      titulo: 'Frete Grátis',
-      subtitulo: 'Em compras acima de R$ 200',
-      imagem: 'https://readdy.ai/api/search-image?query=Free%20shipping%20banner%20with%20delivery%20truck%20icon%2C%20modern%20e-commerce%20design%2C%20clean%20background%2C%20professional%20marketing%20banner%2C%20blue%20and%20white%20color%20scheme&width=400&height=150&seq=banner3&orientation=landscape',
-      link: '/frete-gratis',
-      ordem: 3,
-      ativo: false
-    }
-  ]);
-
+  const [banners, setBanners] = useState<Banner[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [showModal, setShowModal] = useState(false);
+  const [bannerToDelete, setBannerToDelete] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchBanners = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('banners')
+          .select('*')
+          .order('ordem_exibicao', { ascending: true });
+
+        if (error) {
+          console.error('Erro ao buscar banners:', error);
+          showToast('error', 'Erro ao carregar banners');
+        } else {
+          setBanners(data || []);
+        }
+      } catch (error) {
+        console.error('Erro inesperado:', error);
+        showToast('error', 'Erro inesperado ao carregar banners');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchBanners();
+  }, [showToast]);
 
   const filteredBanners = banners.filter(banner =>
     banner.titulo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    banner.subtitulo.toLowerCase().includes(searchTerm.toLowerCase())
+    (banner.subtitulo && banner.subtitulo.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
-  const handleDelete = (id: number) => {
-    if (confirm('Tem certeza que deseja excluir este banner?')) {
-      setBanners(banners.filter(b => b.id !== id));
-      showToast('Banner excluído com sucesso!', 'success');
+  const handleDelete = (id: string) => {
+    setBannerToDelete(id);
+    setShowModal(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!bannerToDelete) return;
+
+    try {
+      // 1. Get image_url from the banner to be deleted
+      const { data: bannerData, error: fetchError } = await supabase
+        .from('banners')
+        .select('imagem_url')
+        .eq('id', bannerToDelete)
+        .single();
+
+      if (fetchError) {
+        throw new Error(`Erro ao buscar banner para exclusão: ${fetchError.message}`);
+      }
+
+      // 2. Delete the banner record from the database
+      const { error: deleteBannerError } = await supabase
+        .from('banners')
+        .delete()
+        .eq('id', bannerToDelete);
+
+      if (deleteBannerError) {
+        throw new Error(`Erro ao excluir banner do banco de dados: ${deleteBannerError.message}`);
+      }
+
+      // 3. If database deletion is successful, delete the image from storage
+      if (bannerData?.imagem_url) {
+        const fileName = bannerData.imagem_url.split('/').pop();
+        if (fileName) {
+          const { error: deleteImageError } = await supabase.storage
+            .from('banners')
+            .remove([`public/${fileName}`]);
+
+          if (deleteImageError) {
+            // Log the image deletion error but don't block the success message
+            // as the main record is already deleted.
+            console.error('Erro ao excluir a imagem do storage, mas o banner foi removido do banco de dados:', deleteImageError);
+            showToast('warning', 'O banner foi excluído, mas houve um erro ao remover o arquivo de imagem.');
+          }
+        }
+      }
+
+      setBanners(banners.filter((banner) => banner.id !== bannerToDelete));
+      showToast('success', 'Banner excluído com sucesso!');
+    } catch (error: any) {
+      console.error('Erro ao excluir o banner:', error.message);
+      showToast('error', `Erro ao excluir o banner: ${error.message}`);
+    } finally {
+      setShowModal(false);
+      setBannerToDelete(null);
     }
   };
 
-  const toggleStatus = (id: number) => {
-    setBanners(banners.map(banner => 
-      banner.id === id ? { ...banner, ativo: !banner.ativo } : banner
-    ));
-    showToast('Status alterado com sucesso!', 'success');
+  const toggleStatus = async (id: string, ativo: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('banners')
+        .update({ ativo: !ativo })
+        .eq('id', id);
+
+      if (error) {
+        console.error('Erro ao alterar status:', error);
+        showToast('error', 'Erro ao alterar status');
+      } else {
+        setBanners(banners.map(banner =>
+          banner.id === id ? { ...banner, ativo: !banner.ativo } : banner
+        ));
+        showToast('success', 'Status alterado com sucesso!');
+      }
+    } catch (error) {
+      console.error('Erro inesperado:', error);
+      showToast('error', 'Erro inesperado ao alterar status');
+    }
   };
+
+  if (loading) {
+    return (
+      <AdminLayout>
+        <div className="p-6 text-center">
+          <p>Carregando banners...</p>
+        </div>
+      </AdminLayout>
+    );
+  }
 
   return (
     <AdminLayout>
@@ -76,7 +155,7 @@ export default function ListarBannersPage() {
             <p className="text-gray-600 dark:text-gray-400 mt-1">Gerencie os banners da loja</p>
           </div>
           <button
-            onClick={() => window.REACT_APP_NAVIGATE('/paineladmin/banners/cadastrar')}
+            onClick={() => navigate('/paineladmin/banners/cadastrar')}
             className="px-4 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-colors whitespace-nowrap"
           >
             <i className="ri-add-line mr-2"></i>
@@ -114,35 +193,35 @@ export default function ListarBannersPage() {
                 {filteredBanners.map((banner) => (
                   <tr key={banner.id} className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700">
                     <td className="py-3 px-4">
-                      <img src={banner.imagem} alt={banner.titulo} className="w-24 h-16 object-cover rounded" />
+                      <img src={banner.imagem_url} alt={banner.titulo} className="w-24 h-16 object-cover rounded" />
                     </td>
                     <td className="py-3 px-4 text-sm text-gray-800 dark:text-gray-200">{banner.titulo}</td>
                     <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">{banner.subtitulo}</td>
-                    <td className="py-3 px-4 text-sm text-gray-800 dark:text-gray-200">{banner.ordem}</td>
+                    <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">{banner.ordem_exibicao}</td>
                     <td className="py-3 px-4">
-                      <button
-                        onClick={() => toggleStatus(banner.id)}
-                        className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap cursor-pointer ${
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs font-medium cursor-pointer ${
                           banner.ativo
                             ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
                             : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
                         }`}
+                        onClick={() => toggleStatus(banner.id, banner.ativo)}
                       >
                         {banner.ativo ? 'Ativo' : 'Inativo'}
-                      </button>
+                      </span>
                     </td>
                     <td className="py-3 px-4">
-                      <div className="flex gap-2">
+                      <div className="flex items-center gap-2">
                         <button
-                          onClick={() => console.log('Editar banner:', banner.id)}
-                          className="w-8 h-8 flex items-center justify-center text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900 rounded cursor-pointer"
+                          onClick={() => navigate(`/paineladmin/banners/editar/${banner.id}`)}
+                          className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 p-1"
                           title="Editar"
                         >
-                          <i className="ri-edit-line"></i>
+                          <i className="ri-pencil-line"></i>
                         </button>
                         <button
                           onClick={() => handleDelete(banner.id)}
-                          className="w-8 h-8 flex items-center justify-center text-red-600 hover:bg-red-50 dark:hover:bg-red-900 rounded cursor-pointer"
+                          className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 p-1"
                           title="Excluir"
                         >
                           <i className="ri-delete-bin-line"></i>
@@ -163,6 +242,13 @@ export default function ListarBannersPage() {
           </div>
         </div>
       </div>
+      <ConfirmationModal
+        show={showModal}
+        onHide={() => setShowModal(false)}
+        onConfirm={confirmDelete}
+        title="Confirmar Exclusão"
+        body="Tem certeza que deseja excluir este banner?"
+      />
     </AdminLayout>
   );
 }

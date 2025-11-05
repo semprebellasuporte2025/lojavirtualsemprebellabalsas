@@ -420,18 +420,18 @@ export default function CategoriaPage() {
                             <img
                               src={produto.imagens?.[0] || '/placeholder-product.svg'}
                               alt={produto.nome}
-                              className="w-full h-80 object-cover object-top group-hover:scale-105 transition-transform duration-300"
+                              className="w-full h-96 object-contain object-top group-hover:scale-105 transition-transform duration-300 bg-gray-50"
                             />
                           </div>
 
                           <div className="p-4">
                             <p className="text-xs text-gray-500 mb-1 uppercase tracking-wide">{produto.categorias?.nome || categoria}</p>
                             
-                            <h3 className="text-sm font-medium text-gray-800 mb-2 line-clamp-2 min-h-[40px]">
+                            <h3 className="text-sm font-medium text-gray-800 mb-1 line-clamp-2">
                               {produto.nome}
                             </h3>
 
-                            <div className="flex items-center gap-1 mb-3">
+                            <div className="flex items-center gap-1 mb-1">
                               <div className="flex text-yellow-400">
                                 {[...Array(Math.round(produto.average_rating || 0))].map((_, i) => (
                                   <i key={i} className="ri-star-fill text-xs"></i>
@@ -443,7 +443,7 @@ export default function CategoriaPage() {
                               <span className="text-xs text-gray-500 ml-1">({produto.review_count || 0})</span>
                             </div>
 
-                            <p className="text-xs text-gray-600 mb-3">Cores disponíveis:</p>
+                            <p className="text-xs text-gray-600 mb-1">Cores disponíveis:</p>
                             <div className="flex gap-2 mb-4">
                               {produto.variantes_produto && produto.variantes_produto.length > 0 ? (
                                 produto.variantes_produto.map((variante, index) => (
@@ -459,7 +459,7 @@ export default function CategoriaPage() {
                               )}
                             </div>
 
-                            <div className="mb-4">
+                            <div className="mb-2">
                               {produto.preco_promocional ? (
                                 <div className="flex items-center gap-2">
                                   <span className="text-gray-400 line-through text-sm">

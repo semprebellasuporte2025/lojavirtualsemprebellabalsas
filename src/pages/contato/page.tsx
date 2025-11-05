@@ -1,8 +1,9 @@
 
 import { useState } from 'react';
-import Header from '../../components/feature/Header';
-import Footer from '../../components/feature/Footer';
-import SEOHead from '../../components/feature/SEOHead';
+import Header from '@/components/feature/Header';
+import Footer from '@/components/feature/Footer';
+import SEOHead from '@/components/feature/SEOHead';
+import SuccessModal from '@/components/feature/modal/SuccessModal'; // Importa o modal
 
 export default function ContatoPage() {
   const [formData, setFormData] = useState({
@@ -14,6 +15,7 @@ export default function ContatoPage() {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [isModalOpen, setIsModalOpen] = useState(false); // Estado para controlar o modal
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -26,20 +28,21 @@ export default function ContatoPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    
-    try {
-      const formDataToSend = new FormData();
-      Object.entries(formData).forEach(([key, value]) => {
-        formDataToSend.append(key, value);
-      });
+    setSubmitStatus('idle');
 
-      const response = await fetch('https://readdy.ai/api/form/submit/contato-sempre-bella', {
+    try {
+      const webhookUrl = 'https://portaln8n.semprebellabalsas.com.br/webhook/form_contato_pagina_contato';
+      const response = await fetch(webhookUrl, {
         method: 'POST',
-        body: formDataToSend
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
       });
 
       if (response.ok) {
         setSubmitStatus('success');
+        setIsModalOpen(true); // Abre o modal de sucesso
         setFormData({
           nome: '',
           email: '',
@@ -51,6 +54,7 @@ export default function ContatoPage() {
         setSubmitStatus('error');
       }
     } catch (error) {
+      console.error('Erro ao enviar formulário:', error);
       setSubmitStatus('error');
     } finally {
       setIsSubmitting(false);
@@ -66,6 +70,8 @@ export default function ContatoPage() {
       />
       <div className="min-h-screen bg-white">
         <Header />
+
+        <SuccessModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
         
         {/* Hero Section */}
         <section className="relative py-20 bg-gradient-to-r from-pink-50 to-purple-50">
@@ -92,8 +98,8 @@ export default function ContatoPage() {
                 </div>
                 <h3 className="text-xl font-semibold text-gray-800 mb-3">Endereço</h3>
                 <p className="text-gray-600">
-                  Rua das Flores, 123 - Centro<br />
-                  Balsas - MA, 65800-000
+                  Rua Major Felipe, Centro<br />
+                  CEP: 65840000, São Raimundo das Mangabeiras/MA
                 </p>
               </div>
               <div className="text-center">
@@ -102,18 +108,18 @@ export default function ContatoPage() {
                 </div>
                 <h3 className="text-xl font-semibold text-gray-800 mb-3">Telefone</h3>
                 <p className="text-gray-600">
-                  (99) 3541-2345<br />
-                  (99) 99876-5432
+                  (99) 99134-5178<br />
+                  (99) 98550-2075
                 </p>
               </div>
               <div className="text-center">
                 <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <i className="ri-mail-fill text-2xl text-blue-600"></i>
+                  <i className="ri-instagram-fill text-2xl text-blue-600"></i>
                 </div>
-                <h3 className="text-xl font-semibold text-gray-800 mb-3">E-mail</h3>
+                <h3 className="text-xl font-semibold text-gray-800 mb-3">Instagram</h3>
                 <p className="text-gray-600">
-                  contato@semprebella.com.br<br />
-                  vendas@semprebella.com.br
+                  @semprebella.balsas<br />
+                  @semprebellamangabeiras
                 </p>
               </div>
             </div>
@@ -129,7 +135,6 @@ export default function ContatoPage() {
                   <div className="space-y-2 text-gray-600">
                     <p><span className="font-medium">Segunda a Sexta:</span> 8h às 18h</p>
                     <p><span className="font-medium">Sábado:</span> 8h às 17h</p>
-                    <p><span className="font-medium">Domingo:</span> 8h às 12h</p>
                   </div>
                 </div>
                 <div>
@@ -196,7 +201,7 @@ export default function ContatoPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                     <div>
                       <label htmlFor="telefone" className="block text-sm font-medium text-gray-700 mb-2">
-                        Telefone
+                        Whatsapp *
                       </label>
                       <input
                         type="tel"
@@ -204,6 +209,7 @@ export default function ContatoPage() {
                         name="telefone"
                         value={formData.telefone}
                         onChange={handleInputChange}
+                        required
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent text-sm"
                         placeholder="(99) 99999-9999"
                       />
@@ -302,7 +308,7 @@ export default function ContatoPage() {
             </h2>
             <div className="max-w-4xl mx-auto">
               <iframe
-                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3973.123456789!2d-46.0356789!3d-7.5323456!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zN8KwMzEnNTYuNCJTIDQ2wrAwMicwOC40Ilc!5e0!3m2!1spt-BR!2sbr!4v1234567890"
+                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d31780.53533333333!2d-45.50111111111111!3d-7.019722222222222!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x92d8f5a5f5f5f5f5%3A0x4f5f5f5f5f5f5f5f!2sS%C3%A3o%20Raimundo%20das%20Mangabeiras%2C%20MA!5e0!3m2!1sen!2sbr!4v1689280000000"
                 width="100%"
                 height="450"
                 style={{ border: 0 }}

@@ -146,7 +146,7 @@ const CadastrarProdutoCopy = () => {
           cor: variation.color,
           cor_hex: variation.colorHex,
           estoque: variation.stock,
-          sku: variation.sku || `${formData.referencia}-${variation.size}-${variation.color.replace(/\s+/g, '').toUpperCase()}`
+          sku: variation.sku || formData.referencia
         }))
       };
 
@@ -207,7 +207,7 @@ const CadastrarProdutoCopy = () => {
         cor: variation.color,
         cor_hex: variation.colorHex,
         estoque: variation.stock,
-        sku: variation.sku || `${formData.referencia}-${variation.size}-${variation.color.replace(/\s+/g, '').toUpperCase()}`
+        sku: variation.sku || formData.referencia
       }));
 
       const { error: variacoesError } = await supabase
@@ -781,7 +781,7 @@ const CadastrarProdutoCopy = () => {
                 <div className="mt-6 flex flex-col sm:flex-row gap-3">
                   <button
                     onClick={handleAddNewProduct}
-                    className="w-full sm:w-auto px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors"
+                    className="w-full sm:w-auto px-4 py-2 bg-pink-600 text-white rounded-md hover:bg-pink-700 transition-colors"
                   >
                     Cadastrar outro produto
                   </button>

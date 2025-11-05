@@ -1,13 +1,18 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../../../../components/feature/AdminLayout';
 import AdminFormButtons from '../../../../components/feature/AdminFormButtons/AdminFormButtons';
 import { useToast } from '../../../../hooks/useToast';
+import { useAuth } from '../../../../hooks/useAuth';
 import Toast from '../../../../components/base/Toast';
 
 export default function CadastrarUsuarioPage() {
+  const navigate = useNavigate();
+  const { user, isAdmin, loading } = useAuth();
   const { toast, showToast, hideToast } = useToast();
 
+  // Declarar todos os hooks no topo (regra do React)
   const [formData, setFormData] = useState({
     nome: '',
     email: '',
@@ -19,7 +24,6 @@ export default function CadastrarUsuarioPage() {
     departamento: '',
     cargo: '',
     dataAdmissao: '',
-    salario: '',
     observacoes: '',
     ativo: true,
     receberNotificacoes: true
@@ -28,22 +32,39 @@ export default function CadastrarUsuarioPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  // Verificar se o usuário tem permissão para cadastrar usuários
+  useEffect(() => {
+    if (!loading && !isAdmin) {
+      showToast('Apenas administradores podem cadastrar usuários', 'error');
+      navigate('/paineladmin');
+    }
+  }, [loading, isAdmin, navigate, showToast]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pink-600"></div>
+      </div>
+    );
+  }
+
+  if (!isAdmin) {
+    return null; // Não renderiza nada enquanto redireciona
+  }
+
   const tiposUsuario = [
     { id: 'admin', nome: 'Administrador' },
-    { id: 'gerente', nome: 'Gerente' },
-    { id: 'vendedor', nome: 'Vendedor' },
-    { id: 'estoquista', nome: 'Estoquista' },
-    { id: 'financeiro', nome: 'Financeiro' },
-    { id: 'atendimento', nome: 'Atendimento' }
+    { id: 'atendente', nome: 'Atendente' },
+    { id: 'cliente', nome: 'Cliente' }
   ];
 
   const departamentos = [
     'Vendas',
-    'Estoque',
-    'Financeiro',
-    'Atendimento ao Cliente',
     'Marketing',
-    'Administração'
+    'Financeiro',
+    'Recursos Humanos',
+    'TI',
+    'Atendimento ao Cliente'
   ];
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -104,8 +125,9 @@ export default function CadastrarUsuarioPage() {
           email: formData.email,
           senha: formData.senha,
           tipo: formData.tipo || 'admin',
-          departamento: formData.departamento || 'Administração',
-          cargo: formData.cargo || 'Administrador'
+          departamento: formData.departamento,
+          cargo: formData.cargo,
+          data_admissao: formData.dataAdmissao
         })
       });
 
@@ -113,6 +135,8 @@ export default function CadastrarUsuarioPage() {
 
       if (response.ok) {
         showToast('Usuário cadastrado com sucesso!', 'success');
+        navigate('/paineladmin/usuarios/listar');
+
         // Limpar formulário
         setFormData({
           nome: '',
@@ -125,7 +149,6 @@ export default function CadastrarUsuarioPage() {
           departamento: '',
           cargo: '',
           dataAdmissao: '',
-          salario: '',
           observacoes: '',
           ativo: true,
           receberNotificacoes: true
@@ -327,10 +350,8 @@ export default function CadastrarUsuarioPage() {
                           className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white pr-8"
                         >
                           <option value="">Selecione o departamento</option>
-                          {departamentos.map(dept => (
-                            <option key={dept} value={dept}>
-                              {dept}
-                            </option>
+                          {departamentos.map(dep => (
+                            <option key={dep} value={dep}>{dep}</option>
                           ))}
                         </select>
                       </div>
@@ -359,21 +380,6 @@ export default function CadastrarUsuarioPage() {
                           onChange={handleInputChange}
                           required
                           className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                          Salário (R$)
-                        </label>
-                        <input
-                          type="number"
-                          name="salario"
-                          value={formData.salario}
-                          onChange={handleInputChange}
-                          min="0"
-                          step="0.01"
-                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                          placeholder="Ex: 2500.00"
                         />
                       </div>
                     </div>

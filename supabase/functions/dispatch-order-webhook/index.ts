@@ -84,15 +84,17 @@ serve(async (req: Request) => {
     let clienteNome = "Cliente";
     let clienteEmail: string | null = null;
     let clienteId: string | undefined = pedido.cliente_id || undefined;
+    let cliente: any = null; // Declarar cliente aqui
 
     if (pedido.cliente_id) {
-      const { data: cliente, error: clienteErr } = await supabase
+      const { data: clienteData, error: clienteErr } = await supabase
         .from("clientes")
-        .select("id, nome, email")
+        .select("id, nome, email, cpf")
         .eq("id", pedido.cliente_id)
         .maybeSingle();
 
-      if (!clienteErr && cliente) {
+      if (!clienteErr && clienteData) {
+        cliente = clienteData; // Atribuir o resultado a cliente
         clienteNome = cliente.nome || clienteNome;
         clienteEmail = cliente.email || clienteEmail;
         clienteId = cliente.id || clienteId;
@@ -127,6 +129,7 @@ serve(async (req: Request) => {
         id: clienteId,
         nome: clienteNome,
         email: clienteEmail,
+        cpf: (cliente as any)?.cpf || null,
       },
       endereco_entrega: pedido.endereco_entrega || null,
       itens: (itens || []).map((i) => ({

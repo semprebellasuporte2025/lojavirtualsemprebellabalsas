@@ -1,7 +1,9 @@
 
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../../../../components/feature/AdminLayout';
 import { useToast } from '../../../../hooks/useToast';
+import { useAuth } from '../../../../hooks/useAuth';
 import Toast from '../../../../components/base/Toast';
 import { supabase } from '../../../../lib/supabase';
 
@@ -39,6 +41,8 @@ const capitalizeString = (str?: string | null) => {
 };
 
 export default function ListarUsuariosPage() {
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const { toast, showToast, hideToast } = useToast();
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -256,7 +260,10 @@ export default function ListarUsuariosPage() {
                 <p className="text-gray-600 dark:text-gray-400 mt-1">Gerencie todos os usuários do sistema</p>
               </div>
               <div className="mt-4 sm:mt-0 flex items-center space-x-3">
-                <button className="bg-pink-600 text-white px-4 py-2 rounded-lg hover:bg-pink-700 transition-colors flex items-center space-x-2 whitespace-nowrap cursor-pointer">
+                <button 
+                  onClick={() => navigate('/paineladmin/usuarios/cadastrar')}
+                  className="bg-pink-600 text-white px-4 py-2 rounded-lg hover:bg-pink-700 transition-colors flex items-center space-x-2 whitespace-nowrap cursor-pointer"
+                >
                   <i className="ri-add-line"></i>
                   <span>Novo Usuário</span>
                 </button>
@@ -441,22 +448,15 @@ export default function ListarUsuariosPage() {
                             </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <div>
-                              <div className="text-sm text-gray-900 dark:text-white">{usuario.email ?? 'Email não informado'}</div>
-                              <div className="text-sm text-gray-500 dark:text-gray-400">{usuario.departamento ?? 'Departamento não informado'}</div>
-                            </div>
+                            <div className="text-sm text-gray-900 dark:text-white">{usuario.email}</div>
+                            <div className="text-sm text-gray-500 dark:text-gray-400">{usuario.departamento}</div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <div>
-                              <div className="text-sm text-gray-900 dark:text-white">{usuario.cargo ?? 'Cargo não informado'}</div>
-                              <div className="text-sm text-gray-500 dark:text-gray-400">{usuario.departamento ?? 'Departamento não informado'}</div>
-                            </div>
+                            <div className="text-sm text-gray-900 dark:text-white">{capitalizeString(usuario.cargo)}</div>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getTipoColor(usuario.tipo)}`}>
-                              {capitalizeString(usuario.tipo)}
-                            </span>
-                          </td>
+                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getTipoColor(usuario.tipo)}`}>
+                            {capitalizeString(usuario.tipo)}
+                          </span>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="text-sm text-gray-900 dark:text-white">
                               {usuario.data_admissao ? new Date(usuario.data_admissao).toLocaleDateString('pt-BR') : 'Data não informada'}
@@ -493,13 +493,15 @@ export default function ListarUsuariosPage() {
                               >
                                 <i className="ri-edit-line text-lg"></i>
                               </button>
-                              <button
-                                onClick={() => handleDelete(usuario.id)}
-                                className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300 cursor-pointer"
-                                title="Excluir usuário"
-                              >
-                                <i className="ri-delete-bin-line text-lg"></i>
-                              </button>
+                              {usuario.email !== 'semprebellasuporte2025@gmail.com' && (
+                                <button
+                                  onClick={() => handleDelete(usuario.id)}
+                                  className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300 cursor-pointer"
+                                  title="Excluir usuário"
+                                >
+                                  <i className="ri-delete-bin-line text-lg"></i>
+                                </button>
+                              )}
                             </div>
                           </td>
                         </tr>

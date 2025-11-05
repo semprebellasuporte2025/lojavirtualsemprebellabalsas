@@ -248,7 +248,7 @@ const EditarProduto = () => {
         cor: variation.color,
         cor_hex: variation.colorHex,
         estoque: variation.stock,
-        sku: variation.sku || `${formData.referencia}-${variation.size}-${variation.color.replace(/\s+/g, '').toUpperCase()}`
+        sku: variation.sku || formData.referencia
       }));
 
       const { error: variacoesError } = await supabase
@@ -896,26 +896,26 @@ const EditarProduto = () => {
                     {images.map((img, index) => (
                       <div key={index} className="relative group">
                         <img src={img} alt={`Preview ${index + 1}`} className="w-full h-24 object-cover rounded" />
-                        <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="absolute top-1 right-1 flex gap-1">
                           <button
                             type="button"
                             title="Remover do formulário"
                             onClick={() => removeImage(index)}
-                            className="w-7 h-7 flex items-center justify-center bg-yellow-500 text-white rounded-full cursor-pointer hover:bg-yellow-600"
+                            className="w-8 h-8 flex items-center justify-center bg-yellow-500/80 text-white rounded-full cursor-pointer hover:bg-yellow-600"
                           >
-                            <i className="ri-close-line text-sm"></i>
+                            <i className="ri-close-line"></i>
                           </button>
                           <button
                             type="button"
                             title="Excluir do servidor"
                             onClick={() => deleteImageServer(index)}
                             disabled={isDeletingImage && deletingIndex === index}
-                            className="w-7 h-7 flex items-center justify-center bg-red-600 text-white rounded-full cursor-pointer hover:bg-red-700 disabled:opacity-60"
+                            className="w-8 h-8 flex items-center justify-center bg-red-600/80 text-white rounded-full cursor-pointer hover:bg-red-700 disabled:opacity-60"
                           >
                             {isDeletingImage && deletingIndex === index ? (
-                              <i className="ri-loader-4-line text-sm animate-spin"></i>
+                              <i className="ri-loader-4-line animate-spin"></i>
                             ) : (
-                              <i className="ri-delete-bin-line text-sm"></i>
+                              <i className="ri-delete-bin-line"></i>
                             )}
                           </button>
                         </div>

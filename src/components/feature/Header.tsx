@@ -7,7 +7,8 @@ import { supabase } from '../../lib/supabase';
 import type { Categoria } from '../../lib/supabase';
 
 export default function Header() {
-  const cartItemCount = useCart((state) => state.getTotalItems());
+  // Usa seletor puro para evitar qualquer efeito colateral ao obter a contagem
+  const cartItemCount = useCart((state) => state.items.reduce((total, item) => total + item.quantity, 0));
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { user, signOut } = useAuth(); // Adicionando signOut do hook useAuth

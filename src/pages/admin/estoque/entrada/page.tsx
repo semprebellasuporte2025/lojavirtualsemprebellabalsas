@@ -1,11 +1,28 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import AdminLayout from '../../../../components/feature/AdminLayout';
 import { useToast } from '../../../../hooks/useToast';
 import Toast from '../../../../components/base/Toast';
+import { supabase } from '../../../../lib/supabase';
+import { useAuth } from '../../../../hooks/useAuth';
+
+interface Produto {
+  id: string;
+  nome: string;
+  referencia?: string;
+}
+
+interface Fornecedor {
+  id: string;
+  nome: string;
+}
 
 export default function EntradaEstoquePage() {
   const { toast, showToast, hideToast } = useToast();
+  const { user } = useAuth();
+  const [isLoading, setIsLoading] = useState(false);
+  const [produtos, setProdutos] = useState<Produto[]>([]);
+  const [fornecedores, setFornecedores] = useState<Fornecedor[]>([]);
 
   const [formData, setFormData] = useState({
     produto: '',
@@ -18,20 +35,47 @@ export default function EntradaEstoquePage() {
     observacoes: ''
   });
 
-  const produtos = [
-    { id: 1, nome: 'Batom Matte Vermelho', sku: 'BAT001' },
-    { id: 2, nome: 'Base Líquida Bege', sku: 'BAS002' },
-    { id: 3, nome: "Rímel à Prova D'água", sku: 'RIM003' },
-    { id: 4, nome: 'Pó Compacto Translúcido', sku: 'POC004' },
-    { id: 5, nome: 'Blush Rosa Natural', sku: 'BLU005' }
-  ];
+  // Carregar produtos e fornecedores do banco
+  useEffect(() => {
+    carregarDados();
+  }, []);
 
-  const fornecedores = [
-    { id: 1, nome: 'Beleza & Cia Ltda' },
-    { id: 2, nome: 'Cosméticos Premium' },
-    { id: 3, nome: 'Distribuidora Beauty' },
-    { id: 4, nome: 'Makeup Supply Co.' }
-  ];
+  const carregarDados = async () => {
+    try {
+      // Carregar produtos ativos
+      const { data: produtosData, error: produtosError } = await supabase
+        .from('produtos')
+        .select('id, nome, referencia')
+        .eq('ativo', true)
+        .order('nome');
+
+      if (produtosError) throw produtosError;
+      setProdutos(produtosData || []);
+
+      // Carregar fornecedores ativos
+      const { data: fornecedoresData, error: fornecedoresError } = await supabase
+        .from('fornecedores')
+        .select('id, nome')
+        .eq('ativo', true)
+        .order('nome');
+
+      if (fornecedoresError) {
+        console.warn('Tabela fornecedores não encontrada, usando dados estáticos');
+        // Fallback para dados estáticos se a tabela não existir
+        setFornecedores([
+          { id: '1', nome: 'Beleza & Cia Ltda' },
+          { id: '2', nome: 'Cosméticos Premium' },
+          { id: '3', nome: 'Distribuidora Beauty' },
+          { id: '4', nome: 'Makeup Supply Co.' }
+        ]);
+      } else {
+        setFornecedores(fornecedoresData || []);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar dados:', error);
+      showToast('Erro ao carregar dados', 'error');
+    }
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -49,15 +93,65 @@ export default function EntradaEstoquePage() {
     });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    showToast('Entrada de estoque registrada com sucesso!', 'success');
-    // Limpar formulário
-    setProduto('');
-    setQuantidade('');
-    setFornecedor('');
-    setNotaFiscal('');
-    setObservacoes('');
+    
+    if (!user) {
+      showToast('Usuário não autenticado', 'error');
+      return;
+    }
+
+    setIsLoading(true);
+    
+    try {
+      // Buscar nome do fornecedor se selecionado
+      let fornecedorNome = null;
+      if (formData.fornecedor) {
+        const fornecedor = fornecedores.find(f => f.id === formData.fornecedor);
+        fornecedorNome = fornecedor?.nome || null;
+      }
+
+      // Inserir movimentação de estoque
+      const movimentacao = {
+        produto_id: formData.produto,
+        tipo: 'entrada',
+        quantidade: parseInt(formData.quantidade),
+        valor_unitario: parseFloat(formData.valorUnitario),
+        valor_total: parseFloat(formData.valorTotal),
+        fornecedor_id: formData.fornecedor || null,
+        fornecedor_nome: fornecedorNome,
+        numero_nota: formData.numeroNota || null,
+        observacoes: formData.observacoes || null,
+        usuario_id: user.id,
+        usuario_nome: user.user_metadata?.nome || user.email || 'Usuário'
+      };
+
+      const { error } = await supabase
+        .from('movimentacoes_estoque')
+        .insert(movimentacao);
+
+      if (error) throw error;
+
+      showToast('Entrada de estoque registrada com sucesso!', 'success');
+      
+      // Limpar formulário
+      setFormData({
+        produto: '',
+        fornecedor: '',
+        quantidade: '',
+        valorUnitario: '',
+        valorTotal: '',
+        dataEntrada: new Date().toISOString().split('T')[0],
+        numeroNota: '',
+        observacoes: ''
+      });
+
+    } catch (error) {
+      console.error('Erro ao registrar entrada:', error);
+      showToast('Erro ao registrar entrada de estoque', 'error');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -100,7 +194,7 @@ export default function EntradaEstoquePage() {
                         <option value="">Selecione um produto</option>
                         {produtos.map(produto => (
                           <option key={produto.id} value={produto.id}>
-                            {produto.nome} - {produto.sku}
+                            {produto.nome} {produto.referencia ? `(${produto.referencia})` : ''}
                           </option>
                         ))}
                       </select>
@@ -236,10 +330,11 @@ export default function EntradaEstoquePage() {
                     </button>
                     <button
                       type="submit"
-                      className="px-6 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-colors whitespace-nowrap cursor-pointer"
+                      disabled={isLoading}
+                      className="px-6 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-colors whitespace-nowrap cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <i className="ri-save-line mr-2"></i>
-                      Registrar Entrada
+                      {isLoading ? 'Registrando...' : 'Registrar Entrada'}
                     </button>
                   </div>
                 </form>

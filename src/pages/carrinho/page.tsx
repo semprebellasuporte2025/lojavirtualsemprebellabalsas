@@ -86,7 +86,10 @@ export default function CarrinhoPage() {
 
                 {/* Summary */}
                 <div className="space-y-6">
-                  <ShippingCalculator onShippingCalculated={handleShippingCalculated} />
+                  <ShippingCalculator 
+                    onShippingCalculated={handleShippingCalculated} 
+                    subtotal={subtotal}
+                  />
                   <CartSummary
                     subtotal={subtotal}
                     shipping={{ price: shippingCost, name: shippingMethod }}

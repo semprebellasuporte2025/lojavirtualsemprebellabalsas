@@ -1,6 +1,7 @@
 
 import { useState, useRef } from 'react';
 import Button from '../../../components/base/Button';
+import { useToast } from '../../../hooks/useToast';
 
 interface ProductInfoProps {
   produto: any;
@@ -20,6 +21,7 @@ export default function ProductInfo({ produto, onAddToCart }: ProductInfoProps) 
   const [showSelectionModal, setShowSelectionModal] = useState(false);
   const [highlightSize, setHighlightSize] = useState(false);
   const sizeSectionRef = useRef<HTMLDivElement>(null);
+  const { showToast } = useToast();
 
   // Derivar cores e tamanhos a partir das variantes do produto
   const variantes: any[] = Array.isArray(produto?.variantes_produto) ? produto?.variantes_produto : [];
@@ -76,6 +78,8 @@ export default function ProductInfo({ produto, onAddToCart }: ProductInfoProps) 
         color: selectedColor,
         material: produto?.material || undefined
       });
+      // Toast de sucesso ao adicionar ao carrinho
+      showToast('Produto adicionado ao carrinho!', 'success');
     }
   };
 
@@ -106,7 +110,8 @@ export default function ProductInfo({ produto, onAddToCart }: ProductInfoProps) 
           peso: 0.5, // Peso padrão de 500g para roupas
           comprimento: 20,
           altura: 5,
-          largura: 15
+          largura: 15,
+          valorTotal: product.price * quantity
         })
       });
 
@@ -237,6 +242,10 @@ export default function ProductInfo({ produto, onAddToCart }: ProductInfoProps) 
         <p className="text-sm text-gray-600 mt-2">
           ou 3x de R$ {(product.price / 3).toFixed(2)} sem juros
         </p>
+        {/* Aviso de seleção de variações */}
+        <p className="text-sm text-gray-800 mt-3">
+          Escolha o seu tamanho e a cor
+        </p>
       </div>
 
       {/* Color Selection */}
@@ -323,8 +332,73 @@ export default function ProductInfo({ produto, onAddToCart }: ProductInfoProps) 
         </div>
       </div>
 
+      {/* Action Buttons */}
+      <div className="space-y-3 pt-4">
+        <Button variant="primary" size="lg" className="w-full" onClick={handleAddToCart}>
+          <i className="ri-shopping-cart-line mr-2 text-xl"></i>
+          Adicionar ao Carrinho
+        </Button>
+
+        <div className="grid grid-cols-2 gap-3">
+          <Button variant="outline" size="md" className="w-full">
+            <i className="ri-heart-line mr-2"></i>
+            Favoritar
+          </Button>
+
+          <div className="relative">
+            <Button variant="outline" size="md" className="w-full" onClick={() => setShowShareMenu(!showShareMenu)}>
+              <i className="ri-share-line mr-2"></i>
+              Compartilhar
+            </Button>
+
+            {showShareMenu && (
+              <div className="absolute top-full mt-2 right-0 bg-white border-2 border-gray-200 rounded-lg shadow-xl p-4 z-10 w-64">
+                <p className="text-sm font-semibold text-gray-900 mb-3">Compartilhar via:</p>
+                <div className="space-y-2">
+                  <button
+                    onClick={() => handleShare('whatsapp')}
+                    className="w-full flex items-center space-x-3 px-4 py-2 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors"
+                  >
+                    <i className="ri-whatsapp-fill text-green-500 text-xl"></i>
+                    <span className="text-sm text-gray-700">WhatsApp</span>
+                  </button>
+                  <button
+                    onClick={() => handleShare('facebook')}
+                    className="w-full flex items-center space-x-3 px-4 py-2 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors"
+                  >
+                    <i className="ri-facebook-fill text-blue-600 text-xl"></i>
+                    <span className="text-sm text-gray-700">Facebook</span>
+                  </button>
+                  <button
+                    onClick={() => handleShare('twitter')}
+                    className="w-full flex items-center space-x-3 px-4 py-2 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors"
+                  >
+                    <i className="ri-twitter-fill text-blue-400 text-xl"></i>
+                    <span className="text-sm text-gray-700">Twitter</span>
+                  </button>
+                  <button
+                    onClick={() => handleShare('pinterest')}
+                    className="w-full flex items-center space-x-3 px-4 py-2 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors"
+                  >
+                    <i className="ri-pinterest-fill text-red-600 text-xl"></i>
+                    <span className="text-sm text-gray-700">Pinterest</span>
+                  </button>
+                  <button
+                    onClick={copyLink}
+                    className="w-full flex items-center space-x-3 px-4 py-2 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors border-t border-gray-200 mt-2 pt-3"
+                  >
+                    <i className="ri-link text-gray-600 text-xl"></i>
+                    <span className="text-sm text-gray-700">Copiar link</span>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
       {/* Shipping Calculator */}
-      <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+      <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 mt-4">
         <label className="block text-sm font-semibold text-gray-900 mb-3">Calcular Frete e Prazo</label>
         <div className="flex space-x-3">
           <input
@@ -394,7 +468,11 @@ export default function ProductInfo({ produto, onAddToCart }: ProductInfoProps) 
                           </span>
                         )}
                       </p>
-                      <p className="text-xs text-gray-600">Entrega em {option.days}</p>
+                      <p className="text-xs text-gray-600">
+                        {option.isGratis
+                          ? (option.days || '').replace(/^\s*\d+\s*dias?\s*úteis?\s*-\s*/i, '').replace(/^\s*1\s*dia\s*útil\s*-\s*/i, '').trim()
+                          : `Entrega em ${option.days}`}
+                      </p>
                     </div>
                   </div>
                   <span
@@ -407,71 +485,6 @@ export default function ProductInfo({ produto, onAddToCart }: ProductInfoProps) 
             ))}
           </div>
         )}
-      </div>
-
-      {/* Action Buttons */}
-      <div className="space-y-3 pt-4">
-        <Button variant="primary" size="lg" className="w-full" onClick={handleAddToCart}>
-          <i className="ri-shopping-cart-line mr-2 text-xl"></i>
-          Adicionar ao Carrinho
-        </Button>
-
-        <div className="grid grid-cols-2 gap-3">
-          <Button variant="outline" size="md" className="w-full">
-            <i className="ri-heart-line mr-2"></i>
-            Favoritar
-          </Button>
-
-          <div className="relative">
-            <Button variant="outline" size="md" className="w-full" onClick={() => setShowShareMenu(!showShareMenu)}>
-              <i className="ri-share-line mr-2"></i>
-              Compartilhar
-            </Button>
-
-            {showShareMenu && (
-              <div className="absolute top-full mt-2 right-0 bg-white border-2 border-gray-200 rounded-lg shadow-xl p-4 z-10 w-64">
-                <p className="text-sm font-semibold text-gray-900 mb-3">Compartilhar via:</p>
-                <div className="space-y-2">
-                  <button
-                    onClick={() => handleShare('whatsapp')}
-                    className="w-full flex items-center space-x-3 px-4 py-2 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors"
-                  >
-                    <i className="ri-whatsapp-fill text-green-500 text-xl"></i>
-                    <span className="text-sm text-gray-700">WhatsApp</span>
-                  </button>
-                  <button
-                    onClick={() => handleShare('facebook')}
-                    className="w-full flex items-center space-x-3 px-4 py-2 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors"
-                  >
-                    <i className="ri-facebook-fill text-blue-600 text-xl"></i>
-                    <span className="text-sm text-gray-700">Facebook</span>
-                  </button>
-                  <button
-                    onClick={() => handleShare('twitter')}
-                    className="w-full flex items-center space-x-3 px-4 py-2 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors"
-                  >
-                    <i className="ri-twitter-fill text-blue-400 text-xl"></i>
-                    <span className="text-sm text-gray-700">Twitter</span>
-                  </button>
-                  <button
-                    onClick={() => handleShare('pinterest')}
-                    className="w-full flex items-center space-x-3 px-4 py-2 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors"
-                  >
-                    <i className="ri-pinterest-fill text-red-600 text-xl"></i>
-                    <span className="text-sm text-gray-700">Pinterest</span>
-                  </button>
-                  <button
-                    onClick={copyLink}
-                    className="w-full flex items-center space-x-3 px-4 py-2 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors border-t border-gray-200 mt-2 pt-3"
-                  >
-                    <i className="ri-link text-gray-600 text-xl"></i>
-                    <span className="text-sm text-gray-700">Copiar link</span>
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
       </div>
 
       {/* Product Features */}

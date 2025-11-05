@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { User, Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 
@@ -19,13 +19,21 @@ export const useAuth = () => {
     isAdmin: false,
     adminName: undefined,
   });
+  
+  // Marcadores aceitos para perfis administradores
+  const ADMIN_LABELS = ['admin', 'administrador', 'super_admin', 'superadmin', 'administrator'];
+  
+  // Referência para o cache que pode ser limpo externamente
+  const adminCheckCacheRef = useRef<{[key: string]: {result: any, timestamp: number}}>({});
+  // Promessas em andamento por chave (evita retornos falsos em corrida)
+  const adminCheckPromisesRef = useRef<{[key: string]: Promise<{isAdmin: boolean, adminName?: string}>}>({});
 
   useEffect(() => {
     let mounted = true;
-    let isCheckingAdmin = false;
+    // Removido boolean de corrida; usamos promessas compartilhadas
     let safetyTimer: number | null = null;
     let activityTimer: number | null = null;
-    let adminCheckCache: {[key: string]: {result: any, timestamp: number}} = {};
+    // Usar sempre a referência atual do cache (não criar cópia local)
 
     // Sistema de detecção de atividade para manter sessão ativa
     const updateLastActivity = () => {
@@ -67,68 +75,99 @@ export const useAuth = () => {
     // Inicializar última atividade
     updateLastActivity();
 
-    const checkAdminStatus = async (userId: string): Promise<{isAdmin: boolean, adminName?: string}> => {
+    const checkAdminStatus = async (userId: string, email?: string): Promise<{isAdmin: boolean, adminName?: string}> => {
       // Verificar cache (válido por 30 segundos)
-      const cacheKey = userId;
-      const cached = adminCheckCache[cacheKey];
+      const cacheKey = `${userId}|${String(email || '').toLowerCase()}`;
+      const cached = adminCheckCacheRef.current[cacheKey];
       if (cached && Date.now() - cached.timestamp < 30000) {
         console.log('[Auth] Usando cache para verificação admin');
         return cached.result;
       }
 
-      if (isCheckingAdmin) {
-        console.log('[Auth] Verificação admin já em andamento, aguardando...');
-        // Aguardar um pouco e tentar novamente
-        await new Promise(resolve => setTimeout(resolve, 100));
-        if (adminCheckCache[cacheKey]) {
-          return adminCheckCache[cacheKey].result;
-        }
-        return {isAdmin: false};
+      // Se já existe uma verificação em andamento para esta chave, aguarde ela
+      const ongoing = adminCheckPromisesRef.current[cacheKey];
+      if (ongoing) {
+        console.log('[Auth] Verificação admin compartilhada em andamento, aguardando promessa...');
+        return await ongoing;
       }
       
-      isCheckingAdmin = true;
-      
       try {
-        console.log('[Auth] Verificando status admin para userId:', userId);
+        console.log('[Auth] Verificando status admin para userId/email:', userId, email);
         
-        // Timeout reduzido para 3 segundos
+        // Timeout aumentado para 10 segundos para evitar erros
         const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error('Timeout na verificação admin')), 3000);
+          setTimeout(() => reject(new Error('Timeout na verificação admin')), 10000);
         });
         
-        const queryPromise = supabase
-          .from('usuarios_admin')
-          .select('*')
-          .eq('user_id', userId)
-          .eq('ativo', true)
-          .maybeSingle();
-        
-        const { data: adminData } = await Promise.race([queryPromise, timeoutPromise]) as any;
-        
-        const result = {
-          isAdmin: !!adminData,
-          adminName: adminData?.nome
-        };
-        
-        // Armazenar no cache
-        adminCheckCache[cacheKey] = {
-          result,
-          timestamp: Date.now()
-        };
-        
-        console.log('[Auth] Resultado verificação admin:', result);
-        return result;
+        // Cria promessa compartilhada e armazena
+        const verificationPromise = (async () => {
+          const selectCols = 'id, user_id, email, nome, role, tipo, ativo';
+          let adminData: any = null;
+
+          // 1) Tentar por user_id (schema mais recente)
+          const q1 = supabase
+            .from('usuarios_admin')
+            .select(selectCols)
+            .eq('user_id', userId)
+            .eq('ativo', true)
+            .maybeSingle();
+          const { data: byUserId } = await Promise.race([q1, timeoutPromise]) as any;
+          adminData = byUserId;
+
+          // 2) Fallback por id (schema antigo que referencia auth.users.id)
+          if (!adminData) {
+            const q2 = supabase
+              .from('usuarios_admin')
+              .select(selectCols)
+              .eq('id', userId)
+              .eq('ativo', true)
+              .maybeSingle();
+            const { data: byId } = await Promise.race([q2, timeoutPromise]) as any;
+            adminData = byId;
+          }
+
+          // 3) Fallback por email (garante compatibilidade com registros antigos)
+          const emailLower = String(email || '').toLowerCase();
+          if (!adminData && emailLower) {
+            const q3 = supabase
+              .from('usuarios_admin')
+              .select(selectCols)
+              .eq('email', emailLower)
+              .eq('ativo', true)
+              .maybeSingle();
+            const { data: byEmail } = await Promise.race([q3, timeoutPromise]) as any;
+            adminData = byEmail;
+          }
+          
+          const isAdminResolved = !!adminData && ([adminData.role, adminData.tipo]
+            .map(v => String(v ?? '').toLowerCase())
+            .some(v => ADMIN_LABELS.includes(v))
+          );
+
+          const result = {
+            isAdmin: isAdminResolved,
+            adminName: adminData?.nome
+          };
+
+          // Armazenar no cache
+          adminCheckCacheRef.current[cacheKey] = {
+            result,
+            timestamp: Date.now()
+          };
+          console.log('[Auth] Resultado verificação admin:', result);
+          return result;
+        })();
+
+        adminCheckPromisesRef.current[cacheKey] = verificationPromise;
+        const finalResult = await verificationPromise;
+        // Limpa a promessa após resolver
+        delete adminCheckPromisesRef.current[cacheKey];
+        return finalResult;
       } catch (error) {
         console.error('[Auth] Erro na verificação admin:', error);
-        const fallbackResult = {isAdmin: false};
-        // Armazenar resultado de fallback no cache por um tempo menor
-        adminCheckCache[cacheKey] = {
-          result: fallbackResult,
-          timestamp: Date.now() - 25000 // Cache por apenas 5 segundos em caso de erro
-        };
-        return fallbackResult;
-      } finally {
-        isCheckingAdmin = false;
+        // Em erro, não alternar o estado para falso imediatamente; apenas propagar falso sem cache
+        // para evitar thrash em casos intermitentes.
+        return {isAdmin: false};
       }
     };
 
@@ -137,9 +176,34 @@ export const useAuth = () => {
       if (mounted) {
         setAuthState(prev => ({ ...prev, loading: false }));
       }
-    }, 3000);
+    }, 12000);
 
     // Verificar sessão atual
+    // Helper: formata nome em Title Case simples
+    const toTitleCase = (s: string) => {
+      return s
+        .split(/\s+/)
+        .filter(Boolean)
+        .map(p => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase())
+        .join(' ');
+    };
+
+    // Helper: calcula o nome de exibição a partir do adminStatus ou metadados do usuário
+    const computeDisplayName = (usr: User | null, adminStatus?: { adminName?: string }) => {
+      const meta = (usr as any)?.user_metadata || {};
+      const raw = (adminStatus?.adminName
+        || meta.name
+        || meta.full_name
+        || meta.nome
+        || meta.display_name
+        || meta.first_name && meta.last_name && `${meta.first_name} ${meta.last_name}`
+        || meta.first_name
+        || '') as string;
+      const fallbackEmail = (usr?.email || '').split('@')[0];
+      const resolved = (raw && raw.trim().length > 0) ? raw.trim() : fallbackEmail;
+      return resolved ? toTitleCase(String(resolved)) : undefined;
+    };
+
     const initAuth = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
@@ -147,11 +211,8 @@ export const useAuth = () => {
         if (!mounted) return;
 
         if (session?.user) {
-          const adminStatus = await checkAdminStatus(session.user.id);
-          
-          // Usar sempre "Karina Arruda" como nome de exibição
-          const displayName = 'Karina Arruda';
-          
+          const adminStatus = await checkAdminStatus(session.user.id, session.user.email);
+          const displayName = computeDisplayName(session.user, adminStatus);
           if (safetyTimer) clearTimeout(safetyTimer);
           setAuthState({
             user: session.user,
@@ -188,8 +249,6 @@ export const useAuth = () => {
     // Escutar mudanças de autenticação
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('[Auth] Estado mudou:', event, session?.user?.email);
-        
         if (!mounted) return;
 
         // Evitar logout desnecessário em eventos de refresh de token
@@ -204,15 +263,25 @@ export const useAuth = () => {
           return;
         }
 
+        // Ignorar INITIAL_SESSION se já temos usuário carregado
+        if (event === 'INITIAL_SESSION' && authState.user?.id && session?.user?.id === authState.user.id) {
+          console.log('[Auth] INITIAL_SESSION ignorado, usuário já carregado');
+          return;
+        }
+
+        // Só logar mudanças de estado quando não for INITIAL_SESSION sem usuário
+        if (!(event === 'INITIAL_SESSION' && !session?.user)) {
+          console.log('[Auth] Estado mudou:', event, session?.user?.email);
+        }
+
         if (session?.user) {
           console.log('[Auth] Processando login para:', session.user.email);
           
           try {
-            const adminStatus = await checkAdminStatus(session.user.id);
+            const adminStatus = await checkAdminStatus(session.user.id, session.user.email);
             console.log('[Auth] Status admin verificado:', adminStatus);
             
-            // Usar sempre "Karina Arruda" como nome de exibição
-            const displayName = 'Karina Arruda';
+            const displayName = computeDisplayName(session.user, adminStatus);
             
             setAuthState({
               user: session.user,
@@ -312,10 +381,86 @@ export const useAuth = () => {
     return { error };
   };
 
+  // Função para limpar o cache de verificação de administrador
+  const clearAdminCache = () => {
+    const cache = adminCheckCacheRef.current;
+    for (const k of Object.keys(cache)) delete cache[k];
+    console.log('[Auth] Cache de verificação admin limpo');
+  };
+
+  // Função para forçar uma nova verificação de status de administrador
+  const refreshAdminStatus = async () => {
+    if (authState.user?.id) {
+      clearAdminCache();
+      
+      // Recriar a lógica de verificação diretamente aqui
+      try {
+        console.log('[Auth] Forçando nova verificação admin para userId:', authState.user.id);
+        
+        const selectCols = 'id, user_id, email, nome, role, tipo, ativo';
+        let adminData: any = null;
+
+        // 1) user_id
+        const { data: byUserId } = await supabase
+          .from('usuarios_admin')
+          .select(selectCols)
+          .eq('user_id', authState.user.id)
+          .eq('ativo', true)
+          .maybeSingle();
+        adminData = byUserId;
+
+        // 2) id
+        if (!adminData) {
+          const { data: byId } = await supabase
+            .from('usuarios_admin')
+            .select(selectCols)
+            .eq('id', authState.user.id)
+            .eq('ativo', true)
+            .maybeSingle();
+          adminData = byId;
+        }
+
+        // 3) email
+        const emailLower = String(authState.user.email || '').toLowerCase();
+        if (!adminData && emailLower) {
+          const { data: byEmail } = await supabase
+            .from('usuarios_admin')
+            .select(selectCols)
+            .eq('email', emailLower)
+            .eq('ativo', true)
+            .maybeSingle();
+          adminData = byEmail;
+        }
+        
+        const isAdminComputed = !!adminData && ([adminData.role, adminData.tipo]
+          .map(v => String(v ?? '').toLowerCase())
+          .some(v => ADMIN_LABELS.includes(v))
+        );
+        const isAdmin = isAdminComputed || authState.user.email === 'semprebellasuporte2025@gmail.com';
+        const adminName = computeDisplayName(authState.user, { adminName: adminData?.nome });
+        
+        setAuthState(prev => ({
+          ...prev,
+          isAdmin,
+          adminName,
+        }));
+        
+        console.log('[Auth] Nova verificação admin concluída:', { isAdmin, adminName });
+        return { isAdmin, adminName };
+      } catch (error) {
+        console.error('[Auth] Erro na verificação forçada admin:', error);
+        return { isAdmin: false, adminName: undefined };
+      }
+    }
+    return { isAdmin: false, adminName: undefined };
+  };
+
   return {
     ...authState,
     signIn,
     signUp,
     signOut,
+    clearAdminCache,
+    refreshAdminStatus,
   };
 };

@@ -116,7 +116,7 @@ export default function SobreNosPage() {
                     <i className="ri-map-pin-fill text-pink-600 text-xl mt-1"></i>
                     <div>
                       <p className="font-semibold text-gray-800">Endereço</p>
-                      <p className="text-gray-600">Rua das Flores, 123 - Centro<br />Balsas - MA, 65800-000</p>
+                      <p className="text-gray-600">Rua Major Felipe, Centro<br />CEP: 65840000, São Raimundo das Mangabeiras/MA</p>
                     </div>
                   </div>
                   <div className="flex items-start gap-3">
@@ -125,8 +125,7 @@ export default function SobreNosPage() {
                       <p className="font-semibold text-gray-800">Horário de Funcionamento</p>
                       <p className="text-gray-600">
                         Segunda a Sexta: 8h às 18h<br />
-                        Sábado: 8h às 17h<br />
-                        Domingo: 8h às 12h
+                        Sábado: 8h às 17h
                       </p>
                     </div>
                   </div>
@@ -134,14 +133,14 @@ export default function SobreNosPage() {
                     <i className="ri-phone-fill text-pink-600 text-xl mt-1"></i>
                     <div>
                       <p className="font-semibold text-gray-800">Telefone</p>
-                      <p className="text-gray-600">(99) 3541-2345</p>
+                      <p className="text-gray-600">(99) 99134-5178<br />(99) 98550-2075</p>
                     </div>
                   </div>
                 </div>
               </div>
               <div className="relative">
                 <iframe
-                  src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3973.123456789!2d-46.0356789!3d-7.5323456!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zN8KwMzEnNTYuNCJTIDQ2wrAwMicwOC40Ilc!5e0!3m2!1spt-BR!2sbr!4v1234567890"
+                  src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d31780.53533333333!2d-45.50111111111111!3d-7.019722222222222!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x92d8f5a5f5f5f5f5%3A0x4f5f5f5f5f5f5f5f!2sS%C3%A3o%20Raimundo%20das%20Mangabeiras%2C%20MA!5e0!3m2!1sen!2sbr!4v1689280000000"
                   width="100%"
                   height="400"
                   style={{ border: 0 }}

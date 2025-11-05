@@ -119,18 +119,18 @@ const ObrigadoInscricaoPage: React.FC = () => {
                     <img
                       src={produto.imagens?.[0] || '/placeholder-product.svg'}
                       alt={produto.nome}
-                      className="w-full h-80 object-cover object-top group-hover:scale-105 transition-transform duration-300"
+                      className="w-full h-96 object-contain object-top group-hover:scale-105 transition-transform duration-300 bg-gray-50"
                     />
                   </div>
 
                   <div className="p-4 flex flex-col flex-grow">
                     <p className="text-xs text-gray-500 mb-1 uppercase tracking-wide">{categoriaNome}</p>
                     
-                    <h3 className="text-sm font-medium text-gray-800 mb-2 line-clamp-2 min-h-[40px] flex-grow">
+                    <h3 className="text-sm font-medium text-gray-800 mb-1 line-clamp-2 flex-grow">
                       {produto.nome}
                     </h3>
 
-                    <div className="flex items-center gap-1 mb-3">
+                    <div className="flex items-center gap-1 mb-1">
                       <div className="flex text-yellow-400">
                         {[...Array(5)].map((_, i) => {
                           const rating = produto.average_rating || 0;
@@ -148,7 +148,7 @@ const ObrigadoInscricaoPage: React.FC = () => {
 
                     {cores.length > 0 && (
                       <div className="mb-4">
-                        <p className="text-xs text-gray-600 mb-2">Cores disponíveis:</p>
+                        <p className="text-xs text-gray-600 mb-1">Cores disponíveis:</p>
                         <div className="flex gap-3">
                           {cores.map((cor, index) => (
                             <div key={index} className="relative group">

@@ -7,7 +7,7 @@ import { useAuth } from '../../../hooks/useAuth';
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { user, loading, isAdmin, signIn, signOut } = useAuth();
+  const { user, loading, isAdmin, signIn, signOut, clearAdminCache, refreshAdminStatus } = useAuth();
 
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [rememberMe, setRememberMe] = useState(false);
@@ -77,15 +77,6 @@ export default function LoginPage() {
         localStorage.removeItem('rememberMe');
         localStorage.removeItem('rememberEmail');
       }
-      
-      // Redirecionamento imediato para garantir que ocorra
-      if (formData.email === 'semprebellasuporte2025@gmail.com') {
-        console.log('[Login] Redirecionamento imediato para painel admin');
-        forceRedirect('/paineladmin');
-      } else {
-        // Para outros usuários, o useEffect tratará o redirecionamento
-        console.log('[Login] Redirecionamento será tratado pelo useEffect');
-      }
     } catch (err: any) {
       console.error('[Login] Erro inesperado:', err);
       setError(err?.message || 'Erro inesperado ao fazer login');
@@ -102,17 +93,11 @@ export default function LoginPage() {
         isAdmin,
         currentPath: window.location.pathname
       });
-      
+
       // Evitar redirecionamento se já estiver na página correta
       const currentPath = window.location.pathname;
-      
-      // Usuário específico sempre vai para admin
-      if (user.email === 'semprebellasuporte2025@gmail.com') {
-        console.log('[Login] Email admin específico detectado, redirecionando para painel admin');
-        if (!currentPath.startsWith('/paineladmin')) {
-          forceRedirect('/paineladmin');
-        }
-      } else if (isAdmin) {
+
+      if (isAdmin) {
         console.log('[Login] Usuário é admin, redirecionando para painel admin');
         if (!currentPath.startsWith('/paineladmin')) {
           forceRedirect('/paineladmin');
@@ -124,7 +109,7 @@ export default function LoginPage() {
         }
       }
     }
-  }, [loading, user, isAdmin, navigate]);
+  }, [user, loading, isAdmin, navigate]);
 
   if (loading) {
     return (
@@ -196,21 +181,36 @@ export default function LoginPage() {
                 <div className="max-w-md mx-auto bg-white shadow-sm rounded-lg p-6 text-center">
                   <h2 className="text-2xl font-bold text-gray-900 mb-2">Você já está logado</h2>
                   <p className="text-gray-600 mb-6">Escolha acessar sua conta ou o painel administrativo.</p>
-                  <div className="flex items-center justify-center gap-3">
-                    <button
-                      type="button"
-                      onClick={() => navigate(isAdmin ? '/paineladmin' : '/minha-conta')}
-                      className="px-5 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-colors whitespace-nowrap cursor-pointer font-medium"
-                    >
-                      {isAdmin ? 'Ir para Painel Admin' : 'Ir para Minha Conta'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={async () => { await signOut(); navigate('/auth/login'); }}
-                      className="px-5 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors whitespace-nowrap cursor-pointer font-medium"
-                    >
-                      Sair
-                    </button>
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => navigate(isAdmin ? '/paineladmin' : '/minha-conta')}
+                        className="px-5 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-colors whitespace-nowrap cursor-pointer font-medium"
+                      >
+                        {isAdmin ? 'Ir para Painel Admin' : 'Ir para Minha Conta'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={async () => { await signOut(); navigate('/auth/login'); }}
+                        className="px-5 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors whitespace-nowrap cursor-pointer font-medium"
+                      >
+                        Sair
+                      </button>
+                    </div>
+                    {!isAdmin && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          clearAdminCache();
+                          refreshAdminStatus();
+                          console.log('Cache de admin limpo e status atualizado');
+                        }}
+                        className="px-4 py-1 text-xs text-gray-600 border border-gray-300 rounded hover:bg-gray-50 transition-colors cursor-pointer"
+                      >
+                        Atualizar status de administrador
+                      </button>
+                    )}
                   </div>
                 </div>
               ) : (

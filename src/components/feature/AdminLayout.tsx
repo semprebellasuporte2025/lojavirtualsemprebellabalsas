@@ -79,14 +79,6 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       ],
     },
     {
-      title: 'Fornecedores',
-      icon: 'ri-truck-line',
-      submenu: [
-        { title: 'Cadastrar', path: '/paineladmin/fornecedores/cadastrar' },
-        { title: 'Listar', path: '/paineladmin/fornecedores/listar' },
-      ],
-    },
-    {
       title: 'Estoque',
       icon: 'ri-archive-line',
       submenu: [

@@ -161,39 +161,31 @@ export default function CategorySection({ title, categoryName }: CategorySection
                   <img
                     src={produto.imagens?.[0] || '/placeholder-product.svg'}
                     alt={produto.nome}
-                    className="w-full h-80 object-cover object-top group-hover:scale-105 transition-transform duration-300"
+                    className="w-full h-96 object-contain object-top group-hover:scale-105 transition-transform duration-300 bg-gray-50"
                   />
                 </div>
+                <div className="p-3">
+                  <p className="text-sm text-gray-500 mb-1">{categoryName}</p>
+                  <h3 className="text-lg font-semibold text-gray-800 mb-1 line-clamp-2">{produto.nome}</h3>
 
-                <div className="p-4">
-                  <p className="text-xs text-gray-500 mb-1 uppercase tracking-wide">{categoriaNome}</p>
-                  
-                  <h3 className="text-sm font-medium text-gray-800 mb-2 line-clamp-2 min-h-[40px]">
-                    {produto.nome}
-                  </h3>
-
-                  <div className="flex items-center gap-1 mb-3">
+                  <div className="flex items-center mb-1">
                     <div className="flex text-yellow-400">
-                      {[...Array(5)].map((_, i) => {
-                        const rating = produto.average_rating || 0;
-                        if (i < Math.floor(rating)) {
-                          return <i key={i} className="ri-star-fill text-xs"></i>;
-                        } else if (i < rating) {
-                          return <i key={i} className="ri-star-half-fill text-xs"></i>;
-                        } else {
-                          return <i key={i} className="ri-star-line text-xs"></i>;
-                        }
-                      })}
+                      {[...Array(Math.round(produto.average_rating || 0))].map((_, i) => (
+                        <i key={i} className="ri-star-fill text-sm"></i>
+                      ))}
+                      {[...Array(5 - Math.round(produto.average_rating || 0))].map((_, i) => (
+                        <i key={i} className="ri-star-line text-sm"></i>
+                      ))}
                     </div>
                     <span className="text-xs text-gray-500 ml-1">({produto.review_count || 0})</span>
                   </div>
 
                   {cores.length > 0 && (
-                    <>
-                      <p className="text-xs text-gray-600 mb-3">Cores disponíveis:</p>
-                      <div className="flex gap-3 mb-4">
-                        {cores.map((cor, index) => (
-                          <div key={index} className="relative group">
+                    <div className="mb-1">
+                      <p className="text-sm text-gray-600 mb-1">Cores disponíveis:</p>
+                      <div className="flex space-x-2">
+                        {cores.map((cor) => (
+                          <div key={cor.cor_hex} className="relative group">
                             <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-0.5 rounded-full bg-white text-gray-800 border border-gray-300 text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none shadow-sm">
                               {cor.cor}
                             </span>
@@ -205,13 +197,13 @@ export default function CategorySection({ title, categoryName }: CategorySection
                           </div>
                         ))}
                       </div>
-                    </>
+                    </div>
                   )}
 
-                  <div className="mb-4">
+                  <div className="flex justify-between items-center mt-2">
                     {produto.preco_promocional ? (
-                      <div className="flex items-center gap-2">
-                        <span className="text-gray-400 line-through text-sm">
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-gray-500 line-through">
                           R$ {produto.preco.toFixed(2)}
                         </span>
                         <span className="text-xl font-bold text-pink-600">
@@ -219,16 +211,15 @@ export default function CategorySection({ title, categoryName }: CategorySection
                         </span>
                       </div>
                     ) : (
-                      <span className="text-xl font-bold text-gray-800">
+                      <span className="text-xl font-bold text-gray-900">
                         R$ {produto.preco.toFixed(2)}
                       </span>
                     )}
                   </div>
 
-                <Link
+                  <Link
                     to={`/produto/${produto.id}`}
-                    onClick={(e) => { e.stopPropagation(); }}
-                    className="w-full block text-center py-2.5 bg-pink-600 text-white text-sm font-semibold rounded hover:bg-pink-700 transition-colors whitespace-nowrap"
+                    className="mt-3 w-full block text-center py-2.5 bg-pink-600 text-white text-sm font-semibold rounded hover:bg-pink-700 transition-colors whitespace-nowrap"
                   >
                     Ver Detalhes
                   </Link>

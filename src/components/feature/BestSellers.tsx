@@ -161,37 +161,33 @@ export default function BestSellers() {
                   <img
                     src={produto.imagens?.[0] || '/placeholder-product.svg'}
                     alt={produto.nome}
-                    className="w-full h-80 object-cover object-top group-hover:scale-105 transition-transform duration-300"
+                    className="w-full h-96 object-contain object-top bg-gray-50 group-hover:scale-105 transition-transform duration-300"
                   />
                 </div>
 
-                <div className="p-4">
+                <div className="p-3">
                   <p className="text-xs text-gray-500 mb-1 uppercase tracking-wide">{categoriaNome}</p>
                   
-                  <h3 className="text-sm font-medium text-gray-800 mb-2 line-clamp-2 min-h-[40px]">
+                  <h3 className="text-sm font-medium text-gray-800 mb-1 line-clamp-2">
                     {produto.nome}
                   </h3>
 
-                  <div className="flex items-center gap-1 mb-3">
+                  <div className="flex items-center gap-1 mb-1">
                     <div className="flex text-yellow-400">
-                      {[...Array(5)].map((_, i) => {
-                        const rating = produto.average_rating || 0;
-                        if (i < Math.floor(rating)) {
-                          return <i key={i} className="ri-star-fill text-xs"></i>;
-                        } else if (i < rating) {
-                          return <i key={i} className="ri-star-half-fill text-xs"></i>;
-                        } else {
-                          return <i key={i} className="ri-star-line text-xs"></i>;
-                        }
-                      })}
+                      {[...Array(Math.round(produto.average_rating || 0))].map((_, i) => (
+                        <i key={i} className="ri-star-fill text-xs"></i>
+                      ))}
+                      {[...Array(5 - Math.round(produto.average_rating || 0))].map((_, i) => (
+                        <i key={i} className="ri-star-line text-xs"></i>
+                      ))}
                     </div>
                     <span className="text-xs text-gray-500 ml-1">({produto.review_count || 0})</span>
                   </div>
 
                   {cores.length > 0 && (
-                    <>
-                      <p className="text-xs text-gray-600 mb-3">Cores disponíveis:</p>
-                      <div className="flex gap-3 mb-4">
+                    <div className="mb-1">
+                      <p className="text-xs text-gray-600 mb-1">Cores disponíveis:</p>
+                      <div className="flex gap-2">
                         {cores.map((cor, index) => (
                           <div key={index} className="relative group">
                             <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-0.5 rounded-full bg-white text-gray-800 border border-gray-300 text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none shadow-sm">
@@ -205,10 +201,10 @@ export default function BestSellers() {
                           </div>
                         ))}
                       </div>
-                    </>
+                    </div>
                   )}
 
-                  <div className="mb-4">
+                  <div className="flex items-center justify-between mt-2">
                     {produto.preco_promocional ? (
                       <div className="flex items-center gap-2">
                         <span className="text-gray-400 line-through text-sm">
@@ -228,7 +224,7 @@ export default function BestSellers() {
                   <Link
                     to={`/produto/${produto.id}`}
                     onClick={(e) => { e.stopPropagation(); }}
-                    className="w-full block text-center py-2.5 bg-pink-600 text-white text-sm font-semibold rounded hover:bg-pink-700 transition-colors whitespace-nowrap"
+                    className="mt-2 w-full block text-center py-2.5 bg-pink-600 text-white text-sm font-semibold rounded hover:bg-pink-700 transition-colors whitespace-nowrap"
                   >
                     Ver Detalhes
                   </Link>

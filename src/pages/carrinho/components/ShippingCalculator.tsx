@@ -11,9 +11,10 @@ interface ShippingOption {
 
 interface ShippingCalculatorProps {
   onShippingCalculated: (cost: number, method: string) => void;
+  subtotal: number;
 }
 
-export default function ShippingCalculator({ onShippingCalculated }: ShippingCalculatorProps) {
+export default function ShippingCalculator({ onShippingCalculated, subtotal }: ShippingCalculatorProps) {
   const [cep, setCep] = useState('');
   const [loading, setLoading] = useState(false);
   const [shippingOptions, setShippingOptions] = useState<ShippingOption[]>([]);
@@ -21,6 +22,16 @@ export default function ShippingCalculator({ onShippingCalculated }: ShippingCal
   const [address, setAddress] = useState('');
   const [error, setError] = useState('');
   const [freteGratis, setFreteGratis] = useState(false);
+
+  // Remove prefixos de prazo do início da descrição quando for frete grátis
+  const getDisplayDescription = (option: ShippingOption) => {
+    const desc = option.descricao || '';
+    if (option.valor === 0) {
+      // Remove padrões como "1 dia útil - " ou "2 dias úteis - " do início
+      return desc.replace(/^\s*\d+\s*dias?\s*úteis?\s*-\s*/i, '').replace(/^\s*1\s*dia\s*útil\s*-\s*/i, '').trim();
+    }
+    return desc;
+  };
 
   const formatCep = (value: string) => {
     const numbers = value.replace(/\D/g, '');
@@ -55,19 +66,25 @@ export default function ShippingCalculator({ onShippingCalculated }: ShippingCal
     try {
       // URL da função Edge do Supabase
       const supabaseUrl = import.meta.env.VITE_PUBLIC_SUPABASE_URL;
+      
+      const requestBody = {
+        cepDestino: cep.replace('-', ''),
+        peso: 0.5, // 500g
+        comprimento: 20,
+        largura: 15,
+        altura: 5,
+        valorTotal: Number(subtotal) // Garantir que é um número
+      };
+      
+      console.log('Enviando para calcular-frete:', requestBody);
+      
       const response = await fetch(`${supabaseUrl}/functions/v1/calcular-frete`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${import.meta.env.VITE_PUBLIC_SUPABASE_ANON_KEY}`,
         },
-        body: JSON.stringify({
-          cepDestino: cep.replace('-', ''),
-          peso: 0.5, // 500g
-          comprimento: 20,
-          largura: 15,
-          altura: 5
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       const data = await response.json();
@@ -169,7 +186,7 @@ export default function ShippingCalculator({ onShippingCalculated }: ShippingCal
             {freteGratis && (
               <p className="text-sm text-green-600 font-semibold mt-1">
                 <i className="ri-gift-line mr-1"></i>
-                🎉 Parabéns! Você tem frete grátis em Balsas - MA!
+                🎉 Parabéns! Você tem frete grátis!
               </p>
             )}
           </div>
@@ -206,7 +223,7 @@ export default function ShippingCalculator({ onShippingCalculated }: ShippingCal
                           </span>
                         )}
                       </p>
-                      <p className="text-sm text-gray-600">{option.descricao}</p>
+                      <p className="text-sm text-gray-600">{getDisplayDescription(option)}</p>
                     </div>
                   </div>
                   <div className="text-right">

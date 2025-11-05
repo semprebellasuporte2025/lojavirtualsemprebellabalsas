@@ -1,81 +1,67 @@
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import AdminLayout from '../../../../components/feature/AdminLayout';
+import { useToast } from '../../../../hooks/useToast';
+import Toast from '../../../../components/base/Toast';
+import { supabase } from '../../../../lib/supabase';
 
-export default function ListarMovimentacoes() {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [tipoFilter, setTipoFilter] = useState('todos');
-  const [dateFilter, setDateFilter] = useState('todos');
+interface Movimentacao {
+  id: string;
+  tipo: 'entrada' | 'saida' | 'ajuste';
+  produto_id: string;
+  produto_nome?: string;
+  quantidade: number;
+  valor_unitario: number;
+  valor_total: number;
+  fornecedor_nome?: string;
+  numero_nota?: string;
+  motivo?: string;
+  observacoes?: string;
+  usuario_nome: string;
+  created_at: string;
+}
 
-  const movimentacoes = [
-    {
-      id: 1,
-      tipo: 'entrada',
-      produto: 'Batom Matte Vermelho',
-      sku: 'BAT001',
-      quantidade: 50,
-      valorUnitario: 25.90,
-      valorTotal: 1295.00,
-      fornecedor: 'Beleza & Cia Ltda',
-      data: '2024-01-20',
-      hora: '14:30',
-      numeroNota: '123456',
-      usuario: 'Kalina Arruda'
-    },
-    {
-      id: 2,
-      tipo: 'saida',
-      produto: 'Base Líquida Bege',
-      sku: 'BAS002',
-      quantidade: 3,
-      valorUnitario: 45.90,
-      valorTotal: 137.70,
-      motivo: 'Venda #VD002',
-      data: '2024-01-20',
-      hora: '16:45',
-      usuario: 'Sistema'
-    },
-    {
-      id: 3,
-      tipo: 'entrada',
-      produto: "Rímel à Prova D'água",
-      sku: 'RIM003',
-      quantidade: 30,
-      valorUnitario: 32.50,
-      valorTotal: 975.00,
-      fornecedor: 'Cosméticos Premium',
-      data: '2024-01-19',
-      hora: '10:15',
-      numeroNota: '789012',
-      usuario: 'Kalina Arruda'
-    },
-    {
-      id: 4,
-      tipo: 'ajuste',
-      produto: 'Pó Compacto Translúcido',
-      sku: 'POC004',
-      quantidade: -2,
-      valorUnitario: 28.90,
-      valorTotal: -57.80,
-      motivo: 'Produto danificado',
-      data: '2024-01-19',
-      hora: '09:20',
-      usuario: 'Kalina Arruda'
-    },
-    {
-      id: 5,
-      tipo: 'saida',
-      produto: 'Blush Rosa Natural',
-      sku: 'BLU005',
-      quantidade: 1,
-      valorUnitario: 22.90,
-      valorTotal: 22.90,
-      motivo: 'Venda #VD005',
-      data: '2024-01-18',
-      hora: '15:30',
-      usuario: 'Sistema'
+export default function ListarEstoquePage() {
+  const { toast, showToast, hideToast } = useToast();
+  const [isLoading, setIsLoading] = useState(true);
+  const [movimentacoes, setMovimentacoes] = useState<Movimentacao[]>([]);
+  const [filtros, setFiltros] = useState({
+    busca: '',
+    tipo: '',
+    dataInicio: '',
+    dataFim: ''
+  });
+
+  useEffect(() => {
+    carregarMovimentacoes();
+  }, []);
+
+  const carregarMovimentacoes = async () => {
+    try {
+      setIsLoading(true);
+      
+      const { data, error } = await supabase
+        .from('movimentacoes_estoque')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.warn('Tabela movimentacoes_estoque não encontrada, usando dados vazios');
+        setMovimentacoes([]);
+      } else {
+        setMovimentacoes(data || []);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar movimentações:', error);
+      showToast('Erro ao carregar movimentações', 'error');
+      setMovimentacoes([]);
+    } finally {
+      setIsLoading(false);
     }
-  ];
+  };
+
+  const handleFiltroChange = (campo: string, valor: string) => {
+    setFiltros(prev => ({ ...prev, [campo]: valor }));
+  };
 
   const getTipoColor = (tipo: string) => {
     switch (tipo) {
@@ -97,251 +83,299 @@ export default function ListarMovimentacoes() {
 
   const getTipoIcon = (tipo: string) => {
     switch (tipo) {
-      case 'entrada': return 'ri-arrow-down-line';
-      case 'saida': return 'ri-arrow-up-line';
-      case 'ajuste': return 'ri-edit-line';
-      default: return 'ri-question-line';
+      case 'entrada': return 'fas fa-arrow-up';
+      case 'saida': return 'fas fa-arrow-down';
+      case 'ajuste': return 'fas fa-edit';
+      default: return 'fas fa-question';
     }
   };
 
-  const filteredMovimentacoes = movimentacoes.filter(mov => {
-    const matchesSearch = mov.produto.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         mov.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         (mov.fornecedor && mov.fornecedor.toLowerCase().includes(searchTerm.toLowerCase())) ||
-                         (mov.motivo && mov.motivo.toLowerCase().includes(searchTerm.toLowerCase()));
-    const matchesTipo = tipoFilter === 'todos' || mov.tipo === tipoFilter;
-    const matchesDate = dateFilter === 'todos' || 
-                       (dateFilter === 'hoje' && mov.data === '2024-01-20') ||
-                       (dateFilter === 'ontem' && mov.data === '2024-01-19') ||
-                       (dateFilter === 'semana' && ['2024-01-18', '2024-01-19', '2024-01-20'].includes(mov.data));
-    
-    return matchesSearch && matchesTipo && matchesDate;
+  const formatarData = (data: string) => {
+    return new Date(data).toLocaleString('pt-BR');
+  };
+
+  const formatarValor = (valor: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    }).format(valor);
+  };
+
+  // Filtrar movimentações
+  const movimentacoesFiltradas = movimentacoes.filter(mov => {
+    const matchBusca = !filtros.busca || 
+      mov.produto_nome?.toLowerCase().includes(filtros.busca.toLowerCase()) ||
+      mov.usuario_nome.toLowerCase().includes(filtros.busca.toLowerCase()) ||
+      mov.fornecedor_nome?.toLowerCase().includes(filtros.busca.toLowerCase());
+
+    const matchTipo = !filtros.tipo || mov.tipo === filtros.tipo;
+
+    const matchData = (!filtros.dataInicio && !filtros.dataFim) ||
+      (filtros.dataInicio && new Date(mov.created_at) >= new Date(filtros.dataInicio)) &&
+      (filtros.dataFim && new Date(mov.created_at) <= new Date(filtros.dataFim));
+
+    return matchBusca && matchTipo && matchData;
   });
+
+  // Calcular estatísticas
+  const totalMovimentacoes = movimentacoesFiltradas.length;
+  const totalEntradas = movimentacoesFiltradas.filter(m => m.tipo === 'entrada').length;
+  const totalSaidas = movimentacoesFiltradas.filter(m => m.tipo === 'saida').length;
+  const totalAjustes = movimentacoesFiltradas.filter(m => m.tipo === 'ajuste').length;
 
   return (
     <AdminLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Movimentações de Estoque</h1>
-            <p className="text-gray-600 dark:text-gray-400 mt-1">Histórico completo de entradas, saídas e ajustes</p>
-          </div>
-          <div className="mt-4 sm:mt-0 flex items-center space-x-3">
-            <button className="bg-pink-600 text-white px-4 py-2 rounded-lg hover:bg-pink-700 transition-colors flex items-center space-x-2 whitespace-nowrap cursor-pointer">
-              <i className="ri-download-line"></i>
-              <span>Exportar</span>
-            </button>
-          </div>
+        <div className="flex justify-between items-center">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+            Movimentações de Estoque
+          </h1>
         </div>
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Movimentações</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">{filteredMovimentacoes.length}</p>
-              </div>
-              <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center">
-                <i className="ri-exchange-line text-xl text-blue-600 dark:text-blue-400"></i>
-              </div>
-            </div>
-          </div>
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Entradas</p>
-                <p className="text-2xl font-bold text-green-600 dark:text-green-400">{filteredMovimentacoes.filter(m => m.tipo === 'entrada').length}</p>
-              </div>
-              <div className="w-12 h-12 bg-green-100 dark:bg-green-900 rounded-lg flex items-center justify-center">
-                <i className="ri-arrow-down-line text-xl text-green-600 dark:text-green-400"></i>
+          <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
+            <div className="p-5">
+              <div className="flex items-center">
+                <div className="flex-shrink-0">
+                  <i className="fas fa-list-ul text-gray-400 text-xl"></i>
+                </div>
+                <div className="ml-5 w-0 flex-1">
+                  <dl>
+                    <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Total</dt>
+                    <dd className="text-lg font-medium text-gray-900 dark:text-white">{totalMovimentacoes}</dd>
+                  </dl>
+                </div>
               </div>
             </div>
           </div>
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Saídas</p>
-                <p className="text-2xl font-bold text-red-600 dark:text-red-400">{filteredMovimentacoes.filter(m => m.tipo === 'saida').length}</p>
-              </div>
-              <div className="w-12 h-12 bg-red-100 dark:bg-red-900 rounded-lg flex items-center justify-center">
-                <i className="ri-arrow-up-line text-xl text-red-600 dark:text-red-400"></i>
+
+          <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
+            <div className="p-5">
+              <div className="flex items-center">
+                <div className="flex-shrink-0">
+                  <i className="fas fa-arrow-up text-green-400 text-xl"></i>
+                </div>
+                <div className="ml-5 w-0 flex-1">
+                  <dl>
+                    <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Entradas</dt>
+                    <dd className="text-lg font-medium text-green-600 dark:text-green-400">{totalEntradas}</dd>
+                  </dl>
+                </div>
               </div>
             </div>
           </div>
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Ajustes</p>
-                <p className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">{filteredMovimentacoes.filter(m => m.tipo === 'ajuste').length}</p>
+
+          <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
+            <div className="p-5">
+              <div className="flex items-center">
+                <div className="flex-shrink-0">
+                  <i className="fas fa-arrow-down text-red-400 text-xl"></i>
+                </div>
+                <div className="ml-5 w-0 flex-1">
+                  <dl>
+                    <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Saídas</dt>
+                    <dd className="text-lg font-medium text-red-600 dark:text-red-400">{totalSaidas}</dd>
+                  </dl>
+                </div>
               </div>
-              <div className="w-12 h-12 bg-yellow-100 dark:bg-yellow-900 rounded-lg flex items-center justify-center">
-                <i className="ri-edit-line text-xl text-yellow-600 dark:text-yellow-400"></i>
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
+            <div className="p-5">
+              <div className="flex items-center">
+                <div className="flex-shrink-0">
+                  <i className="fas fa-edit text-yellow-400 text-xl"></i>
+                </div>
+                <div className="ml-5 w-0 flex-1">
+                  <dl>
+                    <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Ajustes</dt>
+                    <dd className="text-lg font-medium text-yellow-600 dark:text-yellow-400">{totalAjustes}</dd>
+                  </dl>
+                </div>
               </div>
             </div>
           </div>
         </div>
 
         {/* Filters */}
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Buscar
               </label>
-              <div className="relative">
-                <input
-                  type="text"
-                  placeholder="Produto, Referência, fornecedor..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
-                />
-                <i className="ri-search-line absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm"></i>
-              </div>
+              <input
+                type="text"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                placeholder="Produto, usuário ou fornecedor..."
+                value={filtros.busca}
+                onChange={(e) => handleFiltroChange('busca', e.target.value)}
+              />
             </div>
+
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Tipo
               </label>
               <select
-                value={tipoFilter}
-                onChange={(e) => setTipoFilter(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm pr-8"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                value={filtros.tipo}
+                onChange={(e) => handleFiltroChange('tipo', e.target.value)}
               >
-                <option value="todos">Todos os Tipos</option>
+                <option value="">Todos</option>
                 <option value="entrada">Entrada</option>
                 <option value="saida">Saída</option>
                 <option value="ajuste">Ajuste</option>
               </select>
             </div>
+
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Período
+                Data Início
               </label>
-              <select
-                value={dateFilter}
-                onChange={(e) => setDateFilter(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm pr-8"
-              >
-                <option value="todos">Todos os Períodos</option>
-                <option value="hoje">Hoje</option>
-                <option value="ontem">Ontem</option>
-                <option value="semana">Esta Semana</option>
-              </select>
+              <input
+                type="date"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                value={filtros.dataInicio}
+                onChange={(e) => handleFiltroChange('dataInicio', e.target.value)}
+              />
             </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Data Fim
+              </label>
+              <input
+                type="date"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                value={filtros.dataFim}
+                onChange={(e) => handleFiltroChange('dataFim', e.target.value)}
+              />
+            </div>
+
             <div className="flex items-end">
               <button
-                onClick={() => {
-                  setSearchTerm('');
-                  setTipoFilter('todos');
-                  setDateFilter('todos');
-                }}
-                className="w-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors flex items-center justify-center space-x-2 whitespace-nowrap cursor-pointer"
+                type="button"
+                onClick={() => setFiltros({ busca: '', tipo: '', dataInicio: '', dataFim: '' })}
+                className="w-full px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
               >
-                <i className="ri-refresh-line"></i>
-                <span>Limpar</span>
+                Limpar
               </button>
             </div>
           </div>
         </div>
 
         {/* Movimentações Table */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div className="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
               <thead className="bg-gray-50 dark:bg-gray-700">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Tipo
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Produto
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Quantidade
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Valor
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Data/Hora
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Data
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Origem/Destino
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Detalhes
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Usuário
                   </th>
                 </tr>
               </thead>
               <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                {filteredMovimentacoes.map((mov) => (
-                  <tr key={mov.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center space-x-2">
-                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${getTipoColor(mov.tipo)}`}>
-                          <i className={`${getTipoIcon(mov.tipo)} text-sm`}></i>
-                        </div>
-                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getTipoColor(mov.tipo)}`}>
-                          {getTipoText(mov.tipo)}
-                        </span>
+                {isLoading ? (
+                  <tr>
+                    <td colSpan={7} className="px-6 py-12 text-center">
+                      <div className="flex items-center justify-center">
+                        <i className="fas fa-spinner fa-spin text-gray-400 mr-2"></i>
+                        <span className="text-gray-500 dark:text-gray-400">Carregando movimentações...</span>
                       </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div>
-                        <div className="text-sm font-medium text-gray-900 dark:text-white">{mov.produto}</div>
-                        <div className="text-sm text-gray-500 dark:text-gray-400">{mov.sku}</div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className={`text-sm font-medium ${mov.quantidade > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                        {mov.quantidade > 0 ? '+' : ''}{mov.quantidade}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div>
-                        <div className="text-sm font-medium text-gray-900 dark:text-white">
-                          R$ {Math.abs(mov.valorTotal).toFixed(2)}
-                        </div>
-                        <div className="text-sm text-gray-500 dark:text-gray-400">
-                          Unit: R$ {mov.valorUnitario.toFixed(2)}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div>
-                        <div className="text-sm text-gray-900 dark:text-white">{new Date(mov.data).toLocaleDateString('pt-BR')}</div>
-                        <div className="text-sm text-gray-500 dark:text-gray-400">{mov.hora}</div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900 dark:text-white">
-                        {mov.fornecedor || mov.motivo || '-'}
-                      </div>
-                      {mov.numeroNota && (
-                        <div className="text-sm text-gray-500 dark:text-gray-400">NF: {mov.numeroNota}</div>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                      {mov.usuario}
                     </td>
                   </tr>
-                ))}
+                ) : movimentacoesFiltradas.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="px-6 py-12 text-center">
+                      <div className="text-gray-500 dark:text-gray-400">
+                        <i className="fas fa-inbox text-4xl mb-4"></i>
+                        <p>Nenhuma movimentação encontrada</p>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  movimentacoesFiltradas.map((mov) => (
+                    <tr key={mov.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${getTipoColor(mov.tipo)}`}>
+                            <i className={`${getTipoIcon(mov.tipo)} text-sm`}></i>
+                          </div>
+                          <span className={`ml-2 inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getTipoColor(mov.tipo)}`}>
+                            {getTipoText(mov.tipo)}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-medium text-gray-900 dark:text-white">{mov.produto_nome || 'Produto não encontrado'}</div>
+                        <div className="text-sm text-gray-500 dark:text-gray-400">ID: {mov.produto_id}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className={`text-sm font-medium ${mov.quantidade > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                          {mov.quantidade > 0 ? '+' : ''}{mov.quantidade}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-medium text-gray-900 dark:text-white">
+                          {formatarValor(Math.abs(mov.valor_total))}
+                        </div>
+                        <div className="text-sm text-gray-500 dark:text-gray-400">
+                          Unit: {formatarValor(mov.valor_unitario)}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900 dark:text-white">{formatarData(mov.created_at)}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900 dark:text-white">
+                          {mov.fornecedor_nome || mov.motivo || '-'}
+                        </div>
+                        {mov.numero_nota && (
+                          <div className="text-sm text-gray-500 dark:text-gray-400">NF: {mov.numero_nota}</div>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                        {mov.usuario_nome}
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
         </div>
-
-        {filteredMovimentacoes.length === 0 && (
-          <div className="text-center py-12">
-            <i className="ri-exchange-line text-4xl text-gray-400 dark:text-gray-600 mb-4"></i>
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">Nenhuma movimentação encontrada</h3>
-            <p className="text-gray-500 dark:text-gray-400">Tente ajustar os filtros para encontrar movimentações.</p>
-          </div>
-        )}
       </div>
+      
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={hideToast}
+        />
+      )}
     </AdminLayout>
   );
 }

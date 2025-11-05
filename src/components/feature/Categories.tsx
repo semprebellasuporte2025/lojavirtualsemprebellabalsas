@@ -54,7 +54,12 @@ export default function Categories({ initialCategorias, catalogLoading }: { init
   };
 
   const handleCategoryClick = (nome: string) => {
-    window.REACT_APP_NAVIGATE(`/categoria/${encodeURIComponent(nome)}`);
+    if (typeof window.REACT_APP_NAVIGATE === 'function') {
+      window.REACT_APP_NAVIGATE(`/categoria/${encodeURIComponent(nome)}`);
+    } else {
+      // Fallback para navegação padrão caso a função não esteja disponível
+      window.location.href = `/categoria/${encodeURIComponent(nome)}`;
+    }
   };
 
   const scrollToIndex = (index: number) => {

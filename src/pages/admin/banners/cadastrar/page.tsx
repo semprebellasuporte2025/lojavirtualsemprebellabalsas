@@ -1,35 +1,94 @@
 
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { supabase } from '../../../../lib/supabase';
 import AdminLayout from '../../../../components/feature/AdminLayout';
 import AdminFormButtons from '../../../../components/feature/AdminFormButtons/AdminFormButtons';
+import { useToast } from '@/hooks/useToast';
 
 export default function CadastrarBanner() {
+  const navigate = useNavigate();
+  const { showToast } = useToast();
   const [formData, setFormData] = useState({
     titulo: '',
     subtitulo: '',
     link: '',
+    texto_botao: '', // Adicionado
     ordem: '1',
     ativo: true
   });
   const [imagePreview, setImagePreview] = useState('');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Banner cadastrado:', formData);
-    alert('Banner cadastrado com sucesso!');
-    setFormData({
-      titulo: '',
-      subtitulo: '',
-      link: '',
-      ordem: '1',
-      ativo: true
-    });
-    setImagePreview('');
+    
+    if (!selectedFile) {
+      alert('Por favor, selecione uma imagem para o banner.');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      // Upload da imagem para o Supabase Storage
+      const fileExt = selectedFile.name.split('.').pop();
+      const fileName = `banner-${Date.now()}.${fileExt}`;
+      const filePath = `banners/${fileName}`;
+
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('banners')
+        .upload(filePath, selectedFile);
+
+      if (uploadError) {
+        console.error('Erro no upload:', uploadError);
+        alert('Erro ao fazer upload da imagem. Tente novamente.');
+        return;
+      }
+
+      // Obter URL pública da imagem
+      const { data: { publicUrl } } = supabase.storage
+        .from('banners')
+        .getPublicUrl(filePath);
+
+      // Salvar dados do banner no banco
+      const { data, error } = await supabase
+        .from('banners')
+        .insert([
+          {
+            titulo: formData.titulo,
+            subtitulo: formData.subtitulo || null,
+            imagem_url: publicUrl,
+            link_destino: formData.link || null,
+            texto_botao: formData.texto_botao || null, // Adicionado
+            ordem_exibicao: parseInt(formData.ordem),
+            ativo: formData.ativo
+          }
+        ])
+        .select();
+
+      if (error) {
+        console.error('Erro ao salvar banner:', error);
+        alert('Erro ao salvar banner. Tente novamente.');
+        return;
+      }
+
+      showToast('Banner cadastrado com sucesso!', 'success');
+      navigate('/paineladmin/banners/listar');
+
+    } catch (error) {
+      console.error('Erro inesperado:', error);
+      alert('Erro inesperado. Tente novamente.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      setSelectedFile(file);
       const reader = new FileReader();
       reader.onloadend = () => {
         setImagePreview(reader.result as string);
@@ -103,31 +162,48 @@ export default function CadastrarBanner() {
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Link de Destino
-                </label>
-                <input
-                  type="url"
-                  value={formData.link}
-                  onChange={(e) => setFormData({ ...formData, link: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-                  placeholder="https://exemplo.com/promocao"
-                />
-              </div>
+              <div className="md:col-span-2">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Link de Destino
+                    </label>
+                    <input
+                      type="url"
+                      value={formData.link}
+                      onChange={(e) => setFormData({ ...formData, link: e.target.value })}
+                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                      placeholder="https://exemplo.com/promocao"
+                    />
+                  </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Ordem de Exibição *
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  value={formData.ordem}
-                  onChange={(e) => setFormData({ ...formData, ordem: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-                  required
-                />
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Texto do Botão
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.texto_botao}
+                      onChange={(e) => setFormData({ ...formData, texto_botao: e.target.value })}
+                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                      placeholder="Ex: Saiba Mais"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Ordem de Exibição *
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={formData.ordem}
+                      onChange={(e) => setFormData({ ...formData, ordem: e.target.value })}
+                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                      required
+                    />
+                  </div>
+                </div>
               </div>
 
               <div className="md:col-span-2">
@@ -148,7 +224,8 @@ export default function CadastrarBanner() {
             <AdminFormButtons
               onSave={handleSubmit}
               onBack={() => window.history.back()}
-              saveText="Salvar Banner"
+              saveText={loading ? "Salvando..." : "Salvar Banner"}
+              disabled={loading}
             />
 
           </form>

@@ -97,30 +97,33 @@ export default function RelatedProducts({ categoriaId, produtoAtualId }: Related
                   <img
                     src={produto.imagens?.[0] || '/placeholder-product.svg'}
                     alt={produto.nome}
-                    className="w-full h-60 sm:h-72 lg:h-80 object-cover object-top group-hover:scale-110 transition-transform duration-300"
+                    className="w-full h-96 object-contain object-top bg-gray-50 group-hover:scale-105 transition-transform duration-300"
                   />
                   {produto.preco_promocional && (
-                    <div className="absolute top-4 right-4 bg-pink-600 text-white px-3 py-1 rounded-full text-sm font-semibold">
+                    <div className="absolute top-3 left-3 bg-red-500 text-white px-2 py-1 rounded text-xs font-bold z-10">
                       -{Math.round(((produto.preco - produto.preco_promocional) / produto.preco) * 100)}%
                     </div>
                   )}
                 </div>
 
-                <div className="p-4">
-                  <h3 className="text-lg font-semibold text-gray-800 mb-2 line-clamp-2">
+                <div className="p-3">
+                  <h3 className="text-lg font-semibold text-gray-800 mb-1 line-clamp-2">
                     {produto.nome}
                   </h3>
 
-                  <div className="flex items-center gap-2 mb-3">
+                  <div className="flex items-center gap-1 mb-1">
                     <div className="flex text-yellow-400">
-                      {[...Array(5)].map((_, i) => (
+                      {[...Array(Math.round(produto.average_rating || 0))].map((_, i) => (
                         <i key={i} className="ri-star-fill text-sm"></i>
                       ))}
+                      {[...Array(5 - Math.round(produto.average_rating || 0))].map((_, i) => (
+                        <i key={i} className="ri-star-line text-sm"></i>
+                      ))}
                     </div>
-                    <span className="text-sm text-gray-500">(4.8)</span>
+                    <span className="text-xs text-gray-500 ml-1">({produto.review_count || 0})</span>
                   </div>
 
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between mt-2">
                     <div>
                       {produto.preco_promocional ? (
                         <div className="flex items-center gap-2">
@@ -142,7 +145,7 @@ export default function RelatedProducts({ categoriaId, produtoAtualId }: Related
                   <Link
                     to={`/produto/${produto.id}`}
                     onClick={(e) => { e.stopPropagation(); }}
-                    className="mt-3 w-full block text-center py-2.5 bg-pink-600 text-white text-sm font-semibold rounded hover:bg-pink-700 transition-colors whitespace-nowrap"
+                    className="mt-2 w-full block text-center py-2.5 bg-pink-600 text-white text-sm font-semibold rounded hover:bg-pink-700 transition-colors whitespace-nowrap"
                   >
                     Ver Detalhes
                   </Link>

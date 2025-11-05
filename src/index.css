@@ -10,6 +10,10 @@
     overflow-x: hidden;
     max-width: 100vw;
   }
+
+.text-shadow {
+  text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.5);
+}
   
   /* Garantir que todos os elementos não excedam a largura da viewport */
   * {

@@ -11,7 +11,10 @@ serve(async (req) => {
   }
 
   try {
-    const { cepDestino, peso = 0.5, altura = 5, largura = 15, profundidade = 20 } = await req.json()
+    const { cepDestino, peso = 0.5, altura = 5, largura = 15, profundidade = 20, valorTotal = 0 } = await req.json()
+
+    // Log para debug
+    console.log('Dados recebidos:', { cepDestino, peso, altura, largura, profundidade, valorTotal })
 
     if (!cepDestino) {
       return new Response(
@@ -55,9 +58,24 @@ serve(async (req) => {
 
     // Verificar se é Balsas - MA para frete grátis
     const isBalsasMA = cepData.localidade?.toLowerCase() === 'balsas' && cepData.uf === 'MA'
+    
+    // Verificar se é CEP 65800000 para frete grátis
+    const isCepFreteGratis = cepLimpo === '65800000'
+    
+    // Verificar se o valor total é maior ou igual a R$ 499 para frete grátis
+    const isFreteGratisPorValor = valorTotal >= 499
+
+    // Log para debug das condições de frete grátis
+    console.log('Condições de frete grátis:', { 
+      isBalsasMA, 
+      isCepFreteGratis, 
+      isFreteGratisPorValor, 
+      valorTotal,
+      valorTotalTipo: typeof valorTotal 
+    })
 
     // Calcular frete usando API dos Correios (simulação baseada em distância e peso)
-    const freteOptions = await calcularFreteCorreios(cepOrigem, cepLimpo, peso, altura, largura, profundidade, cepData, isBalsasMA)
+    const freteOptions = await calcularFreteCorreios(cepOrigem, cepLimpo, peso, altura, largura, profundidade, cepData, isBalsasMA, isCepFreteGratis, isFreteGratisPorValor)
 
     return new Response(
       JSON.stringify({
@@ -70,7 +88,7 @@ serve(async (req) => {
           uf: cepData.uf
         },
         opcoesFrete: freteOptions,
-        freteGratis: isBalsasMA
+        freteGratis: isBalsasMA || isCepFreteGratis || isFreteGratisPorValor
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -89,16 +107,26 @@ serve(async (req) => {
   }
 })
 
-async function calcularFreteCorreios(cepOrigem: string, cepDestino: string, peso: number, altura: number, largura: number, profundidade: number, dadosCep: any, isBalsasMA: boolean) {
-  // Se for Balsas - MA, retorna frete grátis
-  if (isBalsasMA) {
+async function calcularFreteCorreios(cepOrigem: string, cepDestino: string, peso: number, altura: number, largura: number, profundidade: number, dadosCep: any, isBalsasMA: boolean, isCepFreteGratis: boolean, isFreteGratisPorValor: boolean) {
+  // Se for Balsas - MA, CEP específico ou valor acima de R$ 499, retorna frete grátis
+  if (isBalsasMA || isCepFreteGratis || isFreteGratisPorValor) {
+    let descricaoFrete = '1 dia útil - Frete Grátis'
+    
+    if (isBalsasMA) {
+      descricaoFrete = '1 dia útil - Frete Grátis em Balsas'
+    } else if (isCepFreteGratis) {
+      descricaoFrete = '1 dia útil - Frete Grátis (CEP especial)'
+    } else if (isFreteGratisPorValor) {
+      descricaoFrete = '1 dia útil - Frete Grátis (pedido acima de R$ 499)'
+    }
+    
     return [
       {
         codigo: 'GRATIS',
         nome: 'Entrega Grátis',
         valor: 0,
         prazoEntrega: 1,
-        descricao: '1 dia útil - Frete Grátis em Balsas'
+        descricao: descricaoFrete
       }
     ]
   }

@@ -21,6 +21,7 @@ const NotFoundPage = lazy(() => import('../pages/NotFound'));
 const CarrinhoPage = lazy(() => import('../pages/carrinho/page'));
 const CheckoutPage = lazy(() => import('../pages/checkout/page'));
 const AuthLoginPage = lazy(() => import('../pages/auth/login/page'));
+const WebhookTesterPage = lazy(() => import('../pages/webhook-tester/page'));
 
 // Páginas institucionais
 const SobreNosPage = lazy(() => import('../pages/sobre-nos/page'));
@@ -40,8 +41,7 @@ const AdminCategoriasListarPage = lazy(() => import('../pages/admin/categorias/l
 const AdminCategoriasEditarPage = lazy(() => import('../pages/admin/categorias/editar/page'));
 const AdminClientesCadastrarPage = lazy(() => import('../pages/admin/clientes/cadastrar/page'));
 const AdminClientesListarPage = lazy(() => import('../pages/admin/clientes/listar/page'));
-const AdminFornecedoresCadastrarPage = lazy(() => import('../pages/admin/fornecedores/cadastrar/page'));
-const AdminFornecedoresListarPage = lazy(() => import('../pages/admin/fornecedores/listar/page'));
+const AdminClientesEditarPage = lazy(() => import('../pages/admin/clientes/editar/page'));
 const AdminEstoqueEntradaPage = lazy(() => import('../pages/admin/estoque/entrada/page'));
 const AdminEstoqueListarPage = lazy(() => import('../pages/admin/estoque/listar/page'));
 const AdminVendasListarPage = lazy(() => import('../pages/admin/vendas/listar/page'));
@@ -57,6 +57,8 @@ const AdminConfiguracoesSistemaPage = lazy(() => import('../pages/admin/configur
 const AdminAjudaPage = lazy(() => import('../pages/admin/ajuda/page'));
 const AdminDebugUploadPage = lazy(() => import('../pages/admin/debug-upload'));
 const AdminDebugColorVariationsPage = lazy(() => import('../pages/admin/debug-color-variations'));
+
+import ProtectedRoute from './ProtectedRoute';
 
 const routes: RouteObject[] = [
   {
@@ -86,6 +88,10 @@ const routes: RouteObject[] = [
   {
     path: '/product/:id',
     element: <Suspense fallback={<LoadingFallback />}><ProductPage /></Suspense>,
+  },
+  {
+    path: '/webhook-tester',
+    element: <Suspense fallback={<LoadingFallback />}><WebhookTesterPage /></Suspense>,
   },
   {
     path: '/minha-conta',
@@ -123,88 +129,85 @@ const routes: RouteObject[] = [
   // Admin routes
   {
     path: '/paineladmin',
-    element: <Suspense fallback={<LoadingFallback />}><AdminDashboardPage /></Suspense>,
-  },
-  {
-    path: '/paineladmin/dashboard',
-    element: <Suspense fallback={<LoadingFallback />}><AdminDashboardPage /></Suspense>,
-  },
-  {
-    path: '/paineladmin/produtos/cadastrar',
-    element: <Suspense fallback={<LoadingFallback />}><AdminProdutosCadastrarPage /></Suspense>,
-  },
-  {
-    path: '/paineladmin/produtos/listar',
-    element: <Suspense fallback={<LoadingFallback />}><AdminProdutosListarPage /></Suspense>,
-  },
-  {
-    path: '/paineladmin/produtos/editar/:id',
-    element: <Suspense fallback={<LoadingFallback />}><AdminProdutosEditarPage /></Suspense>,
-  },
-  {
-    path: '/paineladmin/categorias/cadastrar',
-    element: <Suspense fallback={<LoadingFallback />}><AdminCategoriasCadastrarPage /></Suspense>,
-  },
-  {
-    path: '/paineladmin/categorias/listar',
-    element: <Suspense fallback={<LoadingFallback />}><AdminCategoriasListarPage /></Suspense>,
-  },
-  {
-    path: '/paineladmin/categorias/editar/:id',
-    element: <Suspense fallback={<LoadingFallback />}><AdminCategoriasEditarPage /></Suspense>,
-  },
-  {
-    path: '/paineladmin/clientes/cadastrar',
-    element: <Suspense fallback={<LoadingFallback />}><AdminClientesCadastrarPage /></Suspense>,
-  },
-  {
-    path: '/paineladmin/clientes/listar',
-    element: <Suspense fallback={<LoadingFallback />}><AdminClientesListarPage /></Suspense>,
-  },
-  {
-    path: '/paineladmin/fornecedores/cadastrar',
-    element: <Suspense fallback={<LoadingFallback />}><AdminFornecedoresCadastrarPage /></Suspense>,
-  },
-  {
-    path: '/paineladmin/fornecedores/listar',
-    element: <Suspense fallback={<LoadingFallback />}><AdminFornecedoresListarPage /></Suspense>,
-  },
-  {
-    path: '/paineladmin/estoque/entrada',
-    element: <Suspense fallback={<LoadingFallback />}><AdminEstoqueEntradaPage /></Suspense>,
-  },
-  {
-    path: '/paineladmin/estoque/listar',
-    element: <Suspense fallback={<LoadingFallback />}><AdminEstoqueListarPage /></Suspense>,
-  },
-  {
-    path: '/paineladmin/vendas/listar',
-    element: <Suspense fallback={<LoadingFallback />}><AdminVendasListarPage /></Suspense>,
-  },
-  {
-    path: '/paineladmin/banners/cadastrar',
-    element: <Suspense fallback={<LoadingFallback />}><AdminBannersCadastrarPage /></Suspense>,
-  },
-  {
-    path: '/paineladmin/banners/listar',
-    element: <Suspense fallback={<LoadingFallback />}><AdminBannersListarPage /></Suspense>,
-  },
-  {
-    path: '/paineladmin/usuarios/cadastrar',
-    element: <Suspense fallback={<LoadingFallback />}><AdminUsuariosCadastrarPage /></Suspense>,
-  },
-  {
-    path: '/paineladmin/usuarios/listar',
-    element: <Suspense fallback={<LoadingFallback />}><AdminUsuariosListarPage /></Suspense>,
-  },
-
-  {
-    path: '/paineladmin/conta',
-    element: <Suspense fallback={<LoadingFallback />}><AdminContaPage /></Suspense>,
-  },
-  {
-    path: '/paineladmin/configuracoes/gerais',
-    element: <Suspense fallback={<LoadingFallback />}><AdminConfiguracoesGeraisPage /></Suspense>,
+    element: <ProtectedRoute />,
+    children: [
+      {
+        path: '',
+        element: <Suspense fallback={<LoadingFallback />}><AdminDashboardPage /></Suspense>,
+      },
+      {
+        path: 'dashboard',
+        element: <Suspense fallback={<LoadingFallback />}><AdminDashboardPage /></Suspense>,
+      },
+      {
+        path: 'produtos/cadastrar',
+        element: <Suspense fallback={<LoadingFallback />}><AdminProdutosCadastrarPage /></Suspense>,
+      },
+      {
+        path: 'produtos/listar',
+        element: <Suspense fallback={<LoadingFallback />}><AdminProdutosListarPage /></Suspense>,
+      },
+      {
+        path: 'produtos/editar/:id',
+        element: <Suspense fallback={<LoadingFallback />}><AdminProdutosEditarPage /></Suspense>,
+      },
+      {
+        path: 'categorias/cadastrar',
+        element: <Suspense fallback={<LoadingFallback />}><AdminCategoriasCadastrarPage /></Suspense>,
+      },
+      {
+        path: 'categorias/listar',
+        element: <Suspense fallback={<LoadingFallback />}><AdminCategoriasListarPage /></Suspense>,
+      },
+      {
+        path: 'categorias/editar/:id',
+        element: <Suspense fallback={<LoadingFallback />}><AdminCategoriasEditarPage /></Suspense>,
+      },
+      {
+        path: 'clientes/cadastrar',
+        element: <Suspense fallback={<LoadingFallback />}><AdminClientesCadastrarPage /></Suspense>,
+      },
+      {
+        path: 'clientes/listar',
+        element: <Suspense fallback={<LoadingFallback />}><AdminClientesListarPage /></Suspense>,
+      },
+      {
+        path: 'estoque/entrada',
+        element: <Suspense fallback={<LoadingFallback />}><AdminEstoqueEntradaPage /></Suspense>,
+      },
+      {
+        path: 'estoque/listar',
+        element: <Suspense fallback={<LoadingFallback />}><AdminEstoqueListarPage /></Suspense>,
+      },
+      {
+        path: 'vendas/listar',
+        element: <Suspense fallback={<LoadingFallback />}><AdminVendasListarPage /></Suspense>,
+      },
+      {
+        path: 'banners/cadastrar',
+        element: <Suspense fallback={<LoadingFallback />}><AdminBannersCadastrarPage /></Suspense>,
+      },
+      {
+        path: 'banners/listar',
+        element: <Suspense fallback={<LoadingFallback />}><AdminBannersListarPage /></Suspense>,
+      },
+      {
+        path: 'usuarios/cadastrar',
+        element: <Suspense fallback={<LoadingFallback />}><AdminUsuariosCadastrarPage /></Suspense>,
+      },
+      {
+        path: 'usuarios/listar',
+        element: <Suspense fallback={<LoadingFallback />}><AdminUsuariosListarPage /></Suspense>,
+      },
+      {
+        path: 'conta',
+        element: <Suspense fallback={<LoadingFallback />}><AdminContaPage /></Suspense>,
+      },
+      {
+        path: 'configuracoes/gerais',
+        element: <Suspense fallback={<LoadingFallback />}><AdminConfiguracoesGeraisPage /></Suspense>,
+      },
+    ]
   },
   {
     path: '/paineladmin/configuracoes/integracao',
