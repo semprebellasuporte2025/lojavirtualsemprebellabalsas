@@ -40,12 +40,41 @@ serve(async (req) => {
     }
 
     // Verificar se o CEP existe
+    console.log('Consultando ViaCEP para CEP:', cepLimpo)
     const viaCepResponse = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`)
-    const cepData = await viaCepResponse.json()
-
-    if (cepData.erro) {
+    
+    // Verificar se a resposta é válida
+    if (!viaCepResponse.ok) {
+      console.error('Erro na resposta do ViaCEP:', viaCepResponse.status, viaCepResponse.statusText)
       return new Response(
-        JSON.stringify({ error: 'CEP não encontrado' }),
+        JSON.stringify({ error: 'Erro ao consultar CEP' }),
+        { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      )
+    }
+    
+    const cepDataText = await viaCepResponse.text()
+    console.log('Resposta bruta do ViaCEP:', cepDataText)
+    
+    let cepData
+    try {
+      cepData = JSON.parse(cepDataText)
+      
+      if (cepData.erro) {
+        return new Response(
+          JSON.stringify({ error: 'CEP não encontrado' }),
+          { 
+            status: 400, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          }
+        )
+      }
+    } catch (parseError) {
+      console.error('Erro ao parsear JSON do ViaCEP:', parseError, 'Resposta:', cepDataText)
+      return new Response(
+        JSON.stringify({ error: 'Resposta inválida do serviço de CEP' }),
         { 
           status: 400, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -74,26 +103,40 @@ serve(async (req) => {
       valorTotalTipo: typeof valorTotal 
     })
 
-    // Calcular frete usando API dos Correios (simulação baseada em distância e peso)
-    const freteOptions = await calcularFreteCorreios(cepOrigem, cepLimpo, peso, altura, largura, profundidade, cepData, isBalsasMA, isCepFreteGratis, isFreteGratisPorValor)
+    try {
+      // Calcular frete usando API dos Correios (simulação baseada em distância e peso)
+      const freteOptions = await calcularFreteCorreios(cepOrigem, cepLimpo, peso, altura, largura, profundidade, cepData, isBalsasMA, isCepFreteGratis, isFreteGratisPorValor)
 
-    return new Response(
-      JSON.stringify({
-        success: true,
-        endereco: {
-          cep: cepLimpo,
-          logradouro: cepData.logradouro,
-          bairro: cepData.bairro,
-          localidade: cepData.localidade,
-          uf: cepData.uf
-        },
-        opcoesFrete: freteOptions,
-        freteGratis: isBalsasMA || isCepFreteGratis || isFreteGratisPorValor
-      }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      }
-    )
+      return new Response(
+        JSON.stringify({
+          success: true,
+          endereco: {
+            cep: cepLimpo,
+            logradouro: cepData.logradouro,
+            bairro: cepData.bairro,
+            localidade: cepData.localidade,
+            uf: cepData.uf
+          },
+          opcoesFrete: freteOptions,
+          freteGratis: isBalsasMA || isCepFreteGratis || isFreteGratisPorValor
+        }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      )
+    } catch (error) {
+      console.error('Erro ao calcular opções de frete:', error)
+      return new Response(
+        JSON.stringify({ 
+          error: 'Erro ao calcular opções de frete',
+          details: error.message 
+        }),
+        { 
+          status: 500, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      )
+    }
 
   } catch (error) {
     console.error('Erro ao calcular frete:', error)

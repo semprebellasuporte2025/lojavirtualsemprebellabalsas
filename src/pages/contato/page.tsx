@@ -134,7 +134,7 @@ export default function ContatoPage() {
                   <h3 className="text-lg font-semibold text-gray-800 mb-4">Loja Física</h3>
                   <div className="space-y-2 text-gray-600">
                     <p><span className="font-medium">Segunda a Sexta:</span> 8h às 18h</p>
-                    <p><span className="font-medium">Sábado:</span> 8h às 17h</p>
+                    <p><span className="font-medium">Sábado:</span> 7h às 12h</p>
                   </div>
                 </div>
                 <div>

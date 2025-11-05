@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../../lib/supabase';
 
 interface Banner {
@@ -18,6 +18,11 @@ export default function BannerSlider() {
   const [banners, setBanners] = useState<Banner[]>([]);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [imagesLoaded, setImagesLoaded] = useState<Set<string>>(new Set());
+  const cacheRef = useRef<{
+    banners: Banner[];
+    timestamp: number;
+  } | null>(null);
 
   useEffect(() => {
     fetchBanners();
@@ -34,19 +39,35 @@ export default function BannerSlider() {
   }, [banners.length]);
 
   const fetchBanners = async () => {
+    // Verificar cache (válido por 5 minutos)
+    const now = Date.now();
+    if (cacheRef.current && now - cacheRef.current.timestamp < 5 * 60 * 1000) {
+      setBanners(cacheRef.current.banners);
+      setLoading(false);
+      return;
+    }
+
     try {
       const { data, error } = await supabase
         .from('banners')
-        .select('*')
+        .select('id, titulo, subtitulo, imagem_url, link_destino, texto_botao, ordem_exibicao') // Selecionar apenas campos necessários
         .eq('ativo', true)
-        .order('ordem_exibicao', { ascending: true });
+        .order('ordem_exibicao', { ascending: true })
+        .limit(10); // Limitar número de banners
 
       if (error) {
         console.error('Erro ao buscar banners:', error);
         return;
       }
 
-      setBanners(data || []);
+      const bannersData = data || [];
+      setBanners(bannersData);
+      
+      // Atualizar cache
+      cacheRef.current = {
+        banners: bannersData,
+        timestamp: now
+      };
     } catch (error) {
       console.error('Erro inesperado:', error);
     } finally {
@@ -72,9 +93,31 @@ export default function BannerSlider() {
     }
   };
 
+  const handleImageLoad = (imageUrl: string) => {
+    setImagesLoaded(prev => new Set(prev).add(imageUrl));
+  };
+
   if (loading) {
     return (
-      <div className="relative w-full h-[300px] md:h-[450px] lg:h-[600px] bg-gray-200 dark:bg-gray-700 animate-pulse">
+      <div className="relative w-full h-[300px] md:h-[450px] lg:h-[600px] bg-gray-200 dark:bg-gray-700 overflow-hidden shadow-lg">
+        {/* Skeleton Loading com shimmer effect */}
+        <div className="absolute inset-0 flex animate-pulse">
+          <div className="min-w-full h-full relative">
+            <div className="w-full h-full bg-gradient-to-r from-gray-300 via-gray-200 to-gray-300 animate-shimmer">
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer"></div>
+            </div>
+            
+            {/* Conteúdo do skeleton */}
+            <div className="absolute inset-0 flex items-center justify-start p-12 md:p-24">
+              <div className="max-w-lg space-y-4">
+                <div className="h-8 bg-gray-400 rounded w-3/4"></div>
+                <div className="h-6 bg-gray-400 rounded w-1/2"></div>
+                <div className="h-10 bg-pink-500 rounded w-32"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="text-gray-500 dark:text-gray-400">Carregando banners...</div>
         </div>
@@ -102,7 +145,18 @@ export default function BannerSlider() {
             <img
               src={banner.imagem_url}
               alt={banner.titulo}
-              className="w-full h-full object-cover object-top"
+              className="w-full h-full object-cover object-top transition-opacity duration-300"
+              style={{
+                opacity: imagesLoaded.has(banner.imagem_url) ? 1 : 0,
+              }}
+              loading="lazy"
+              onLoad={() => handleImageLoad(banner.imagem_url)}
+              onError={(e) => {
+                // Fallback para imagem quebrada
+                const target = e.target as HTMLImageElement;
+                target.style.opacity = '1';
+                target.src = '/placeholder-banner.svg';
+              }}
             />
             
             {/* Conteúdo do banner */}

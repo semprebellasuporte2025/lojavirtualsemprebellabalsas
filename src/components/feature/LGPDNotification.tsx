@@ -11,6 +11,18 @@ export default function LGPDNotification() {
     const path = location.pathname;
     const isHome = path === '/';
 
+    // Páginas onde o modal NÃO deve aparecer
+    const excludedPaths = [
+      '/admin',
+      '/minha-conta', 
+      '/carrinho',
+      '/checkout'
+    ];
+    
+    const isExcludedPath = excludedPaths.some(excludedPath => 
+      path.startsWith(excludedPath)
+    );
+
     const navEntries = typeof performance !== 'undefined' && 'getEntriesByType' in performance
       ? performance.getEntriesByType('navigation')
       : [];
@@ -18,7 +30,7 @@ export default function LGPDNotification() {
     const isReloadLegacy = (performance as any)?.navigation?.type === 1;
     const isReload = isReloadModern || isReloadLegacy;
 
-    if ((isHome && isReload) || !lgpdAccepted) {
+    if ((isHome && isReload && !isExcludedPath) || (!lgpdAccepted && !isExcludedPath)) {
       setIsVisible(true);
     } else {
       setIsVisible(false);

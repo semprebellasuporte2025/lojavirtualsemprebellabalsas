@@ -4,22 +4,89 @@ import { useState } from 'react';
 interface CartSummaryProps {
   subtotal: number;
   shipping: any;
-  onFinalizePurchase: () => void;
+  onFinalizePurchase: (paymentMethod: string) => void;
 }
 
 export default function CartSummary({ subtotal, shipping, onFinalizePurchase }: CartSummaryProps) {
   const [couponCode, setCouponCode] = useState('');
-  
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('pix');
+
   const shippingCost = typeof shipping?.price === 'number' ? shipping.price : null;
   const shippingMethod = shipping?.name || '';
-  
+
   const isShippingSelected = !!shippingMethod;
-  const total = subtotal + (shippingCost ?? 0);
+
+  const discount = selectedPaymentMethod === 'pix' ? subtotal * 0.1 : 0;
+  const total = subtotal + (shippingCost ?? 0) - discount;
+
+  const handleFinalize = () => {
+    if (isShippingSelected) {
+      onFinalizePurchase(selectedPaymentMethod);
+    }
+  };
 
   return (
     <div className="bg-white rounded-lg shadow-sm border p-6">
       <h3 className="text-lg font-semibold mb-4">Resumo do Pedido</h3>
-      
+
+      {/* Forma de Pagamento */}
+      <div className="mb-6">
+        <h4 className="text-md font-semibold mb-3">Forma de Pagamento</h4>
+        
+        <div className="space-y-3">
+          {/* PIX primeiro */}
+          <label className="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+            <input
+              type="radio"
+              name="payment"
+              value="pix"
+              checked={selectedPaymentMethod === 'pix'}
+              onChange={(e) => setSelectedPaymentMethod(e.target.value)}
+              className="mr-3"
+            />
+            <i className="ri-qr-code-line text-xl mr-3 text-gray-600"></i>
+            <div>
+              <div className="font-medium">PIX</div>
+              <div className="text-sm text-gray-600">10% de desconto - Aprovação imediata</div>
+            </div>
+          </label>
+
+          {/* Cartão de Crédito */}
+          <label className="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+            <input
+              type="radio"
+              name="payment"
+              value="credit"
+              checked={selectedPaymentMethod === 'credit'}
+              onChange={(e) => setSelectedPaymentMethod(e.target.value)}
+              className="mr-3"
+            />
+            <i className="ri-bank-card-line text-xl mr-3 text-gray-600"></i>
+            <div>
+              <div className="font-medium">Cartão de Crédito</div>
+              <div className="text-sm text-gray-600">Parcelamento em até 6x</div>
+            </div>
+          </label>
+
+          {/* Dinheiro */}
+          <label className="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+            <input
+              type="radio"
+              name="payment"
+              value="dinheiro"
+              checked={selectedPaymentMethod === 'dinheiro'}
+              onChange={(e) => setSelectedPaymentMethod(e.target.value)}
+              className="mr-3"
+            />
+            <i className="ri-money-dollar-circle-line text-xl mr-3 text-gray-600"></i>
+            <div>
+              <div className="font-medium">Dinheiro</div>
+              <div className="text-sm text-gray-600">Pagamento na entrega</div>
+            </div>
+          </label>
+        </div>
+      </div>
+
       <div className="space-y-3 mb-6">
         {/* Subtotal */}
         <div className="flex justify-between text-gray-600">
@@ -40,7 +107,7 @@ export default function CartSummary({ subtotal, shipping, onFinalizePurchase }: 
         {/* Desconto (se houver) */}
         <div className="flex justify-between text-green-600">
           <span>Desconto</span>
-          <span>- R$ 0,00</span>
+          <span>- R$ {discount.toFixed(2).replace('.', ',')}</span>
         </div>
 
         <hr className="border-gray-200" />
@@ -73,7 +140,7 @@ export default function CartSummary({ subtotal, shipping, onFinalizePurchase }: 
 
       {/* Botão Finalizar */}
       <button
-        onClick={onFinalizePurchase}
+        onClick={handleFinalize}
         disabled={!isShippingSelected}
         className={`w-full py-3 rounded-lg font-medium transition-colors cursor-pointer whitespace-nowrap ${
           isShippingSelected

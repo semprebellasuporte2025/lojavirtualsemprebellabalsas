@@ -41,3 +41,20 @@ export const getStatusColor = (status: string) => {
       return 'bg-gray-100 text-gray-800';
   }
 };
+
+/**
+ * Gera um slug a partir de um texto
+ * Converte para minúsculas, remove acentos, substitui espaços por hífens
+ * e remove caracteres especiais
+ */
+export const generateSlug = (text: string): string => {
+  return text
+    .toLowerCase()
+    .normalize('NFD') // Normaliza para decompor acentos
+    .replace(/[\u0300-\u036f]/g, '') // Remove diacríticos
+    .replace(/[^a-z0-9\s-]/g, '') // Remove caracteres especiais, mantém hífens
+    .replace(/\s+/g, '-') // Substitui espaços por hífens
+    .replace(/-+/g, '-') // Remove múltiplos hífens consecutivos
+    .trim() // Remove espaços no início e fim
+    .replace(/^-+|-+$/g, ''); // Remove hífens no início e fim
+};

@@ -28,9 +28,9 @@ export default function CarrinhoPage() {
     setShippingMethod(method);
   };
 
-  const handleFinalizePurchase = () => {
+  const handleFinalizePurchase = (paymentMethod: string) => {
     if (shippingMethod) {
-      navigate('/checkout', { state: { shippingCost, shippingMethod } });
+      navigate('/checkout', { state: { shippingCost, shippingMethod, paymentMethod } });
     }
   };
 

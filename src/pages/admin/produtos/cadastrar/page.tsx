@@ -207,7 +207,7 @@ const CadastrarProdutoCopy = () => {
         cor: variation.color,
         cor_hex: variation.colorHex,
         estoque: variation.stock,
-        sku: variation.sku || formData.referencia
+        sku: variation.sku // Usar apenas o SKU específico da variação, não gerar automaticamente
       }));
 
       const { error: variacoesError } = await supabase

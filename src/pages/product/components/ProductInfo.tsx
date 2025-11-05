@@ -1,5 +1,5 @@
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import Button from '../../../components/base/Button';
 import { useToast } from '../../../hooks/useToast';
 
@@ -45,6 +45,18 @@ export default function ProductInfo({ produto, onAddToCart }: ProductInfoProps) 
     variantes.forEach(v => { if (v?.tamanho) set.add(String(v.tamanho)); });
     return Array.from(set.values());
   })();
+
+  const selectedVariant = variantes.find(v => v.tamanho === selectedSize && v.cor === selectedColor);
+  const stock = selectedVariant ? selectedVariant.estoque : produto?.estoque || 0;
+
+  useEffect(() => {
+    if (coresFromVariantes.length === 1) {
+      setSelectedColor(coresFromVariantes[0].name);
+    }
+    if (sizesFromVariantes.length === 1) {
+      setSelectedSize(sizesFromVariantes[0]);
+    }
+  }, [coresFromVariantes, sizesFromVariantes]);
 
   // Valores padrão somente quando não há dados
   const product = {
@@ -210,9 +222,15 @@ export default function ProductInfo({ produto, onAddToCart }: ProductInfoProps) 
               {product.rating} ({product.reviews} avaliações)
             </span>
           </div>
-          <span className="text-green-600 text-sm font-medium">
-            <i className="ri-check-line"></i> Em estoque
-          </span>
+          {stock > 0 ? (
+            <span className="text-green-600 text-sm font-medium">
+              <i className="ri-check-line"></i> Em estoque
+            </span>
+          ) : (
+            <span className="text-red-600 text-sm font-medium">
+              <i className="ri-close-line"></i> Fora de estoque
+            </span>
+          )}
         </div>
         <div className="mt-2">
           <button
@@ -322,12 +340,16 @@ export default function ProductInfo({ produto, onAddToCart }: ProductInfoProps) 
             <button
               onClick={() => setQuantity(quantity + 1)}
               className="px-4 py-2 text-gray-600 hover:text-pink-600 cursor-pointer"
+              disabled={quantity >= stock}
             >
               <i className="ri-add-line text-xl"></i>
             </button>
           </div>
-          {(product.stock ?? 0) > 0 && (
-            <span className="text-sm text-gray-600">{product.stock} unidades disponíveis</span>
+          {stock > 0 && (
+            <span className="text-sm text-gray-600">{stock} unidades disponíveis</span>
+          )}
+          {stock === 0 && (
+            <span className="text-sm text-red-600">Produto esgotado</span>
           )}
         </div>
       </div>

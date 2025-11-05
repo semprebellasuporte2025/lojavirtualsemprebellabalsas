@@ -370,6 +370,9 @@ export default function ListarVendas() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider min-w-[200px]">
                     Cliente
                   </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider min-w-[250px]">
+                    Produtos
+                  </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider min-w-[120px]">
                     Data/Hora
                   </th>
@@ -390,14 +393,14 @@ export default function ListarVendas() {
               <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                 {loading ? (
                   <tr>
-                    <td colSpan={7} className="px-6 py-12 text-center">
+                    <td colSpan={8} className="px-6 py-12 text-center">
                       <i className="ri-loader-4-line text-2xl text-gray-400 animate-spin"></i>
                       <p className="text-gray-500 mt-2">Carregando vendas...</p>
                     </td>
                   </tr>
                 ) : filteredVendas.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-6 py-12 text-center">
+                    <td colSpan={8} className="px-6 py-12 text-center">
                       <i className="ri-shopping-cart-line text-4xl text-gray-400 dark:text-gray-600 mb-4"></i>
                       <div className="text-lg font-medium text-gray-900 dark:text-white mb-2">Nenhuma venda encontrada</div>
                       <div className="text-gray-500 dark:text-gray-400">Tente ajustar os filtros para encontrar vendas.</div>
@@ -415,6 +418,25 @@ export default function ListarVendas() {
                       <div>
                         <div className="text-sm font-medium text-gray-900 dark:text-white">{venda.cliente_nome}</div>
                         <div className="text-sm text-gray-500 dark:text-gray-400">{venda.cliente_email}</div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="space-y-1">
+                        {venda.itens_pedido?.slice(0, 3).map((item, index) => (
+                          <div key={index} className="text-sm text-gray-900 dark:text-white">
+                            • {item.nome} ({item.quantidade}x)
+                          </div>
+                        ))}
+                        {venda.itens_pedido && venda.itens_pedido.length > 3 && (
+                          <div className="text-xs text-gray-500 dark:text-gray-400">
+                            + {venda.itens_pedido.length - 3} mais itens
+                          </div>
+                        )}
+                        {(!venda.itens_pedido || venda.itens_pedido.length === 0) && (
+                          <div className="text-xs text-gray-500 dark:text-gray-400">
+                            Nenhum item
+                          </div>
+                        )}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">

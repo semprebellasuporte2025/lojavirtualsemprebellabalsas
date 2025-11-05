@@ -82,11 +82,11 @@ const routes: RouteObject[] = [
     element: <Suspense fallback={<LoadingFallback />}><CategoriaPage /></Suspense>,
   },
   {
-    path: '/produto/:id',
+    path: '/produto/:slug',
     element: <Suspense fallback={<LoadingFallback />}><ProductPage /></Suspense>,
   },
   {
-    path: '/product/:id',
+    path: '/product/:slug',
     element: <Suspense fallback={<LoadingFallback />}><ProductPage /></Suspense>,
   },
   {

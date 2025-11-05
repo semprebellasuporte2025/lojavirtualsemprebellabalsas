@@ -14,7 +14,7 @@ import ErrorBoundary from '../../components/base/ErrorBoundary';
 import { useCart } from '../../hooks/useCart';
 
 export default function ProductPage() {
-  const { id } = useParams<{ id: string }>();
+  const { slug } = useParams<{ slug: string }>();
   const [produto, setProduto] = useState<Produto | null>(null);
   const [loading, setLoading] = useState(true);
   const addItem = useCart((state) => state.addItem);
@@ -24,37 +24,54 @@ export default function ProductPage() {
   }, []);
 
   useEffect(() => {
-    if (id) {
+    if (slug) {
       carregarProduto();
     }
-  }, [id]);
+  }, [slug]);
 
   const carregarProduto = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
+      
+      // Primeiro tenta buscar por slug
+      const { data: dataBySlug, error: errorBySlug } = await supabase
         .from('produtos')
         .select('*, categorias(nome), variantes_produto(*)')
-        .eq('id', id)
+        .eq('slug', slug)
         .maybeSingle();
 
-      if (error) {
-        // Verifica se o erro é relacionado a formato UUID inválido
-        if (error.code === '22P02' && error.message.includes('uuid')) {
-          console.error('ID do produto em formato inválido. O banco de dados espera UUID:', id);
-        } else {
-          console.error('Erro ao carregar produto:', error);
-        }
-        setProduto(null);
-        return;
-      }
-      if (!data) {
-        console.warn('Produto não encontrado:', id);
-        setProduto(null);
-        return;
+      if (errorBySlug) {
+        console.error('Erro ao carregar produto por slug:', errorBySlug);
       }
       
-      setProduto(data);
+      if (dataBySlug) {
+        setProduto(dataBySlug);
+        return;
+      }
+
+      // Se não encontrou por slug, verifica se o parâmetro é um UUID
+      // e tenta buscar por ID (para compatibilidade com URLs antigas)
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (slug && uuidRegex.test(slug)) {
+        console.log('Tentando buscar produto por ID (compatibilidade):', slug);
+        const { data: dataById, error: errorById } = await supabase
+          .from('produtos')
+          .select('*, categorias(nome), variantes_produto(*)')
+          .eq('id', slug)
+          .maybeSingle();
+
+        if (errorById) {
+          console.error('Erro ao carregar produto por ID:', errorById);
+        }
+        
+        if (dataById) {
+          setProduto(dataById);
+          return;
+        }
+      }
+
+      console.warn('Produto não encontrado com slug/ID:', slug);
+      setProduto(null);
     } catch (error) {
       console.error('Erro ao carregar produto:', error);
       setProduto(null);

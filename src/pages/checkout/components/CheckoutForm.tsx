@@ -44,6 +44,11 @@ export default function CheckoutForm({ cartItems, subtotal, shippingData, total 
     paymentMethod: 'pix'
   });
 
+  // Calcular desconto de 10% para pagamento via PIX
+  const hasPixDiscount = formData.paymentMethod === 'pix';
+  const discountAmount = hasPixDiscount ? subtotal * 0.1 : 0;
+  const finalTotal = hasPixDiscount ? total - discountAmount : total;
+
   // Helpers CPF
   const formatCPF = (value: string) => {
     const numbers = (value || '').replace(/\D/g, '').slice(0, 11);
@@ -427,7 +432,7 @@ export default function CheckoutForm({ cartItems, subtotal, shippingData, total 
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Nome Completo</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Nome Completo <span className="text-red-500">*</span></label>
                 <input
                   type="text"
                   value={
@@ -440,7 +445,7 @@ export default function CheckoutForm({ cartItems, subtotal, shippingData, total 
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">CPF</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">CPF <span className="text-red-500">*</span></label>
                 {clienteInfo?.cpf ? (
                   <input
                     type="text"
@@ -473,7 +478,7 @@ export default function CheckoutForm({ cartItems, subtotal, shippingData, total 
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">CEP</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">CEP <span className="text-red-500">*</span></label>
                 <div className="relative">
                   <input
                     type="text"
@@ -570,65 +575,7 @@ export default function CheckoutForm({ cartItems, subtotal, shippingData, total 
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow-sm border p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              <i className="ri-bank-card-line mr-2"></i>
-              Forma de Pagamento
-            </h3>
-            
-            <div className="space-y-3">
-              {/* PIX primeiro */}
-              <label className="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
-                <input
-                  type="radio"
-                  name="payment"
-                  value="pix"
-                  checked={formData.paymentMethod === 'pix'}
-                  onChange={(e) => setFormData({ ...formData, paymentMethod: e.target.value })}
-                  className="mr-3"
-                />
-                <i className="ri-qr-code-line text-xl mr-3 text-gray-600"></i>
-                <div>
-                  <div className="font-medium">PIX</div>
-                  <div className="text-sm text-gray-600">Aprovação imediata</div>
-                </div>
-              </label>
 
-              {/* Cartão de Crédito */}
-              <label className="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
-                <input
-                  type="radio"
-                  name="payment"
-                  value="credit"
-                  checked={formData.paymentMethod === 'credit'}
-                  onChange={(e) => setFormData({ ...formData, paymentMethod: e.target.value })}
-                  className="mr-3"
-                />
-                <i className="ri-bank-card-line text-xl mr-3 text-gray-600"></i>
-                <div>
-                  <div className="font-medium">Cartão de Crédito</div>
-                  <div className="text-sm text-gray-600">Parcelamento em até 12x</div>
-                </div>
-              </label>
-
-              {/* Dinheiro */}
-              <label className="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
-                <input
-                  type="radio"
-                  name="payment"
-                  value="dinheiro"
-                  checked={formData.paymentMethod === 'dinheiro'}
-                  onChange={(e) => setFormData({ ...formData, paymentMethod: e.target.value })}
-                  className="mr-3"
-                />
-                <i className="ri-money-dollar-circle-line text-xl mr-3 text-gray-600"></i>
-                <div>
-                  <div className="font-medium">Dinheiro</div>
-                  <div className="text-sm text-gray-600">Pagamento na entrega</div>
-                </div>
-              </label>
-            </div>
-          </div>
 
           <button
             type="submit"
@@ -685,10 +632,16 @@ export default function CheckoutForm({ cartItems, subtotal, shippingData, total 
               <span className="text-gray-600">Frete ({shippingData.method})</span>
               <span>R$ {shippingData.cost.toFixed(2)}</span>
             </div>
+            {hasPixDiscount && (
+              <div className="flex justify-between text-sm">
+                <span className="text-green-600">Desconto PIX (10%)</span>
+                <span className="text-green-600">-R$ {discountAmount.toFixed(2)}</span>
+              </div>
+            )}
             <hr className="my-2" />
             <div className="flex justify-between text-lg font-semibold">
               <span>Total</span>
-              <span className="text-pink-600">R$ {total.toFixed(2)}</span>
+              <span className="text-pink-600">R$ {finalTotal.toFixed(2)}</span>
             </div>
           </div>
           

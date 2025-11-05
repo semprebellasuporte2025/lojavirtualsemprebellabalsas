@@ -53,8 +53,8 @@ export default function PrivacidadePage() {
                 <h2 className="text-2xl font-bold text-gray-800 mb-6">1. Informações Gerais</h2>
                 <div className="prose prose-gray max-w-none">
                   <p className="text-gray-600 leading-relaxed mb-4">
-                    A Sempre Bella Balsas, pessoa jurídica de direito privado, com sede em Balsas - MA, 
-                    inscrita no CNPJ sob o nº XX.XXX.XXX/0001-XX, doravante denominada "Sempre Bella", 
+                    A SEMPRE BELLA COMERCIO DE ROUPAS E ACESSORIOS LTDA, pessoa jurídica de direito privado, com sede em Balsas - MA, 
+                    inscrita no CNPJ sob o nº 58.196.584/0001-00, doravante denominada "Sempre Bella", 
                     é a responsável pelo tratamento dos dados pessoais coletados através de nosso site e loja física.
                   </p>
                   <p className="text-gray-600 leading-relaxed mb-4">
@@ -350,9 +350,9 @@ export default function PrivacidadePage() {
                     <div>
                       <h4 className="font-semibold text-gray-800 mb-3">Dados para Contato</h4>
                       <div className="space-y-2 text-gray-600">
-                        <p><strong>E-mail:</strong> privacidade@semprebella.com.br</p>
+                        <p><strong>E-mail:</strong> atendimento@semprebellabalsas.com.br</p>
                         <p><strong>Telefone:</strong> (99) 3541-2345</p>
-                        <p><strong>Endereço:</strong> Rua das Flores, 123 - Centro, Balsas - MA</p>
+                        <p><strong>Endereço:</strong> Rua Major Felipe, Centro - CEP: 65840000, São Raimundo das Mangabeiras/MA</p>
                       </div>
                     </div>
                     
@@ -360,7 +360,7 @@ export default function PrivacidadePage() {
                       <h4 className="font-semibold text-gray-800 mb-3">Horário de Atendimento</h4>
                       <div className="space-y-2 text-gray-600">
                         <p><strong>Segunda a Sexta:</strong> 8h às 18h</p>
-                        <p><strong>Sábado:</strong> 8h às 17h</p>
+                        <p><strong>Sábado:</strong> 7h às 12h</p>
                         <p><strong>Domingo:</strong> 8h às 12h</p>
                       </div>
                     </div>

@@ -37,17 +37,22 @@ export default function SobreNosPage() {
                 <h2 className="text-3xl font-bold text-gray-800 mb-6">Nossa História</h2>
                 <div className="space-y-4 text-gray-600 leading-relaxed">
                   <p>
-                    A Sempre Bella nasceu em 2018 com o sonho de trazer para Balsas - MA as últimas 
-                    tendências da moda feminina, combinando qualidade, estilo e preços acessíveis.
+                    A Sempre Bella nasceu com o sonho de trazer para Balsas - MA as últimas tendências da moda feminina, combinando qualidade, estilo e preços acessíveis.
                   </p>
                   <p>
-                    Começamos como uma pequena boutique no centro da cidade e, ao longo dos anos, 
-                    conquistamos a confiança de centenas de clientes que buscam peças únicas e 
-                    atendimento personalizado.
+                    Começamos como uma pequena loja no centro da cidade e, ao longo dos anos, conquistamos a confiança de centenas de clientes que buscam peças únicas e atendimento personalizado.
                   </p>
                   <p>
-                    Hoje, além da nossa loja física, oferecemos uma experiência completa de compras 
-                    online, levando moda e estilo para toda a região do sul do Maranhão.
+                    Somos uma loja de moda feminina criada para valorizar o estilo e a elegância de cada mulher.
+                  </p>
+                  <p>
+                    Trabalhamos com peças que unem qualidade, conforto e tendência — desde a alfaiataria refinada até looks casuais e modernos.
+                  </p>
+                  <p>
+                    Nosso propósito é fazer você se sentir ainda mais confiante, linda e única em cada ocasião.
+                  </p>
+                  <p>
+                    Hoje, além da nossa loja física, oferecemos uma experiência completa de compras online, levando moda e estilo para toda a região do sul do Maranhão.
                   </p>
                 </div>
               </div>
@@ -125,7 +130,7 @@ export default function SobreNosPage() {
                       <p className="font-semibold text-gray-800">Horário de Funcionamento</p>
                       <p className="text-gray-600">
                         Segunda a Sexta: 8h às 18h<br />
-                        Sábado: 8h às 17h
+                        Sábado: 7h às 12h
                       </p>
                     </div>
                   </div>

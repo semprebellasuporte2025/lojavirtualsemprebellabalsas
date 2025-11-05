@@ -71,8 +71,8 @@ export default function HomePage() {
     }
   };
 
-  const handleProductClick = (id: string) => {
-    navigate(`/produto/${id}`);
+  const handleProductClick = (produto: Produto) => {
+    navigate(`/produto/${produto.slug || produto.id}`);
   };
 
   const handleVerMaisRecentes = () => {
@@ -128,7 +128,7 @@ export default function HomePage() {
                     return (
                       <div
                         key={produto.id}
-                        onClick={() => handleProductClick(produto.id)}
+                        onClick={() => handleProductClick(produto)}
                         className="bg-white rounded-lg overflow-hidden hover:shadow-xl transition-shadow group border border-gray-200 cursor-pointer"
                       >
                         <div className="relative overflow-hidden bg-gray-50">
@@ -204,7 +204,7 @@ export default function HomePage() {
                           </div>
 
                           <Link
-                            to={`/produto/${produto.id}`}
+                            to={`/produto/${produto.slug || produto.id}`}
                             onClick={(e) => { e.stopPropagation(); }}
                             className="w-full block text-center py-2.5 bg-pink-600 text-white text-sm font-semibold rounded hover:bg-pink-700 transition-colors whitespace-nowrap"
                           >

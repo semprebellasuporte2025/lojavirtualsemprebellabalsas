@@ -119,7 +119,6 @@ serve(async (req: Request) => {
       pedido_id: String(pedido.id),
       criado_em: pedido.created_at || null,
       status: pedido.status,
-      forma_pagamento: pedido.forma_pagamento,
       subtotal: pedido.subtotal,
       desconto: pedido.desconto || 0,
       frete: pedido.frete || 0,
