@@ -22,6 +22,7 @@ const CarrinhoPage = lazy(() => import('../pages/carrinho/page'));
 const CheckoutPage = lazy(() => import('../pages/checkout/page'));
 const AuthLoginPage = lazy(() => import('../pages/auth/login/page'));
 const WebhookTesterPage = lazy(() => import('../pages/webhook-tester/page'));
+const LinkPage = lazy(() => import('../pages/link/page'));
 
 // Páginas institucionais
 const SobreNosPage = lazy(() => import('../pages/sobre-nos/page'));
@@ -45,6 +46,10 @@ const AdminClientesEditarPage = lazy(() => import('../pages/admin/clientes/edita
 const AdminEstoqueEntradaPage = lazy(() => import('../pages/admin/estoque/entrada/page'));
 const AdminEstoqueListarPage = lazy(() => import('../pages/admin/estoque/listar/page'));
 const AdminVendasListarPage = lazy(() => import('../pages/admin/vendas/listar/page'));
+const AdminLinkInstagramCadastrarPage = lazy(() => import('../pages/admin/link-instagram/cadastrar/page'));
+const AdminLinkInstagramListarPage = lazy(() => import('../pages/admin/link-instagram/listar/page'));
+const AdminLinkInstagramEditarPage = lazy(() => import('../pages/admin/link-instagram/editar/page'));
+const AdminLinkInstagramImagemTopoCadastrarPage = lazy(() => import('../pages/admin/link-instagram/imagem-topo/page'));
 const AdminBannersCadastrarPage = lazy(() => import('../pages/admin/banners/cadastrar/page'));
 const AdminBannersListarPage = lazy(() => import('../pages/admin/banners/listar/page'));
 const AdminBannersEditarPage = lazy(() => import('../pages/admin/banners/editar/page'));
@@ -93,6 +98,10 @@ const routes: RouteObject[] = [
   {
     path: '/webhook-tester',
     element: <Suspense fallback={<LoadingFallback />}><WebhookTesterPage /></Suspense>,
+  },
+  {
+    path: '/link',
+    element: <Suspense fallback={<LoadingFallback />}><LinkPage /></Suspense>,
   },
   {
     path: '/minha-conta',
@@ -183,6 +192,22 @@ const routes: RouteObject[] = [
       {
         path: 'vendas/listar',
         element: <Suspense fallback={<LoadingFallback />}><AdminVendasListarPage /></Suspense>,
+      },
+      {
+        path: 'link-instagram/cadastrar',
+        element: <Suspense fallback={<LoadingFallback />}><AdminLinkInstagramCadastrarPage /></Suspense>,
+      },
+      {
+        path: 'link-instagram/listar',
+        element: <Suspense fallback={<LoadingFallback />}><AdminLinkInstagramListarPage /></Suspense>,
+      },
+      {
+        path: 'link-instagram/editar/:id',
+        element: <Suspense fallback={<LoadingFallback />}><AdminLinkInstagramEditarPage /></Suspense>,
+      },
+      {
+        path: 'link-instagram/imagem-topo',
+        element: <Suspense fallback={<LoadingFallback />}><AdminLinkInstagramImagemTopoCadastrarPage /></Suspense>,
       },
       {
         path: 'banners/cadastrar',

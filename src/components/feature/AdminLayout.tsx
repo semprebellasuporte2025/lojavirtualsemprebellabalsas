@@ -94,6 +94,15 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       ],
     },
     {
+      title: 'Link Instagram',
+      icon: 'ri-instagram-line',
+      submenu: [
+        { title: 'Cadastrar Link', path: '/paineladmin/link-instagram/cadastrar' },
+        { title: 'Listar Links', path: '/paineladmin/link-instagram/listar' },
+        { title: 'Imagem Topo', path: '/paineladmin/link-instagram/imagem-topo' },
+      ],
+    },
+    {
       title: 'Banners',
       icon: 'ri-image-line',
       submenu: [
@@ -139,7 +148,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       {/* Sidebar */}
       <aside
         className={`fixed top-0 left-0 h-full bg-pink-600 text-white transition-all duration-300 z-40 ${
-          sidebarOpen ? 'w-64' : 'w-20'
+          sidebarOpen ? 'w-72' : 'w-20'
         }`}
       >
         <div className="flex items-center justify-between p-4 border-b border-pink-500">
@@ -165,7 +174,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                   >
                     <div className="flex items-center gap-3">
                       <i className={`${item.icon} text-xl`}></i>
-                      {sidebarOpen && <span>{item.title}</span>}
+                      {sidebarOpen && <span className="whitespace-nowrap">{item.title}</span>}
                     </div>
                     {sidebarOpen && (
                       <i
@@ -199,7 +208,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                   }`}
                 >
                   <i className={`${item.icon} text-xl`}></i>
-                  {sidebarOpen && <span>{item.title}</span>}
+                  {sidebarOpen && <span className="whitespace-nowrap">{item.title}</span>}
                 </Link>
               )}
             </div>
@@ -221,7 +230,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       {/* Main Content */}
       <div
         className={`transition-all duration-300 ${
-          sidebarOpen ? 'ml-64' : 'ml-20'
+          sidebarOpen ? 'ml-72' : 'ml-20'
         }`}
       >
         {/* Top Bar */}
