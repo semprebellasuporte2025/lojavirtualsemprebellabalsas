@@ -2,7 +2,6 @@
 import { useState } from 'react';
 import AdminLayout from '../../../../components/feature/AdminLayout';
 import { useToast } from '../../../../hooks/useToast';
-import Toast from '../../../../components/base/Toast';
 
 export default function ConfiguracoesGeraisPage() {
   const { toast, showToast, hideToast } = useToast();
@@ -65,13 +64,6 @@ export default function ConfiguracoesGeraisPage() {
 
   return (
     <AdminLayout>
-      {toast.isVisible && (
-        <Toast
-          message={toast.message}
-          type={toast.type}
-          onClose={hideToast}
-        />
-      )}
       <div className="p-6">
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Configurações Gerais</h1>

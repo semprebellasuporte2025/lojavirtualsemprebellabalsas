@@ -160,7 +160,7 @@ export default function BannerSlider() {
             />
             
             {/* Conteúdo do banner */}
-            <div className="absolute inset-0 flex items-center justify-start p-12 md:p-24">
+            <div className="absolute inset-0 flex items-end justify-start p-12 md:p-24 pb-16 md:pb-24">
               <div className="max-w-lg">
                 <h2 className="text-2xl md:text-4xl font-bold mb-2 md:mb-4 text-white text-shadow">
                   {banner.titulo}

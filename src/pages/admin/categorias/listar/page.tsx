@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../../../../hooks/useToast';
-import Toast from '../../../../components/base/Toast';
 import { supabaseWithAuth } from '../../../../lib/supabaseAuth';
 import type { Categoria } from '../../../../lib/supabase';
 import AdminLayout from '../../../../components/feature/AdminLayout';
@@ -109,13 +108,6 @@ export default function ListarCategoriasPage() {
 
   return (
     <AdminLayout>
-      {toast.isVisible && (
-        <Toast
-          message={toast.message}
-          type={toast.type}
-          onClose={hideToast}
-        />
-      )}
       <ConfirmationModal
         show={showDeleteModal}
         onHide={() => setShowDeleteModal(false)}

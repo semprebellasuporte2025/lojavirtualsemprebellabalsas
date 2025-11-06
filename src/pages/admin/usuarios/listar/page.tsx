@@ -4,7 +4,6 @@ import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../../../../components/feature/AdminLayout';
 import { useToast } from '../../../../hooks/useToast';
 import { useAuth } from '../../../../hooks/useAuth';
-import Toast from '../../../../components/base/Toast';
 import { supabase } from '../../../../lib/supabase';
 
 // Interface atualizada para campos opcionais
@@ -243,13 +242,6 @@ export default function ListarUsuariosPage() {
 
   return (
     <>
-      {toast.isVisible && (
-        <Toast
-          message={toast.message}
-          type={toast.type}
-          onClose={hideToast}
-        />
-      )}
       <div className="p-6">
         <AdminLayout>
           <div className="space-y-6">

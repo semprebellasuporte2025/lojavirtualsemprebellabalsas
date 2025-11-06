@@ -5,7 +5,6 @@ import AdminLayout from '../../../../components/feature/AdminLayout';
 import AdminFormButtons from '../../../../components/feature/AdminFormButtons/AdminFormButtons';
 import { useToast } from '../../../../hooks/useToast';
 import { useAuth } from '../../../../hooks/useAuth';
-import Toast from '../../../../components/base/Toast';
 
 export default function CadastrarUsuarioPage() {
   const navigate = useNavigate();
@@ -164,13 +163,6 @@ export default function CadastrarUsuarioPage() {
 
   return (
     <>
-      {toast.isVisible && (
-        <Toast
-          message={toast.message}
-          type={toast.type}
-          onClose={hideToast}
-        />
-      )}
       <div className="p-6">
         <AdminLayout>
           <div className="space-y-6">

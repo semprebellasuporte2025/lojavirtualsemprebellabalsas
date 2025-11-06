@@ -1,5 +1,6 @@
 
 import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { supabase } from '../../../../lib/supabase';
 import AdminLayout from '../../../../components/feature/AdminLayout';
 import { useToast } from '@/hooks/useToast';
@@ -8,6 +9,7 @@ import type { Venda, ItemPedido } from '@/domain/vendas';
 
 export default function ListarVendas() {
   const { showToast } = useToast();
+  const location = useLocation();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('todos');
   const [dateFilter, setDateFilter] = useState('todos');
@@ -16,6 +18,7 @@ export default function ListarVendas() {
   const [editingVenda, setEditingVenda] = useState<Venda | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [updating, setUpdating] = useState(false);
+  const [autoOpenedFromParam, setAutoOpenedFromParam] = useState(false);
 
   const loadVendas = async () => {
     setLoading(true);
@@ -172,6 +175,28 @@ export default function ListarVendas() {
   console.log('Estado loading:', loading);
 
   const totalVendas = filteredVendas.reduce((sum, venda) => sum + venda.total, 0);
+
+  // Abrir modal automaticamente quando há parâmetro na URL
+  useEffect(() => {
+    if (autoOpenedFromParam) return;
+    try {
+      const params = new URLSearchParams(location.search);
+      const idParam = params.get('edit');
+      const numeroPedidoParam = params.get('pedido');
+      let target: Venda | undefined;
+      if (idParam) {
+        target = vendas.find(v => v.id === idParam);
+      } else if (numeroPedidoParam) {
+        target = vendas.find(v => v.numero_pedido === numeroPedidoParam);
+      }
+      if (target) {
+        openEditModal(target);
+        setAutoOpenedFromParam(true);
+      }
+    } catch (e) {
+      console.warn('Falha ao processar parâmetros de edição:', e);
+    }
+  }, [vendas, location.search, autoOpenedFromParam]);
 
   // Funções para editar venda
   const openEditModal = (venda: Venda) => {

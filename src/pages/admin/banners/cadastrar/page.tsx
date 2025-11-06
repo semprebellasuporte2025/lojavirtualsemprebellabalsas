@@ -52,23 +52,40 @@ export default function CadastrarBanner() {
         .from('banners')
         .getPublicUrl(filePath);
 
-      // Salvar dados do banner no banco
-      const { data, error } = await supabase
+      // Monta payload de inserção
+      const payload: any = {
+        titulo: formData.titulo,
+        subtitulo: formData.subtitulo || null,
+        imagem_url: publicUrl,
+        link_destino: formData.link || null,
+        ordem_exibicao: parseInt(formData.ordem),
+        ativo: formData.ativo,
+      };
+
+      if (formData.texto_botao) {
+        payload.texto_botao = formData.texto_botao;
+      }
+
+      // Tenta inserir com todos os campos
+      let { data, error } = await supabase
         .from('banners')
-        .insert([
-          {
-            titulo: formData.titulo,
-            subtitulo: formData.subtitulo || null,
-            imagem_url: publicUrl,
-            link_destino: formData.link || null,
-            texto_botao: formData.texto_botao || null, // Adicionado
-            ordem_exibicao: parseInt(formData.ordem),
-            ativo: formData.ativo
-          }
-        ])
+        .insert([payload])
         .select();
 
-      if (error) {
+      // Se a coluna texto_botao não existir, faz fallback e insere sem ela
+      if (error && (String(error.message).includes('texto_botao') || String(error.message).includes('column'))) {
+        delete payload.texto_botao;
+        const retry = await supabase
+          .from('banners')
+          .insert([payload])
+          .select();
+        if (retry.error) {
+          console.error('Erro ao salvar banner:', retry.error);
+          alert('Erro ao salvar banner. Tente novamente.');
+          return;
+        }
+        data = retry.data;
+      } else if (error) {
         console.error('Erro ao salvar banner:', error);
         alert('Erro ao salvar banner. Tente novamente.');
         return;

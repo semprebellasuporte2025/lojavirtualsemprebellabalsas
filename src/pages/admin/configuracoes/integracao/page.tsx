@@ -2,7 +2,6 @@
 import { useState } from 'react';
 import AdminLayout from '../../../../components/feature/AdminLayout';
 import { useToast } from '../../../../hooks/useToast';
-import Toast from '../../../../components/base/Toast';
 
 export default function ConfiguracoesIntegracaoPage() {
   const { toast, showToast, hideToast } = useToast();
@@ -90,13 +89,6 @@ export default function ConfiguracoesIntegracaoPage() {
 
   return (
     <>
-      {toast.isVisible && (
-        <Toast
-          message={toast.message}
-          type={toast.type}
-          onClose={hideToast}
-        />
-      )}
       <AdminLayout>
         <div className="p-6">
           <div className="mb-6">

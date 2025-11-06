@@ -11,6 +11,7 @@ Esta integração dispara uma requisição HTTP POST ao finalizar o pedido conte
 supabase functions secrets set ORDER_WEBHOOK_URL="https://seu-endpoint.com/webhook"
 supabase functions secrets set SUPABASE_URL="https://YOUR-PROJECT.supabase.co"
 supabase functions secrets set SUPABASE_SERVICE_ROLE_KEY="..."
+supabase functions secrets set WEBHOOK_AUTH_TOKEN="seu_token_secreto_aqui"
 ```
 
 - Faça o deploy da função:
@@ -71,10 +72,22 @@ supabase functions deploy dispatch-order-webhook --no-verify-jwt
 }
 ```
 
+## Autenticação
+
+A função agora requer autenticação via Bearer Token para prevenir chamadas não autorizadas:
+
+```bash
+curl -X POST https://your-project.supabase.co/functions/v1/dispatch-order-webhook \
+  -H "Authorization: Bearer seu_token_secreto_aqui" \
+  -H "Content-Type: application/json" \
+  -d '{"numero_pedido": "20251234"}'
+```
+
 ## Dicas de teste
 
 - Use um endpoint temporário (ex.: webhook.site) para inspecionar o recebimento.
 - Verifique os logs da Edge Function no Supabase (Dashboard/Functions) em caso de falha.
+- Configure o token de autenticação com: `node scripts/setup-webhook-auth.js`
 
 ## Arquivos alterados
 

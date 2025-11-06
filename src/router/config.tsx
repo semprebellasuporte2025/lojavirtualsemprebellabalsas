@@ -47,6 +47,7 @@ const AdminEstoqueListarPage = lazy(() => import('../pages/admin/estoque/listar/
 const AdminVendasListarPage = lazy(() => import('../pages/admin/vendas/listar/page'));
 const AdminBannersCadastrarPage = lazy(() => import('../pages/admin/banners/cadastrar/page'));
 const AdminBannersListarPage = lazy(() => import('../pages/admin/banners/listar/page'));
+const AdminBannersEditarPage = lazy(() => import('../pages/admin/banners/editar/page'));
 const AdminUsuariosCadastrarPage = lazy(() => import('../pages/admin/usuarios/cadastrar/page'));
 const AdminUsuariosListarPage = lazy(() => import('../pages/admin/usuarios/listar/page'));
 const AdminContaPage = lazy(() => import('../pages/admin/conta/page'));
@@ -190,6 +191,10 @@ const routes: RouteObject[] = [
       {
         path: 'banners/listar',
         element: <Suspense fallback={<LoadingFallback />}><AdminBannersListarPage /></Suspense>,
+      },
+      {
+        path: 'banners/editar/:id',
+        element: <Suspense fallback={<LoadingFallback />}><AdminBannersEditarPage /></Suspense>,
       },
       {
         path: 'usuarios/cadastrar',

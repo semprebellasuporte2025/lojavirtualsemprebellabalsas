@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import AdminLayout from '../../../../components/feature/AdminLayout';
 import { useToast } from '../../../../hooks/useToast';
-import Toast from '../../../../components/base/Toast';
 import { supabase } from '../../../../lib/supabase';
 
 interface Movimentacao {

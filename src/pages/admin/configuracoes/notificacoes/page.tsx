@@ -2,7 +2,6 @@
 import { useState } from 'react';
 import AdminLayout from '../../../../components/feature/AdminLayout';
 import { useToast } from '../../../../hooks/useToast';
-import Toast from '../../../../components/base/Toast';
 
 export default function ConfiguracoesNotificacoesPage() {
   const [formData, setFormData] = useState({
@@ -83,14 +82,6 @@ export default function ConfiguracoesNotificacoesPage() {
   };
 
   return (
-    <>
-      {toast.isVisible && (
-        <Toast
-          message={toast.message}
-          type={toast.type}
-          onClose={hideToast}
-        />
-      )}
       <AdminLayout>
         <div className="p-6">
           <div className="mb-6">
@@ -390,6 +381,5 @@ export default function ConfiguracoesNotificacoesPage() {
           </form>
         </div>
       </AdminLayout>
-    </>
   );
 }

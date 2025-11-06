@@ -1,5 +1,6 @@
 
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../../lib/supabase';
 import AdminLayout from '../../../components/feature/AdminLayout';
 import { useAuth } from '../../../hooks/useAuth'; // Importar o hook de autenticação
@@ -42,6 +43,7 @@ interface BusinessSummary {
 
 export default function DashboardPage() {
   const { user } = useAuth(); // Obter o usuário do hook de autenticação
+  const navigate = useNavigate();
   const [stats, setStats] = useState<DashboardStats>({
     totalPedidos: 0,
     faturamentoTotal: 0,
@@ -341,7 +343,15 @@ export default function DashboardPage() {
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Pedidos Recentes</h3>
           <div className="space-y-4">
             {pedidosRecentes.map((pedido, index) => (
-              <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+              <div
+                key={index}
+                className="flex items-center justify-between p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100"
+                onClick={() => {
+                  const np = encodeURIComponent(pedido.numero_pedido);
+                  navigate(`/paineladmin/vendas/listar?pedido=${np}`);
+                }}
+                title="Editar venda"
+              >
                 <div>
                   <p className="font-medium text-gray-900">{pedido.numero_pedido}</p>
                   <p className="text-sm text-gray-600">{pedido.nome}</p>

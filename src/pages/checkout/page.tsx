@@ -7,7 +7,6 @@ import LoginModal from './components/LoginModal';
 import CheckoutForm from './components/CheckoutForm';
 import SEOHead from '../../components/feature/SEOHead';
 import { useToast } from '../../hooks/useToast';
-import Toast from '../../components/base/Toast';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useCart } from '../../hooks/useCart';
 
@@ -71,13 +70,6 @@ export default function CheckoutPage() {
 
   return (
     <>
-      {toast.isVisible && (
-        <Toast
-          message={toast.message}
-          type={toast.type}
-          onClose={hideToast}
-        />
-      )}
       <SEOHead
         title="Finalizar Compra - Sempre Bella Balsas"
         description="Complete seu pedido na Sempre Bella Balsas de forma segura e rápida."

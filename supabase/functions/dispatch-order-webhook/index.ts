@@ -6,6 +6,8 @@ const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 // Aceita dois nomes para compatibilidade: ORDER_WEBHOOK_URL ou WEBHOOK_URL
 const WEBHOOK_URL = Deno.env.get('ORDER_WEBHOOK_URL') ?? Deno.env.get('WEBHOOK_URL') ?? '';
+// Token de autenticação para prevenir chamadas não autorizadas
+const WEBHOOK_AUTH_TOKEN = Deno.env.get('WEBHOOK_AUTH_TOKEN') ?? '';
 
 const corsHeaders: Record<string, string> = {
   "Access-Control-Allow-Origin": "*",
@@ -23,6 +25,17 @@ serve(async (req: Request) => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
+  }
+
+  // Verificação de autenticação
+  const authHeader = req.headers.get("Authorization");
+  const expectedToken = `Bearer ${WEBHOOK_AUTH_TOKEN}`;
+  
+  if (WEBHOOK_AUTH_TOKEN && (!authHeader || authHeader !== expectedToken)) {
+    return new Response(JSON.stringify({ error: "Não autorizado" }), {
+      status: 401,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 
   try {

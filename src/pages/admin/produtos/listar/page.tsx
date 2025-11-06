@@ -2,7 +2,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../../../../hooks/useToast';
-import Toast from '../../../../components/base/Toast';
 import { supabase } from '../../../../lib/supabase';
 import type { Produto } from '../../../../lib/supabase';
 import AdminLayout from '../../../../components/feature/AdminLayout';
@@ -268,13 +267,6 @@ export default function ListarProdutosPage() {
 
   return (
     <AdminLayout>
-      {toast.isVisible && (
-        <Toast
-          message={toast.message}
-          type={toast.type}
-          onClose={hideToast}
-        />
-      )}
       <ConfirmationModal
         show={showDeleteModal}
         onHide={() => setShowDeleteModal(false)}

@@ -28,6 +28,14 @@ export const useAuth = () => {
   // Promessas em andamento por chave (evita retornos falsos em corrida)
   const adminCheckPromisesRef = useRef<{[key: string]: Promise<{isAdmin: boolean, adminName?: string}>}>({});
 
+  // Referência para o estado atual de auth (acessível em callbacks)
+  const authStateRef = useRef(authState);
+
+  // Manter a referência sincronizada com mudanças de estado
+  useEffect(() => {
+    authStateRef.current = authState;
+  }, [authState]);
+
   useEffect(() => {
     let mounted = true;
     // Removido boolean de corrida; usamos promessas compartilhadas
@@ -76,15 +84,16 @@ export const useAuth = () => {
     updateLastActivity();
 
     const checkAdminStatus = async (userId: string, email?: string): Promise<{isAdmin: boolean, adminName?: string}> => {
-      // Verificar cache (válido por 30 segundos)
-      const cacheKey = `${userId}|${String(email || '').toLowerCase()}`;
+      const cacheKey = `${userId}:${email || ''}`;
+      
+      // Verificar cache primeiro (5 minutos de validade)
       const cached = adminCheckCacheRef.current[cacheKey];
-      if (cached && Date.now() - cached.timestamp < 30000) {
-        console.log('[Auth] Usando cache para verificação admin');
+      if (cached && (Date.now() - cached.timestamp) < 300000) {
+        console.log('[Auth] Cache hit para verificação admin');
         return cached.result;
       }
-
-      // Se já existe uma verificação em andamento para esta chave, aguarde ela
+      
+      // Verificar se já existe uma promessa em andamento para este usuário
       const ongoing = adminCheckPromisesRef.current[cacheKey];
       if (ongoing) {
         console.log('[Auth] Verificação admin compartilhada em andamento, aguardando promessa...');
@@ -94,59 +103,40 @@ export const useAuth = () => {
       try {
         console.log('[Auth] Verificando status admin para userId/email:', userId, email);
         
-        // Timeout aumentado para 10 segundos para evitar erros
+        // Timeout reduzido para 5 segundos (era 10)
         const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error('Timeout na verificação admin')), 10000);
+          setTimeout(() => reject(new Error('Timeout na verificação admin')), 5000);
         });
         
         // Cria promessa compartilhada e armazena
         const verificationPromise = (async () => {
           const selectCols = 'id, user_id, email, nome, role, tipo, ativo';
-          let adminData: any = null;
-
-          // 1) Tentar por user_id (schema mais recente)
-          const q1 = supabase
+          
+          // Consulta única otimizada usando OR para verificar múltiplos critérios
+          const query = supabase
             .from('usuarios_admin')
             .select(selectCols)
-            .eq('user_id', userId)
+            .or(`user_id.eq.${userId},id.eq.${userId}${email ? ',email.eq.' + email.toLowerCase() : ''}`)
             .eq('ativo', true)
-            .maybeSingle();
-          const { data: byUserId } = await Promise.race([q1, timeoutPromise]) as any;
-          adminData = byUserId;
-
-          // 2) Fallback por id (schema antigo que referencia auth.users.id)
-          if (!adminData) {
-            const q2 = supabase
-              .from('usuarios_admin')
-              .select(selectCols)
-              .eq('id', userId)
-              .eq('ativo', true)
-              .maybeSingle();
-            const { data: byId } = await Promise.race([q2, timeoutPromise]) as any;
-            adminData = byId;
-          }
-
-          // 3) Fallback por email (garante compatibilidade com registros antigos)
-          const emailLower = String(email || '').toLowerCase();
-          if (!adminData && emailLower) {
-            const q3 = supabase
-              .from('usuarios_admin')
-              .select(selectCols)
-              .eq('email', emailLower)
-              .eq('ativo', true)
-              .maybeSingle();
-            const { data: byEmail } = await Promise.race([q3, timeoutPromise]) as any;
-            adminData = byEmail;
+            .limit(1);
+          
+          const { data: adminData, error } = await Promise.race([query, timeoutPromise]) as any;
+          
+          if (error) {
+            console.error('[Auth] Erro na consulta admin:', error);
+            return {isAdmin: false};
           }
           
-          const isAdminResolved = !!adminData && ([adminData.role, adminData.tipo]
+          const adminRecord = Array.isArray(adminData) ? adminData[0] : adminData;
+          
+          const isAdminResolved = !!adminRecord && ([adminRecord.role, adminRecord.tipo]
             .map(v => String(v ?? '').toLowerCase())
             .some(v => ADMIN_LABELS.includes(v))
           );
 
           const result = {
             isAdmin: isAdminResolved,
-            adminName: adminData?.nome
+            adminName: adminRecord?.nome
           };
 
           // Armazenar no cache
@@ -245,10 +235,15 @@ export const useAuth = () => {
     };
 
     initAuth();
-
+    
     // Escutar mudanças de autenticação
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        // Só logar mudanças de estado quando não for INITIAL_SESSION sem usuário
+        if (!(event === 'INITIAL_SESSION' && !session?.user)) {
+          console.log('[Auth] Estado mudou:', event, session?.user?.email);
+        }
+
         if (!mounted) return;
 
         // Evitar logout desnecessário em eventos de refresh de token
@@ -258,20 +253,16 @@ export const useAuth = () => {
         }
 
         // Evitar processamento duplicado para o mesmo usuário
-        if (session?.user && authState.user?.id === session.user.id && authState.isAdmin !== undefined) {
+        const currentState = authStateRef.current;
+        if (session?.user && currentState.user?.id === session.user.id && currentState.isAdmin !== undefined) {
           console.log('[Auth] Usuário já processado, pulando verificação');
           return;
         }
 
         // Ignorar INITIAL_SESSION se já temos usuário carregado
-        if (event === 'INITIAL_SESSION' && authState.user?.id && session?.user?.id === authState.user.id) {
+        if (event === 'INITIAL_SESSION' && currentState.user?.id && session?.user?.id === currentState.user.id) {
           console.log('[Auth] INITIAL_SESSION ignorado, usuário já carregado');
           return;
-        }
-
-        // Só logar mudanças de estado quando não for INITIAL_SESSION sem usuário
-        if (!(event === 'INITIAL_SESSION' && !session?.user)) {
-          console.log('[Auth] Estado mudou:', event, session?.user?.email);
         }
 
         if (session?.user) {

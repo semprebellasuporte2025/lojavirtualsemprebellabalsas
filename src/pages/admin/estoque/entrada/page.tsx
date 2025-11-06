@@ -2,7 +2,6 @@
 import { useState, useEffect } from 'react';
 import AdminLayout from '../../../../components/feature/AdminLayout';
 import { useToast } from '../../../../hooks/useToast';
-import Toast from '../../../../components/base/Toast';
 import { supabase } from '../../../../lib/supabase';
 import { useAuth } from '../../../../hooks/useAuth';
 
@@ -156,13 +155,6 @@ export default function EntradaEstoquePage() {
 
   return (
     <>
-      {toast.isVisible && (
-        <Toast
-          message={toast.message}
-          type={toast.type}
-          onClose={hideToast}
-        />
-      )}
       <div className="p-6">
         <AdminLayout>
           <div className="space-y-6">

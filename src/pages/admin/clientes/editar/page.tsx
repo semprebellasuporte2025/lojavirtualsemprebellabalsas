@@ -3,7 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import AdminLayout from '../../../../components/feature/AdminLayout';
 import AdminFormButtons from '../../../../components/feature/AdminFormButtons/AdminFormButtons';
 import { useToast } from '../../../../hooks/useToast';
-import Toast from '../../../../components/base/Toast';
 import { supabase } from '../../../../lib/supabase';
 
 interface Cliente {
@@ -237,13 +236,6 @@ export default function EditarClientePage() {
 
   return (
     <AdminLayout>
-      {toast.isVisible && (
-        <Toast
-          message={toast.message}
-          type={toast.type}
-          onClose={hideToast}
-        />
-      )}
       <div className="p-6">
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Editar Cliente</h1>

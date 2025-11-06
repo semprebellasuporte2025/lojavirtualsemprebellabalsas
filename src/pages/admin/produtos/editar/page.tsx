@@ -4,7 +4,6 @@ import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import AdminLayout from '../../../../components/feature/AdminLayout';
 import AdminFormButtons from '../../../../components/feature/AdminFormButtons/AdminFormButtons';
 import { useToast } from '../../../../hooks/useToast';
-import Toast from '../../../../components/base/Toast';
 import { supabase } from '../../../../lib/supabase';
 import RichTextEditor from '../../../../components/base/RichTextEditor';
 import { AVAILABLE_COLORS, AVAILABLE_SIZES, findClosestColorName } from '../../../../constants/colors';
@@ -474,13 +473,6 @@ const EditarProduto = () => {
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-sm p-6">
-            {toast.isVisible && (
-              <Toast
-                message={toast.message}
-                type={toast.type}
-                onClose={hideToast}
-              />
-            )}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <div className="lg:col-span-2 space-y-6">
                 <div>

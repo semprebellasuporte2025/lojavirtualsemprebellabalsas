@@ -181,7 +181,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                         <Link
                           key={subItem.path}
                           to={subItem.path}
-                          className={`block px-4 py-2 rounded-lg hover:bg-pink-700 transition-colors text-white ${
+                          className={`block px-4 py-2 rounded-lg hover:bg-pink-700 transition-colors text-white no-underline visited:text-white ${
                             location.pathname === subItem.path ? 'bg-pink-700' : ''
                           }`}
                         >
@@ -194,7 +194,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
               ) : (
                 <Link
                   to={item.path!}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-pink-700 transition-colors text-white ${
+                  className={`flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-pink-700 transition-colors text-white no-underline visited:text-white ${
                     location.pathname === item.path ? 'bg-pink-700' : ''
                   }`}
                 >
@@ -253,7 +253,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                  href="/"
                  target="_blank"
                  rel="noopener noreferrer"
-                 className="px-4 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-colors whitespace-nowrap"
+                 className="px-4 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-colors whitespace-nowrap no-underline visited:text-white"
                >
                  Ver Loja
                </a>

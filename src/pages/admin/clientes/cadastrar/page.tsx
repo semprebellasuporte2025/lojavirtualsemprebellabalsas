@@ -3,7 +3,6 @@ import { useState } from 'react';
 import AdminLayout from '../../../../components/feature/AdminLayout';
 import AdminFormButtons from '../../../../components/feature/AdminFormButtons/AdminFormButtons';
 import { useToast } from '../../../../hooks/useToast';
-import Toast from '../../../../components/base/Toast';
 
 export default function CadastrarClientePage() {
   const { toast, showToast, hideToast } = useToast();
@@ -43,13 +42,6 @@ export default function CadastrarClientePage() {
 
   return (
     <>
-      {toast.isVisible && (
-        <Toast
-          message={toast.message}
-          type={toast.type}
-          onClose={hideToast}
-        />
-      )}
       <div className="p-6">
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Cadastrar Cliente</h1>

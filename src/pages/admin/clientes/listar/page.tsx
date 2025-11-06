@@ -3,7 +3,6 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../../../../components/feature/AdminLayout';
 import { useToast } from '../../../../hooks/useToast';
-import Toast from '../../../../components/base/Toast';
 import { supabase } from '../../../../lib/supabase';
 import ConfirmationModal from '../../../../components/feature/modal/ConfirmationModal';
 
@@ -136,13 +135,6 @@ export default function ListarClientesPage() {
 
   return (
     <>
-      {toast.isVisible && (
-        <Toast
-          message={toast.message}
-          type={toast.type}
-          onClose={hideToast}
-        />
-      )}
       <AdminLayout>
         <div className="p-6">
           <div className="flex justify-between items-center mb-6">
