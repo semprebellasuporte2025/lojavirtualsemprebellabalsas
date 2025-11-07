@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 interface ProductGalleryProps {
   images: string[];
@@ -11,6 +11,15 @@ export default function ProductGallery({ images, productName }: ProductGalleryPr
   const [zoomPosition, setZoomPosition] = useState({ x: 0, y: 0 });
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalImageIndex, setModalImageIndex] = useState(0);
+  // Mobile pinch-to-zoom state
+  const [scale, setScale] = useState(1);
+  const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null);
+  const [baseOffset, setBaseOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const pinchPointers = useRef<Map<number, { x: number; y: number }>>(new Map());
+  const pinchStart = useRef<{ distance: number; scale: number } | null>(null);
+  const lastTapTime = useRef<number>(0);
+  const maxScale = 3;
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     // Zoom apenas no desktop (telas >= 640px)
@@ -27,11 +36,23 @@ export default function ProductGallery({ images, productName }: ProductGalleryPr
     setModalImageIndex(index);
     setIsModalOpen(true);
     document.body.style.overflow = 'hidden'; // Previne scroll do body
+    // Reset zoom state when opening
+    setScale(1);
+    setOffset({ x: 0, y: 0 });
+    setDragStart(null);
+    pinchPointers.current.clear();
+    pinchStart.current = null;
   };
 
   const closeModal = () => {
     setIsModalOpen(false);
     document.body.style.overflow = 'unset'; // Restaura scroll do body
+    // Reset zoom state when closing
+    setScale(1);
+    setOffset({ x: 0, y: 0 });
+    setDragStart(null);
+    pinchPointers.current.clear();
+    pinchStart.current = null;
   };
 
   const nextImage = () => {
@@ -65,6 +86,91 @@ export default function ProductGallery({ images, productName }: ProductGalleryPr
       document.body.style.overflow = 'unset';
     };
   }, []);
+
+  // Helpers for pinch/drag on mobile modal
+  const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
+  const getPinchDistance = (p1: { x: number; y: number }, p2: { x: number; y: number }) => {
+    const dx = p2.x - p1.x;
+    const dy = p2.y - p1.y;
+    return Math.hypot(dx, dy);
+  };
+
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    const point = { x: e.clientX, y: e.clientY };
+    pinchPointers.current.set(e.pointerId, point);
+
+    // Double-tap to toggle zoom (mobile)
+    const now = Date.now();
+    if (e.pointerType === 'touch' && now - lastTapTime.current < 300) {
+      const newScale = scale > 1 ? 1 : 2;
+      setScale(newScale);
+      setOffset({ x: 0, y: 0 });
+      pinchStart.current = null;
+      pinchPointers.current.clear();
+      lastTapTime.current = 0;
+      return;
+    }
+    lastTapTime.current = now;
+
+    if (pinchPointers.current.size === 2) {
+      const [p1, p2] = Array.from(pinchPointers.current.values());
+      pinchStart.current = { distance: getPinchDistance(p1, p2), scale };
+    } else {
+      setDragStart(point);
+      setBaseOffset({ x: offset.x, y: offset.y });
+    }
+  };
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    // Avoid default scrolling behavior
+    e.preventDefault();
+    const rect = e.currentTarget.getBoundingClientRect();
+    const point = { x: e.clientX, y: e.clientY };
+    if (pinchPointers.current.has(e.pointerId)) {
+      pinchPointers.current.set(e.pointerId, point);
+    }
+
+    if (pinchPointers.current.size === 2 && pinchStart.current) {
+      const [p1, p2] = Array.from(pinchPointers.current.values());
+      const currentDistance = getPinchDistance(p1, p2);
+      const ratio = currentDistance / (pinchStart.current.distance || 1);
+      const targetScale = clamp(pinchStart.current.scale * ratio, 1, maxScale);
+      setScale(targetScale);
+      // Keep centered when pinching
+      setOffset((prev) => {
+        const maxX = ((targetScale - 1) * rect.width) / 2;
+        const maxY = ((targetScale - 1) * rect.height) / 2;
+        return { x: clamp(prev.x, -maxX, maxX), y: clamp(prev.y, -maxY, maxY) };
+      });
+      return;
+    }
+
+    if (dragStart && scale > 1) {
+      const dx = point.x - dragStart.x;
+      const dy = point.y - dragStart.y;
+      const nextX = baseOffset.x + dx;
+      const nextY = baseOffset.y + dy;
+      const maxX = ((scale - 1) * rect.width) / 2;
+      const maxY = ((scale - 1) * rect.height) / 2;
+      setOffset({ x: clamp(nextX, -maxX, maxX), y: clamp(nextY, -maxY, maxY) });
+    }
+  };
+
+  const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    pinchPointers.current.delete(e.pointerId);
+    if (pinchPointers.current.size < 2) {
+      pinchStart.current = null;
+    }
+    if (dragStart) {
+      setDragStart(null);
+    }
+    if (scale <= 1) {
+      setScale(1);
+      setOffset({ x: 0, y: 0 });
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -188,16 +294,26 @@ export default function ProductGallery({ images, productName }: ProductGalleryPr
               </button>
             )}
 
-            {/* Imagem Principal */}
+            {/* Imagem Principal com Pinch-to-Zoom (mobile) */}
             <div
-              className="w-full h-full flex items-center justify-center"
+              className="w-full h-full flex items-center justify-center select-none"
+              style={{ touchAction: 'none' }}
               onClick={(e) => e.stopPropagation()}
+              onPointerDown={handlePointerDown}
+              onPointerMove={handlePointerMove}
+              onPointerUp={handlePointerUp}
+              onPointerCancel={handlePointerUp}
             >
               <img
                 src={images[modalImageIndex]}
                 alt={`${productName} - ${modalImageIndex + 1}`}
                 className="max-w-full max-h-full object-contain"
                 loading="lazy"
+                style={{
+                  transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})`,
+                  transition: 'transform 100ms ease-out',
+                  willChange: 'transform',
+                }}
               />
             </div>
 

@@ -117,7 +117,7 @@ export default function ProductPage() {
           title={`${produto.nome} - Loja de Moda`}
           description={produto.descricao || `Compre ${produto.nome} com o melhor preço e qualidade.`}
         />
-        <div className="min-h-screen bg-white">
+        <div className="min-h-screen bg-white overflow-x-hidden" style={{ overscrollBehaviorX: 'none' }}>
           <Header />
 
           <div className="container mx-auto px-4 sm:px-6 md:px-8 lg:px-10 xl:px-12 2xl:px-16 py-8">
