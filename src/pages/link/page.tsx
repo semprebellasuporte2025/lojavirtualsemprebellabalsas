@@ -138,13 +138,13 @@ export default function LinkPage() {
                 href={item.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center w-full rounded-2xl shadow-md px-4 py-3 font-semibold bg-pink-600 text-white transition-transform duration-200 hover:scale-[1.02] hover:bg-pink-700 focus:outline-none focus:ring-2 focus:ring-pink-500 no-underline hover:no-underline focus:no-underline active:no-underline visited:no-underline"
+                className="flex w-full rounded-2xl shadow-md px-4 py-3 font-semibold bg-pink-600 text-white transition-transform duration-200 hover:scale-[1.02] hover:bg-pink-700 focus:outline-none focus:ring-2 focus:ring-pink-500 no-underline hover:no-underline focus:no-underline active:no-underline visited:no-underline"
                 style={{ textDecoration: 'none' }}
               >
                 {item.imageUrl && (
                   <img src={item.imageUrl} alt={item.label} className="w-10 h-10 rounded-full object-cover mr-4" />
                 )}
-                <span className="flex-grow text-center">{item.label}</span>
+                <span className="flex-grow">{item.label}</span>
               </a>
             ))
           )}

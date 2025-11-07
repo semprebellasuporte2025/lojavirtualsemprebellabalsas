@@ -1,15 +1,19 @@
 
 import { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '../../../../lib/supabase';
 import AdminLayout from '../../../../components/feature/AdminLayout';
 import { useToast } from '@/hooks/useToast';
 import { generateEtiqueta } from '@/lib/pdfGenerator';
 import type { Venda, ItemPedido } from '@/domain/vendas';
+import ConfirmationModal from '@/components/feature/modal/ConfirmationModal';
 
 export default function ListarVendas() {
   const { showToast } = useToast();
   const location = useLocation();
+  const navigate = useNavigate();
+  const { isAtendente } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('todos');
   const [dateFilter, setDateFilter] = useState('todos');
@@ -19,6 +23,129 @@ export default function ListarVendas() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [autoOpenedFromParam, setAutoOpenedFromParam] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [vendaParaExcluir, setVendaParaExcluir] = useState<Venda | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const openEditModal = (venda: Venda) => {
+    setEditingVenda(venda);
+    setIsModalOpen(true);
+  };
+
+  const closeEditModal = () => {
+    setEditingVenda(null);
+    setIsModalOpen(false);
+  };
+
+  const updateVenda = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingVenda) return;
+
+    setUpdating(true);
+    try {
+      const { error } = await supabase
+        .from('pedidos')
+        .update({
+          status: editingVenda.status,
+          numero_rastreio: editingVenda.numero_rastreio,
+        })
+        .eq('id', editingVenda.id);
+
+      if (error) throw error;
+
+      showToast('Venda atualizada com sucesso!', 'success');
+      closeEditModal();
+      loadVendas(); // Recarrega a lista de vendas
+    } catch (error: any) {
+      console.error('Erro ao atualizar venda:', error);
+      showToast(`Erro ao atualizar venda: ${error.message}`, 'error');
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleDeleteVenda = async (vendaId: string) => {
+    // Mantido por compatibilidade, mas agora abrimos o modal padrão
+    const venda = vendas.find(v => v.id === vendaId) || null;
+    if (venda) {
+      setVendaParaExcluir(venda);
+      setShowDeleteModal(true);
+    } else {
+      showToast('Venda não encontrada para exclusão.', 'error');
+    }
+  };
+
+  const openDeleteModal = (venda: Venda) => {
+    // Bloquear atendentes
+    if (isAtendente) {
+      showToast('Atendentes não podem excluir vendas.', 'error');
+      return;
+    }
+    setVendaParaExcluir(venda);
+    setShowDeleteModal(true);
+  };
+
+  const closeDeleteModal = () => {
+    setShowDeleteModal(false);
+    setVendaParaExcluir(null);
+  };
+
+  const confirmDeleteVenda = async () => {
+    if (!vendaParaExcluir) return;
+    setDeleting(true);
+    try {
+      // 1) Reverter estoque inserindo movimentações de "entrada" para cada item do pedido
+      const itens = vendaParaExcluir.itens_pedido || [];
+      if (itens.length > 0) {
+        const movimentos = itens.map(item => ({
+          produto_id: item.produto_id,
+          tipo: 'entrada',
+          quantidade: item.quantidade,
+          valor_unitario: item.preco_unitario ?? 0,
+          valor_total: item.subtotal ?? 0,
+          motivo: 'Cancelamento de venda',
+          observacoes: `Reversão de estoque - Pedido: ${vendaParaExcluir.numero_pedido}`,
+          usuario_nome: 'Sistema - Exclusão de Venda'
+        }));
+
+        const { error: movError } = await supabase
+          .from('movimentacoes_estoque')
+          .insert(movimentos);
+
+        if (movError) throw movError;
+      }
+
+      // 2) Excluir itens do pedido (em cascata já existe, mas garantimos)
+      const { error: itensError } = await supabase
+        .from('itens_pedido')
+        .delete()
+        .eq('pedido_id', vendaParaExcluir.id);
+      if (itensError) throw itensError;
+
+      // 3) Excluir o pedido
+      const { error: pedidoError } = await supabase
+        .from('pedidos')
+        .delete()
+        .eq('id', vendaParaExcluir.id);
+      if (pedidoError) throw pedidoError;
+
+      showToast('Venda excluída e estoque revertido com sucesso!', 'success');
+      closeDeleteModal();
+      loadVendas();
+      // Forçar retorno à listagem (rota oficial do painel)
+      try {
+        navigate('/paineladmin/vendas/listar', { replace: true });
+      } catch (_) {
+        // Fallback caso o router não esteja disponível
+        window.location.href = '/paineladmin/vendas/listar';
+      }
+    } catch (error: any) {
+      console.error('Erro ao excluir venda com reversão de estoque:', error);
+      showToast(`Erro ao excluir venda: ${error.message}`, 'error');
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const loadVendas = async () => {
     setLoading(true);
@@ -199,58 +326,7 @@ export default function ListarVendas() {
   }, [vendas, location.search, autoOpenedFromParam]);
 
   // Funções para editar venda
-  const openEditModal = (venda: Venda) => {
-    setEditingVenda(venda);
-    setIsModalOpen(true);
-  };
-
-  const closeEditModal = () => {
-    setIsModalOpen(false);
-    setEditingVenda(null);
-  };
-
-  const updateVenda = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingVenda) return;
-
-    setUpdating(true);
-    try {
-      const { error } = await supabase
-        .from('pedidos')
-        .update({
-          status: editingVenda.status,
-          numero_rastreio: editingVenda.numero_rastreio || null
-        })
-        .eq('id', editingVenda.id);
-
-      if (error) {
-        console.error('Erro ao atualizar venda:', error);
-        showToast('Erro ao atualizar venda: ' + error.message, 'error');
-      } else {
-        // Atualizar a lista de vendas localmente, mantendo os itens do pedido
-        setVendas(prevVendas => 
-          prevVendas.map(v => 
-            v.id === editingVenda.id 
-              ? { 
-                  ...v, 
-                  status: editingVenda.status, 
-                  numero_rastreio: editingVenda.numero_rastreio,
-                  // Garantir que os itens do pedido não sejam perdidos
-                  itens_pedido: v.itens_pedido 
-                }
-              : v
-          )
-        );
-        showToast('Venda atualizada com sucesso!', 'success');
-        closeEditModal();
-      }
-    } catch (error) {
-      console.error('Erro inesperado:', error);
-      alert('Erro inesperado ao atualizar venda');
-    } finally {
-      setUpdating(false);
-    }
-  };
+  // (duplicatas removidas)
 
   return (
     <AdminLayout className="no-print">
@@ -488,19 +564,33 @@ export default function ListarVendas() {
                         <button
                           onClick={() => openEditModal(venda)}
                           className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
-                          title="Editar venda"
+                          title="Editar/Visualizar venda"
                         >
                           <i className="ri-edit-line text-lg"></i>
                         </button>
-                        <button className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 cursor-pointer">
+                        <button 
+                          onClick={() => openEditModal(venda)}
+                          className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 cursor-pointer"
+                          title="Visualizar detalhes"
+                        >
                           <i className="ri-eye-line text-lg"></i>
                         </button>
-                        <button className="text-green-600 dark:text-green-400 hover:text-green-900 dark:hover:text-green-300 cursor-pointer">
+                        <button 
+                          onClick={() => openEditModal(venda)}
+                          className="text-green-600 dark:text-green-400 hover:text-green-900 dark:hover:text-green-300 cursor-pointer"
+                          title="Imprimir/Gerar Etiqueta"
+                        >
                           <i className="ri-printer-line text-lg"></i>
                         </button>
-                        <button className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300 cursor-pointer">
-                          <i className="ri-delete-bin-line text-lg"></i>
-                        </button>
+                        {!isAtendente && (
+                          <button 
+                            onClick={() => openDeleteModal(venda)}
+                            className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300 cursor-pointer"
+                            title="Excluir venda"
+                          >
+                            <i className="ri-delete-bin-line text-lg"></i>
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -681,6 +771,19 @@ export default function ListarVendas() {
           </div>
         </div>
       )}
+
+      {/* Modal de confirmação de exclusão - padrão do sistema */}
+      <ConfirmationModal
+        show={showDeleteModal}
+        onHide={closeDeleteModal}
+        onConfirm={confirmDeleteVenda}
+        title="Confirmar exclusão"
+        body={
+          vendaParaExcluir 
+            ? `Tem certeza que deseja excluir a venda #${vendaParaExcluir.numero_pedido}? Esta ação não pode ser desfeita e o estoque será revertido.`
+            : 'Tem certeza que deseja excluir esta venda?'
+        }
+      />
     </AdminLayout>
   );
 }

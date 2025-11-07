@@ -205,6 +205,10 @@ export default function EditarLinkInstagramPage() {
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Link Instagram</h1>
             <p className="text-gray-600 dark:text-gray-400 mt-1">Editar Link</p>
           </div>
+        </div>
+
+        <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 max-w-2xl">
+          <div className="grid grid-cols-1 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Ordem de exibição</label>
               <input
@@ -217,10 +221,6 @@ export default function EditarLinkInstagramPage() {
                 placeholder="1 (menor aparece primeiro)"
               />
             </div>
-        </div>
-
-        <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 max-w-2xl">
-          <div className="grid grid-cols-1 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nome do Link</label>
               <input

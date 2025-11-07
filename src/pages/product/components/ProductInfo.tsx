@@ -258,7 +258,7 @@ export default function ProductInfo({ produto, onAddToCart }: ProductInfoProps) 
           )}
         </div>
         <p className="text-sm text-gray-600 mt-2">
-          ou 3x de R$ {(product.price / 3).toFixed(2)} sem juros
+          ou 6x de R$ {(product.price / 6).toFixed(2)} sem juros
         </p>
         {/* Aviso de seleção de variações */}
         <p className="text-sm text-gray-800 mt-3">
@@ -446,7 +446,7 @@ export default function ProductInfo({ produto, onAddToCart }: ProductInfoProps) 
             )}
           </button>
         </div>
-        <p className="text-xs text-gray-700 mt-2">Frete grátis para todo os estado do Maranhão à partir de R$ 499,00</p>
+        <p className="text-xs text-gray-700 mt-2">Toda loja com 10% de desconto no pagamento via Pix ou Dinheiro e Frete Grátis à partir de R$ 499,00</p>
         <a
           href="https://buscacepinter.correios.com.br/app/endereco/index.php"
           target="_blank"
@@ -513,7 +513,7 @@ export default function ProductInfo({ produto, onAddToCart }: ProductInfoProps) 
       <div className="border-t border-gray-200 pt-6 space-y-3">
         <div className="flex items-center space-x-3 text-gray-700">
           <i className="ri-truck-line text-pink-600 text-xl"></i>
-          <span className="text-sm">Frete grátis para todo os estado do Maranhão à partir de R$ 499,00</span>
+          <span className="text-sm">Toda loja com 10% de desconto no pagamento via Pix ou Dinheiro e Frete Grátis à partir de R$ 499,00</span>
         </div>
         <div className="flex items-center space-x-3 text-gray-700">
           <i className="ri-arrow-left-right-line text-pink-600 text-xl"></i>

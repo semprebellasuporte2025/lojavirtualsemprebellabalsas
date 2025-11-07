@@ -61,11 +61,11 @@ export default function Header() {
               </a>
             </div>
 
-            {/* Frete grátis */}
+            {/* Benefícios e frete */}
             <div className="flex items-start sm:items-center gap-2 sm:justify-end">
               <i className="ri-truck-line"></i>
               <span className="leading-snug">
-                Frete grátis para todo os estado do Maranhão à partir de R$ 499,00
+                Toda loja com 10% de desconto no pagamento via Pix ou Dinheiro e Frete Grátis à partir de R$ 499,00
               </span>
             </div>
           </div>

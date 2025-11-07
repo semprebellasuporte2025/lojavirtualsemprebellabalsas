@@ -231,9 +231,9 @@ export default function CategoriaPage() {
         <HeroSlider />
 
 
-        <div className="container mx-auto px-12 sm:px-16 lg:px-24 xl:px-36 2xl:px-56 py-8">
-          <div className="flex flex-col md:flex-row gap-8">
-            <aside className="w-full md:w-64 flex-shrink-0">
+        <div className="container mx-auto px-2 sm:px-3 md:px-4 lg:px-6 xl:px-8 2xl:px-10 py-8">
+          <div className="flex flex-col md:flex-row gap-4">
+            <aside className="w-full md:w-64 flex-shrink-0 -ml-2 sm:-ml-3 md:-ml-4 lg:-ml-6 xl:-ml-8 2xl:-ml-10">
               <div className="bg-white rounded-lg shadow-md p-6 sticky top-4">
                 <h3 className="text-lg font-bold text-gray-800 mb-4">Filtros</h3>
 
@@ -420,6 +420,13 @@ export default function CategoriaPage() {
                             <img
                               src={produto.imagens?.[0] || '/placeholder-product.svg'}
                               alt={produto.nome}
+                              loading="lazy"
+                              decoding="async"
+                              onError={(e) => {
+                                const img = e.currentTarget as HTMLImageElement;
+                                img.onerror = null;
+                                img.src = '/placeholder-product.svg';
+                              }}
                               className="w-full h-96 object-contain object-top group-hover:scale-105 transition-transform duration-300 bg-gray-50"
                             />
                           </div>

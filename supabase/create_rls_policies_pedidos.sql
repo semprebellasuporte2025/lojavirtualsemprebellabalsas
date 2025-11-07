@@ -4,6 +4,8 @@ ALTER TABLE public.pedidos ENABLE ROW LEVEL SECURITY;
 -- Remove políticas antigas para evitar conflitos
 DROP POLICY IF EXISTS "Allow authenticated users to view all orders" ON public.pedidos;
 DROP POLICY IF EXISTS "Allow authenticated users to update all orders" ON public.pedidos;
+DROP POLICY IF EXISTS "Allow authenticated users to delete all orders" ON public.pedidos;
+DROP POLICY IF EXISTS "Allow authenticated users to create their own orders" ON public.pedidos;
 
 -- Política de SELECT: Permite que usuários autenticados vejam todos os pedidos.
 -- Essencial para o painel de admin.
@@ -21,6 +23,14 @@ FOR UPDATE
 TO authenticated
 USING (true)
 WITH CHECK (true);
+
+-- Política de DELETE: Permite que usuários autenticados excluam pedidos.
+-- Necessário para remoção de vendas no painel admin.
+CREATE POLICY "Allow authenticated users to delete all orders"
+ON public.pedidos
+FOR DELETE
+TO authenticated
+USING (true);
 
 -- Política de INSERT: Permite que usuários autenticados criem seus próprios pedidos.
 CREATE POLICY "Allow authenticated users to create their own orders"
