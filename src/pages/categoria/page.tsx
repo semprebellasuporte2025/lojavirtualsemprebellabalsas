@@ -231,9 +231,9 @@ export default function CategoriaPage() {
         <HeroSlider />
 
 
-        <div className="container mx-auto px-2 sm:px-3 md:px-4 lg:px-6 xl:px-8 2xl:px-10 py-8">
+        <div className="container mx-auto px-4 sm:px-6 md:px-8 lg:px-10 xl:px-12 2xl:px-14 py-8">
           <div className="flex flex-col md:flex-row gap-4">
-            <aside className="w-full md:w-64 flex-shrink-0 -ml-2 sm:-ml-3 md:-ml-4 lg:-ml-6 xl:-ml-8 2xl:-ml-10">
+            <aside className="w-full md:w-64 flex-shrink-0 ml-2 sm:ml-3 md:ml-4 lg:ml-6 xl:ml-8 2xl:ml-10">
               <div className="bg-white rounded-lg shadow-md p-6 sticky top-4">
                 <h3 className="text-lg font-bold text-gray-800 mb-4">Filtros</h3>
 
@@ -404,7 +404,7 @@ export default function CategoriaPage() {
                       <p className="text-gray-600">Nenhum produto encontrado</p>
                     </div>
                   ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6" data-product-shop>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 px-6 sm:px-8 md:px-12 lg:px-16 xl:px-20 2xl:px-24" data-product-shop>
                       {produtosOrdenados.map((produto) => (
                         <div
                           key={produto.id}
@@ -422,6 +422,11 @@ export default function CategoriaPage() {
                               alt={produto.nome}
                               loading="lazy"
                               decoding="async"
+                              onAbort={(e) => {
+                                const img = e.currentTarget as HTMLImageElement;
+                                img.onerror = null;
+                                img.src = '/placeholder-product.svg';
+                              }}
                               onError={(e) => {
                                 const img = e.currentTarget as HTMLImageElement;
                                 img.onerror = null;

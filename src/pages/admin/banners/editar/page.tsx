@@ -286,7 +286,7 @@ export default function AdminBannersEditarPage() {
                     alt="Preview" 
                     className="w-full h-auto object-cover rounded-lg border dark:border-gray-600"
                     onError={(e) => {
-                      e.currentTarget.src = '/placeholder-banner.svg';
+                      e.currentTarget.src = '/placeholder-large.svg';
                     }}
                   />
                 </div>

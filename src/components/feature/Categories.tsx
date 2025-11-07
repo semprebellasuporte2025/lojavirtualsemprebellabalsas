@@ -186,6 +186,18 @@ export default function Categories({ initialCategorias, catalogLoading }: { init
                         src={categoria.imagem_url || '/placeholder-category.svg'}
                         alt={categoria.nome}
                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                        loading="lazy"
+                        decoding="async"
+                        onAbort={(e) => {
+                          const img = e.currentTarget as HTMLImageElement;
+                          img.onerror = null;
+                          img.src = '/placeholder-category.svg';
+                        }}
+                        onError={(e) => {
+                          const img = e.currentTarget as HTMLImageElement;
+                          img.onerror = null;
+                          img.src = '/placeholder-category.svg';
+                        }}
                       />
                     </div>
                     <h3 className="text-xl font-bold text-gray-800 group-hover:text-pink-600 transition-colors text-center">
@@ -216,6 +228,17 @@ export default function Categories({ initialCategorias, catalogLoading }: { init
                         alt={categoria.nome}
                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                         loading="lazy"
+                        decoding="async"
+                        onAbort={(e) => {
+                          const img = e.currentTarget as HTMLImageElement;
+                          img.onerror = null;
+                          img.src = '/placeholder-category.svg';
+                        }}
+                        onError={(e) => {
+                          const img = e.currentTarget as HTMLImageElement;
+                          img.onerror = null;
+                          img.src = '/placeholder-category.svg';
+                        }}
                       />
                     </div>
                     <h3 className="text-lg font-bold text-gray-800 group-hover:text-pink-600 transition-colors text-center">

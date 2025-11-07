@@ -151,11 +151,17 @@ export default function BannerSlider() {
               }}
               loading="lazy"
               onLoad={() => handleImageLoad(banner.imagem_url)}
+              onAbort={(e) => {
+                const target = e.target as HTMLImageElement;
+                target.style.opacity = '1';
+                target.src = '/placeholder-large.svg';
+              }}
               onError={(e) => {
                 // Fallback para imagem quebrada
                 const target = e.target as HTMLImageElement;
                 target.style.opacity = '1';
-                target.src = '/placeholder-banner.svg';
+                // Usa placeholder existente no projeto
+                target.src = '/placeholder-large.svg';
               }}
             />
             
