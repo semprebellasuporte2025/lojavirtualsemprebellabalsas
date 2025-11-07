@@ -35,9 +35,9 @@ Thumbs.db
 docs/
 README.md
 
-# Scripts and tools
-scripts/
-tools/
+# Scripts and tools (permit postbuild and helper scripts)
+# scripts/
+# tools/
 
 # Supabase local files
 supabase/.temp/
