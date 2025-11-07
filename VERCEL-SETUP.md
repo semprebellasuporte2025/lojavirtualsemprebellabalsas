@@ -43,7 +43,7 @@ Vá para **Settings > General** e configure:
 
 - **Framework Preset:** Vite
 - **Build Command:** `npm run build`
-- **Output Directory:** `dist`
+- **Output Directory:** `out` (alinhado com `vite.config.ts` → `outDir: 'out'`)
 - **Install Command:** `npm ci`
 - **Development Command:** `npm run dev`
 
@@ -119,6 +119,16 @@ npx vercel logs
 1. Verifique se o repositório está conectado
 2. Confirme se a branch `main` existe
 3. Verifique permissões do GitHub
+
+### GitHub Actions não consegue publicar na Vercel
+1. Configure os segredos do repositório em `Settings > Secrets and variables > Actions`:
+   - `VERCEL_TOKEN`
+   - `VERCEL_ORG_ID`
+   - `VERCEL_PROJECT_ID`
+   - `VITE_PUBLIC_SUPABASE_URL`
+   - `VITE_PUBLIC_SUPABASE_ANON_KEY`
+   - `SITE_URL`
+2. Refaça um push na `main` para re-disparar o workflow.
 
 ### Site Não Carrega
 1. Verifique as variáveis de ambiente do Supabase
