@@ -199,7 +199,7 @@ export default function ProductInfo({ produto, onAddToCart }: ProductInfoProps) 
 
   const copyLink = () => {
     navigator.clipboard.writeText(window.location.href);
-    alert('Link copiado!');
+    showToast('link copiado com sucesso', 'success');
     setShowShareMenu(false);
   };
 
