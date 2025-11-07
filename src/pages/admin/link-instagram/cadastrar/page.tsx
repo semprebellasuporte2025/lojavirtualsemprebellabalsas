@@ -10,7 +10,9 @@ export default function LinkInstagramCadastrarPage() {
 
   const [form, setForm] = useState({
     nome_link: '',
+    link: '',
     link_img: '', // URL pública após upload
+    ordem_exibicao: 1,
   });
   const [imgFile, setImgFile] = useState<File | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -30,6 +32,10 @@ export default function LinkInstagramCadastrarPage() {
 
     if (!form.nome_link) {
       showToast('Informe o Nome do Link.', 'error');
+      return;
+    }
+    if (!form.link) {
+      showToast('Informe o Link de destino.', 'error');
       return;
     }
     if (!imgFile) {
@@ -71,10 +77,12 @@ export default function LinkInstagramCadastrarPage() {
           .from('link_instagram')
           .insert({
             nome_link: form.nome_link,
+            link: form.link,
             img_link: publicUrl, // armazenamos a URL no campo de imagem
             link_img: publicUrl, // conforme especificação, link para a imagem
             ativo: true,
             created_at: new Date().toISOString(),
+            ordem_exibicao: Number(form.ordem_exibicao) || 1,
           });
         if (insertError) throw insertError;
         showToast('Link cadastrado com sucesso.', 'success');
@@ -102,7 +110,7 @@ export default function LinkInstagramCadastrarPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 max-w-2xl">
-          <div className="grid grid-cols-1 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nome do Link</label>
               <input
@@ -115,6 +123,32 @@ export default function LinkInstagramCadastrarPage() {
                 required
               />
             </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Link (URL de destino)</label>
+              <input
+                type="url"
+                name="link"
+                value={form.link}
+                onChange={handleChange}
+                className="input-field"
+                placeholder="https://sua-url.com"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Ordem de exibição</label>
+              <input
+                type="number"
+                name="ordem_exibicao"
+                value={form.ordem_exibicao}
+                onChange={handleChange}
+                min={1}
+                className="input-field"
+                placeholder="1 (menor aparece primeiro)"
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 gap-4 mt-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">img_link (imagem para o Storage)</label>
               <input

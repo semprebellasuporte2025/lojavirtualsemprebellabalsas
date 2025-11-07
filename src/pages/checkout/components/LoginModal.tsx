@@ -32,7 +32,7 @@ export default function LoginModal({ onClose }: LoginModalProps) {
         const { data: clientData } = await supabase
           .from('clientes')
           .select('nome, telefone')
-          .eq('user_id', user.id)
+          .eq('email', user.email || '')
           .maybeSingle();
 
         setFormData((prev) => ({
@@ -110,7 +110,6 @@ export default function LoginModal({ onClose }: LoginModalProps) {
                 nome: formData.name,
                 email: formData.email,
                 telefone: formData.phone,
-                user_id: data.user.id,
                 ativo: true
               }
             ]);

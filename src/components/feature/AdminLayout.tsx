@@ -9,7 +9,7 @@ interface AdminLayoutProps {
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const location = useLocation();
-  const { user, isAdmin, loading, signOut, adminName } = useAuth();
+  const { user, isAdmin, isAtendente, loading, signOut, adminName } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [openMenus, setOpenMenus] = useState<string[]>([]);
   const [currentDateTime, setCurrentDateTime] = useState(new Date());
@@ -25,8 +25,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
   // Navegações foram removidas — usamos retornos condicionais abaixo para evitar loops
 
-  // Verificar se é admin ou usuário específico de suporte
-  const isAuthorizedAdmin = isAdmin || user?.email === 'semprebellasuporte2025@gmail.com';
+  // Verificar se é admin ou atendente (acesso ao painel)
+  const isAuthorizedAdmin = isAdmin || isAtendente;
 
   // Estados de carregamento e redirecionamento imediatos para evitar tela em branco
   if (loading) {
@@ -143,6 +143,11 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     );
   };
 
+  // Ocultar menus restritos para atendente
+  const displayMenuItems = isAtendente
+    ? menuItems.filter((item) => item.title !== 'Usuários' && item.title !== 'Configurações')
+    : menuItems;
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Sidebar */}
@@ -164,7 +169,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         </div>
 
         <nav className="p-4 space-y-2 overflow-y-auto h-[calc(100vh-140px)]">
-          {menuItems.map((item) => (
+          {displayMenuItems.map((item) => (
             <div key={item.title}>
               {item.submenu ? (
                 <div>

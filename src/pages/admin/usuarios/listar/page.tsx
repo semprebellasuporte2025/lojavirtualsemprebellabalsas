@@ -5,6 +5,7 @@ import AdminLayout from '../../../../components/feature/AdminLayout';
 import { useToast } from '../../../../hooks/useToast';
 import { useAuth } from '../../../../hooks/useAuth';
 import { supabase } from '../../../../lib/supabase';
+import ConfirmationModal from '../../../../components/feature/modal/ConfirmationModal';
 
 // Interface atualizada para campos opcionais
 interface Usuario {
@@ -54,6 +55,9 @@ export default function ListarUsuariosPage() {
   // Estados para modais
   const [showViewModal, setShowViewModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [usuarioToDelete, setUsuarioToDelete] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [selectedUsuario, setSelectedUsuario] = useState<Usuario | null>(null);
   const [editFormData, setEditFormData] = useState<Usuario>({
     id: '',
@@ -62,7 +66,6 @@ export default function ListarUsuariosPage() {
     tipo: '',
     departamento: '',
     cargo: '',
-    data_admissao: '',
     ativo: true
   });
 
@@ -150,24 +153,33 @@ export default function ListarUsuariosPage() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (confirm('Tem certeza que deseja excluir este usuário?')) {
-      try {
-        const { error } = await supabase
-          .from('usuarios_admin')
-          .delete()
-          .eq('id', id);
+  const handleDelete = (id: string) => {
+    setUsuarioToDelete(id);
+    setShowDeleteModal(true);
+  };
 
-        if (error) {
-          throw error;
-        }
+  const confirmDelete = async () => {
+    if (!usuarioToDelete) return;
+    try {
+      setIsDeleting(true);
+      const { error } = await supabase
+        .from('usuarios_admin')
+        .delete()
+        .eq('id', usuarioToDelete);
 
-        setUsuarios(usuariosList.filter(u => u.id !== id));
-        showToast('Usuário excluído com sucesso!', 'success');
-      } catch (err: any) {
-        console.error('Erro ao excluir usuário:', err);
-        showToast('Erro ao excluir usuário', 'error');
+      if (error) {
+        throw error;
       }
+
+      setUsuarios(usuariosList.filter(u => u.id !== usuarioToDelete));
+      showToast('Usuário excluído com sucesso!', 'success');
+    } catch (err: any) {
+      console.error('Erro ao excluir usuário:', err);
+      showToast('Erro ao excluir usuário', 'error');
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteModal(false);
+      setUsuarioToDelete(null);
     }
   };
 
@@ -209,7 +221,6 @@ export default function ListarUsuariosPage() {
       if (editFormData.tipo?.trim()) updateData.tipo = editFormData.tipo.trim();
       if (editFormData.departamento?.trim()) updateData.departamento = editFormData.departamento.trim();
       if (editFormData.cargo?.trim()) updateData.cargo = editFormData.cargo.trim();
-      if (editFormData.data_admissao) updateData.data_admissao = editFormData.data_admissao;
       updateData.ativo = editFormData.ativo;
 
       console.log('Atualizando usuário:', editFormData.id, updateData);
@@ -449,14 +460,7 @@ export default function ListarUsuariosPage() {
                           <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getTipoColor(usuario.tipo)}`}>
                             {capitalizeString(usuario.tipo)}
                           </span>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-900 dark:text-white">
-                              {usuario.data_admissao ? new Date(usuario.data_admissao).toLocaleDateString('pt-BR') : 'Data não informada'}
-                            </div>
-                            <div className="text-sm text-gray-500 dark:text-gray-400">
-                              Admissão
-                            </div>
-                          </td>
+
                           <td className="px-6 py-4 whitespace-nowrap">
                             <button
                               onClick={() => toggleStatus(usuario.id)}
@@ -515,6 +519,15 @@ export default function ListarUsuariosPage() {
         </AdminLayout>
       </div>
 
+      {/* Modal de Confirmação de Exclusão */}
+      <ConfirmationModal
+        show={showDeleteModal}
+        onHide={() => setShowDeleteModal(false)}
+        onConfirm={confirmDelete}
+        title="Confirmar Exclusão"
+        body="Tem certeza que deseja excluir este usuário? Esta ação não pode ser desfeita."
+      />
+
       {/* Modal de Visualização */}
       {showViewModal && selectedUsuario && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -549,10 +562,6 @@ export default function ListarUsuariosPage() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Cargo</label>
                 <p className="text-gray-900 dark:text-white">{selectedUsuario.cargo || 'N/A'}</p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Data de Admissão</label>
-                <p className="text-gray-900 dark:text-white">{formatDate(selectedUsuario.data_admissao)}</p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Status</label>
@@ -642,15 +651,6 @@ export default function ListarUsuariosPage() {
                   type="text"
                   value={editFormData.cargo || ''}
                   onChange={(e) => setEditFormData({...editFormData, cargo: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Data de Admissão</label>
-                <input
-                  type="date"
-                  value={editFormData.data_admissao || ''}
-                  onChange={(e) => setEditFormData({...editFormData, data_admissao: e.target.value})}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
                 />
               </div>

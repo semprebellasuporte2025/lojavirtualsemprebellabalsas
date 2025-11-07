@@ -8,10 +8,12 @@ import { supabase } from '@/lib/supabase';
 interface InstagramLink {
   id: string;
   nome_link: string;
+  link: string;
   link_img: string | null;
   img_link: string | null;
   ativo?: boolean;
   created_at?: string;
+  ordem_exibicao?: number;
 }
 
 export default function EditarLinkInstagramPage() {
@@ -19,23 +21,65 @@ export default function EditarLinkInstagramPage() {
   const navigate = useNavigate();
   const { showToast } = useToast();
 
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState<Pick<InstagramLink, 'nome_link' | 'link_img' | 'img_link'>>({
+  const [form, setForm] = useState<Partial<InstagramLink>>({
     nome_link: '',
+    link: '',
     link_img: '',
     img_link: '',
+    ordem_exibicao: 1,
   });
-  const [imgFile, setImgFile] = useState<File | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const bucket = 'imagens-produtos';
+  const bucket = 'imagens-links';
 
   const storagePathFromPublicUrl = (url: string | null | undefined) => {
     if (!url) return null;
-    const marker = `/storage/v1/object/public/${bucket}/`;
-    const idx = url.indexOf(marker);
-    if (idx === -1) return null;
-    return url.substring(idx + marker.length);
+    const bucketMarker = `${bucket}/`;
+    const idx = url.indexOf(bucketMarker);
+    if (idx !== -1) {
+      return decodeURIComponent(url.substring(idx + bucketMarker.length));
+    }
+    return null;
+  };
+
+  const handleDeleteImage = async () => {
+    if (!id) return;
+    const imageUrl = form.link_img || form.img_link;
+    if (!imageUrl) {
+      showToast('Nenhuma imagem para excluir.', 'info');
+      return;
+    }
+
+    const imagePath = storagePathFromPublicUrl(imageUrl);
+    if (!imagePath) {
+      showToast('Não foi possível determinar o caminho da imagem para exclusão.', 'error');
+      return;
+    }
+
+    try {
+      // 1. Excluir do Storage
+      const { error: storageError } = await supabase.storage.from(bucket).remove([imagePath]);
+      if (storageError && storageError.message !== 'The resource was not found') {
+        throw storageError;
+      }
+
+      // 2. Limpar campos no banco de dados
+      const { error: dbError } = await supabase
+        .from('link_instagram')
+        .update({ link_img: null, img_link: null })
+        .eq('id', id);
+      if (dbError) throw dbError;
+
+      // 3. Atualizar estado local
+      setForm(prev => ({ ...prev, link_img: null, img_link: null }));
+      showToast('Imagem excluída com sucesso!', 'success');
+
+    } catch (error: any) {
+      console.error('Erro ao excluir imagem:', error);
+      showToast(`Erro ao excluir a imagem: ${error.message}`, 'error');
+    }
   };
 
   useEffect(() => {
@@ -44,14 +88,16 @@ export default function EditarLinkInstagramPage() {
       try {
         const { data, error } = await supabase
           .from('link_instagram')
-          .select('id, nome_link, link_img, img_link')
+          .select('id, nome_link, link, link_img, img_link, ordem_exibicao')
           .eq('id', id)
           .single();
         if (error) throw error;
         setForm({
           nome_link: data?.nome_link || '',
+          link: data?.link || '',
           link_img: data?.link_img || data?.img_link || '',
           img_link: data?.img_link || data?.link_img || '',
+          ordem_exibicao: data?.ordem_exibicao ?? 1,
         });
       } catch (err: any) {
         console.error('Erro ao carregar link do Instagram:', err);
@@ -65,12 +111,12 @@ export default function EditarLinkInstagramPage() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
+    setForm((prev) => ({ ...prev, [name]: name === 'ordem_exibicao' ? Number(value) : value }));
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] || null;
-    setImgFile(file);
+    setImageFile(file);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -80,21 +126,25 @@ export default function EditarLinkInstagramPage() {
       showToast('Informe o Nome do Link.', 'error');
       return;
     }
+    if (!form.link) {
+      showToast('Informe o Link de destino.', 'error');
+      return;
+    }
 
     setSaving(true);
 
     try {
       let newPublicUrl: string | null = null;
 
-      if (imgFile) {
-        const ext = imgFile.name.split('.').pop();
-        const safeName = imgFile.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+      if (imageFile) {
+        const ext = imageFile.name.split('.').pop();
+        const safeName = imageFile.name.replace(/[^a-zA-Z0-9._-]/g, '_');
         const fileName = `instagram-links/${Date.now()}-${safeName}`;
-        const contentType = imgFile.type || (ext ? `image/${ext}` : 'application/octet-stream');
+        const contentType = imageFile.type || (ext ? `image/${ext}` : 'application/octet-stream');
 
         const { error: uploadError } = await supabase.storage
           .from(bucket)
-          .upload(fileName, imgFile, { upsert: true, contentType });
+          .upload(fileName, imageFile, { upsert: true, contentType });
         if (uploadError) throw uploadError;
 
         const { data: publicUrlData } = supabase.storage
@@ -112,6 +162,8 @@ export default function EditarLinkInstagramPage() {
 
       const updatePayload: Partial<InstagramLink> = {
         nome_link: form.nome_link,
+        link: form.link,
+        ordem_exibicao: form.ordem_exibicao ?? 1,
       };
       if (newPublicUrl) {
         updatePayload.link_img = newPublicUrl;
@@ -153,6 +205,18 @@ export default function EditarLinkInstagramPage() {
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Link Instagram</h1>
             <p className="text-gray-600 dark:text-gray-400 mt-1">Editar Link</p>
           </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Ordem de exibição</label>
+              <input
+                type="number"
+                name="ordem_exibicao"
+                value={form.ordem_exibicao ?? 1}
+                onChange={handleChange}
+                min={1}
+                className="input-field"
+                placeholder="1 (menor aparece primeiro)"
+              />
+            </div>
         </div>
 
         <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 max-w-2xl">
@@ -171,13 +235,35 @@ export default function EditarLinkInstagramPage() {
             </div>
 
             <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Link (URL de destino)</label>
+              <input
+                type="url"
+                name="link"
+                value={form.link}
+                onChange={handleChange}
+                className="input-field"
+                placeholder="https://sua-url.com"
+                required
+              />
+            </div>
+
+            <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Imagem atual</label>
               {form.link_img || form.img_link ? (
-                <img src={(form.link_img || form.img_link) as string} alt="Imagem do link" className="w-48 h-48 object-cover rounded-md border mb-3" />
+                <div>
+                  <img src={(form.link_img || form.img_link) as string} alt="Imagem do link" className="w-48 h-48 object-cover rounded-md border mb-2" />
+                  <button
+                    type="button"
+                    onClick={handleDeleteImage}
+                    className="px-3 py-1 text-sm font-medium text-red-600 bg-red-100 border border-red-200 rounded-md hover:bg-red-200"
+                  >
+                    Excluir Imagem
+                  </button>
+                </div>
               ) : (
                 <p className="text-sm text-gray-500">Nenhuma imagem cadastrada.</p>
               )}
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 mt-2">Substituir imagem</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 mt-4">Substituir imagem</label>
               <input type="file" accept="image/*" onChange={handleFileChange} className="input-field" />
             </div>
 

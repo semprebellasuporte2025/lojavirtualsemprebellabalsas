@@ -52,7 +52,7 @@ SET
 WHERE tipo IS NULL OR departamento IS NULL OR cargo IS NULL OR data_admissao IS NULL;
 
 -- Adicionar comentários para documentação
-COMMENT ON COLUMN public.usuarios_admin.tipo IS 'Tipo de usuário administrativo (admin, super_admin, etc.)';
+COMMENT ON COLUMN public.usuarios_admin.tipo IS 'Tipo de usuário administrativo (admin, atendente, etc.)';
 COMMENT ON COLUMN public.usuarios_admin.departamento IS 'Departamento do usuário na empresa';
 COMMENT ON COLUMN public.usuarios_admin.cargo IS 'Cargo/função do usuário na empresa';
 COMMENT ON COLUMN public.usuarios_admin.data_admissao IS 'Data de admissão do usuário na empresa';

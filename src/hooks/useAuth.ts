@@ -8,6 +8,8 @@ export interface AuthState {
   session: Session | null;
   loading: boolean;
   isAdmin: boolean;
+  isAtendente: boolean;
+  isUsuario: boolean;
   adminName?: string;
 }
 
@@ -17,19 +19,28 @@ export const useAuth = () => {
     session: null,
     loading: true,
     isAdmin: false,
+    isAtendente: false,
+    isUsuario: false,
     adminName: undefined,
   });
   
   // Marcadores aceitos para perfis administradores
-  const ADMIN_LABELS = ['admin', 'administrador', 'super_admin', 'superadmin', 'administrator'];
+  const ADMIN_LABELS = ['admin', 'administrador', 'administrator'];
+  // Marcadores aceitos para perfis atendente
+  const ATTENDANT_LABELS = ['atendente', 'attendant'];
+  // Marcadores aceitos para perfis usuário (staff comum)
+  const USER_LABELS = ['usuario', 'user'];
   
   // Referência para o cache que pode ser limpo externamente
   const adminCheckCacheRef = useRef<{[key: string]: {result: any, timestamp: number}}>({});
   // Promessas em andamento por chave (evita retornos falsos em corrida)
-  const adminCheckPromisesRef = useRef<{[key: string]: Promise<{isAdmin: boolean, adminName?: string}>}>({});
+  const adminCheckPromisesRef = useRef<{[key: string]: Promise<{isAdmin: boolean, isAtendente: boolean, isUsuario: boolean, adminName?: string}>}>({});
 
   // Referência para o estado atual de auth (acessível em callbacks)
   const authStateRef = useRef(authState);
+  // Referências para controle de eventos e prevenção de loops
+  const lastEventTimeRef = useRef<number>(0);
+  const lastEventRef = useRef<string>('');
 
   // Manter a referência sincronizada com mudanças de estado
   useEffect(() => {
@@ -83,7 +94,7 @@ export const useAuth = () => {
     // Inicializar última atividade
     updateLastActivity();
 
-    const checkAdminStatus = async (userId: string, email?: string): Promise<{isAdmin: boolean, adminName?: string}> => {
+  const checkAdminStatus = async (userId: string, email?: string): Promise<{isAdmin: boolean, isAtendente: boolean, isUsuario: boolean, adminName?: string}> => {
       const cacheKey = `${userId}:${email || ''}`;
       
       // Verificar cache primeiro (5 minutos de validade)
@@ -103,20 +114,26 @@ export const useAuth = () => {
       try {
         console.log('[Auth] Verificando status admin para userId/email:', userId, email);
         
-        // Timeout reduzido para 5 segundos (era 10)
+        // Timeout aumentado para 15 segundos (era 5)
         const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error('Timeout na verificação admin')), 5000);
+          setTimeout(() => reject(new Error('Timeout na verificação admin')), 15000);
         });
         
         // Cria promessa compartilhada e armazena
         const verificationPromise = (async () => {
-          const selectCols = 'id, user_id, email, nome, role, tipo, ativo';
+          const selectCols = 'id, email, nome, tipo, ativo';
           
           // Consulta única otimizada usando OR para verificar múltiplos critérios
+          // Construir a string OR corretamente para o Supabase
+          const orConditions = [`id.eq.${userId}`];
+          if (email) {
+            orConditions.push(`email.eq.${email.toLowerCase()}`);
+          }
+          
           const query = supabase
             .from('usuarios_admin')
             .select(selectCols)
-            .or(`user_id.eq.${userId},id.eq.${userId}${email ? ',email.eq.' + email.toLowerCase() : ''}`)
+            .or(orConditions.join(','))
             .eq('ativo', true)
             .limit(1);
           
@@ -124,18 +141,28 @@ export const useAuth = () => {
           
           if (error) {
             console.error('[Auth] Erro na consulta admin:', error);
-            return {isAdmin: false};
+            return {isAdmin: false, isAtendente: false, isUsuario: false};
           }
           
           const adminRecord = Array.isArray(adminData) ? adminData[0] : adminData;
           
-          const isAdminResolved = !!adminRecord && ([adminRecord.role, adminRecord.tipo]
+          const isAdminResolved = !!adminRecord && ([adminRecord.tipo]
             .map(v => String(v ?? '').toLowerCase())
             .some(v => ADMIN_LABELS.includes(v))
+          );
+          const isAtendenteResolved = !!adminRecord && ([adminRecord.tipo]
+            .map(v => String(v ?? '').toLowerCase())
+            .some(v => ATTENDANT_LABELS.includes(v))
+          );
+          const isUsuarioResolved = !!adminRecord && ([adminRecord.tipo]
+            .map(v => String(v ?? '').toLowerCase())
+            .some(v => USER_LABELS.includes(v))
           );
 
           const result = {
             isAdmin: isAdminResolved,
+            isAtendente: isAtendenteResolved,
+            isUsuario: isUsuarioResolved,
             adminName: adminRecord?.nome
           };
 
@@ -157,7 +184,7 @@ export const useAuth = () => {
         console.error('[Auth] Erro na verificação admin:', error);
         // Em erro, não alternar o estado para falso imediatamente; apenas propagar falso sem cache
         // para evitar thrash em casos intermitentes.
-        return {isAdmin: false};
+        return {isAdmin: false, isAtendente: false, isUsuario: false};
       }
     };
 
@@ -208,7 +235,9 @@ export const useAuth = () => {
             user: session.user,
             session,
             loading: false,
-            isAdmin: adminStatus.isAdmin || session.user.email === 'semprebellasuporte2025@gmail.com',
+            isAdmin: adminStatus.isAdmin,
+            isAtendente: adminStatus.isAtendente,
+            isUsuario: adminStatus.isUsuario,
             adminName: displayName,
           });
         } else {
@@ -218,6 +247,8 @@ export const useAuth = () => {
             session: null,
             loading: false,
             isAdmin: false,
+            isAtendente: false,
+            isUsuario: false,
             adminName: undefined,
           });
         }
@@ -229,6 +260,8 @@ export const useAuth = () => {
           session: null,
           loading: false,
           isAdmin: false,
+          isAtendente: false,
+          isUsuario: false,
           adminName: undefined,
         });
       }
@@ -252,10 +285,13 @@ export const useAuth = () => {
           return;
         }
 
-        // Evitar processamento duplicado para o mesmo usuário
+        // Evitar processamento duplicado para o mesmo usuário com mesmo estado
         const currentState = authStateRef.current;
-        if (session?.user && currentState.user?.id === session.user.id && currentState.isAdmin !== undefined) {
-          console.log('[Auth] Usuário já processado, pulando verificação');
+        if (session?.user && 
+            currentState.user?.id === session.user.id && 
+            currentState.isAdmin !== undefined &&
+            currentState.session?.access_token === session.access_token) {
+          console.log('[Auth] Usuário já processado (mesmo ID e token), pulando verificação');
           return;
         }
 
@@ -264,6 +300,16 @@ export const useAuth = () => {
           console.log('[Auth] INITIAL_SESSION ignorado, usuário já carregado');
           return;
         }
+
+        // Prevenir loops: não processar eventos consecutivos do mesmo tipo muito rapidamente
+        const now = Date.now();
+        const lastEventTime = lastEventTimeRef.current;
+        if (lastEventTime && (now - lastEventTime) < 1000 && event === lastEventRef.current) {
+          console.log('[Auth] Evento rápido consecutivo ignorado:', event);
+          return;
+        }
+        lastEventTimeRef.current = now;
+        lastEventRef.current = event;
 
         if (session?.user) {
           console.log('[Auth] Processando login para:', session.user.email);
@@ -278,7 +324,9 @@ export const useAuth = () => {
               user: session.user,
               session,
               loading: false,
-              isAdmin: adminStatus.isAdmin || session.user.email === 'semprebellasuporte2025@gmail.com',
+              isAdmin: adminStatus.isAdmin,
+              isAtendente: adminStatus.isAtendente,
+              isUsuario: adminStatus.isUsuario,
               adminName: displayName,
             });
             
@@ -291,6 +339,8 @@ export const useAuth = () => {
               session,
               loading: false,
               isAdmin: false,
+              isAtendente: false,
+              isUsuario: false,
               adminName: undefined,
             });
           }
@@ -303,6 +353,8 @@ export const useAuth = () => {
               session: null,
               loading: false,
               isAdmin: false,
+              isAtendente: false,
+              isUsuario: false,
               adminName: undefined,
             });
           }
@@ -356,7 +408,6 @@ export const useAuth = () => {
       await supabase
         .from('clientes')
         .insert({
-          user_id: data.user.id,
           nome: userData.nome,
           email: email,
           telefone: userData.telefone,
@@ -388,30 +439,19 @@ export const useAuth = () => {
       try {
         console.log('[Auth] Forçando nova verificação admin para userId:', authState.user.id);
         
-        const selectCols = 'id, user_id, email, nome, role, tipo, ativo';
+        const selectCols = 'id, email, nome, tipo, ativo';
         let adminData: any = null;
 
-        // 1) user_id
-        const { data: byUserId } = await supabase
+        // 1) id
+        const { data: byId } = await supabase
           .from('usuarios_admin')
           .select(selectCols)
-          .eq('user_id', authState.user.id)
+          .eq('id', authState.user.id)
           .eq('ativo', true)
           .maybeSingle();
-        adminData = byUserId;
+        adminData = byId;
 
-        // 2) id
-        if (!adminData) {
-          const { data: byId } = await supabase
-            .from('usuarios_admin')
-            .select(selectCols)
-            .eq('id', authState.user.id)
-            .eq('ativo', true)
-            .maybeSingle();
-          adminData = byId;
-        }
-
-        // 3) email
+        // 2) email
         const emailLower = String(authState.user.email || '').toLowerCase();
         if (!adminData && emailLower) {
           const { data: byEmail } = await supabase
@@ -423,27 +463,39 @@ export const useAuth = () => {
           adminData = byEmail;
         }
         
-        const isAdminComputed = !!adminData && ([adminData.role, adminData.tipo]
+        const isAdminComputed = !!adminData && ([adminData.tipo]
           .map(v => String(v ?? '').toLowerCase())
           .some(v => ADMIN_LABELS.includes(v))
         );
-        const isAdmin = isAdminComputed || authState.user.email === 'semprebellasuporte2025@gmail.com';
+        const isAdmin = isAdminComputed;
+        const isAtendenteComputed = !!adminData && ([adminData.tipo]
+          .map(v => String(v ?? '').toLowerCase())
+          .some(v => ATTENDANT_LABELS.includes(v))
+        );
+        const isAtendente = isAtendenteComputed;
+        const isUsuarioComputed = !!adminData && ([adminData.tipo]
+          .map(v => String(v ?? '').toLowerCase())
+          .some(v => USER_LABELS.includes(v))
+        );
+        const isUsuario = isUsuarioComputed;
         const adminName = computeDisplayName(authState.user, { adminName: adminData?.nome });
         
         setAuthState(prev => ({
           ...prev,
           isAdmin,
+          isAtendente,
+          isUsuario,
           adminName,
         }));
         
-        console.log('[Auth] Nova verificação admin concluída:', { isAdmin, adminName });
-        return { isAdmin, adminName };
+        console.log('[Auth] Nova verificação admin concluída:', { isAdmin, isAtendente, isUsuario, adminName });
+        return { isAdmin, isAtendente, isUsuario, adminName };
       } catch (error) {
         console.error('[Auth] Erro na verificação forçada admin:', error);
-        return { isAdmin: false, adminName: undefined };
+        return { isAdmin: false, isAtendente: false, isUsuario: false, adminName: undefined };
       }
     }
-    return { isAdmin: false, adminName: undefined };
+    return { isAdmin: false, isAtendente: false, isUsuario: false, adminName: undefined };
   };
 
   return {

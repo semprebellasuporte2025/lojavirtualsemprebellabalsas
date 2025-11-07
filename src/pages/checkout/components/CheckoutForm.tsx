@@ -114,7 +114,7 @@ export default function CheckoutForm({ cartItems, subtotal, shippingData, total 
       const { data: cliente, error } = await supabase
         .from('clientes')
         .select('id, nome, email, cpf')
-        .eq('user_id', user.id)
+        .eq('email', (user.email as string) || '')
         .maybeSingle();
       if (!error && cliente) {
         setClienteInfo(cliente);
@@ -151,15 +151,15 @@ export default function CheckoutForm({ cartItems, subtotal, shippingData, total 
       const { data: cliente, error: clienteError } = await supabase
         .from('clientes')
         .select('id, nome, email, cpf')
-        .eq('user_id', user.id)
+        .eq('email', (user.email as string) || '')
         .maybeSingle();
 
       let clienteId = cliente?.id as string | undefined;
       if (clienteError || !clienteId) {
-        // Se não existir, cria um cliente mínimo vinculado ao user_id
+        // Se não existir, cria um cliente mínimo vinculado ao email
         const { data: novoCliente, error: novoClienteError } = await supabase
           .from('clientes')
-          .insert([{ user_id: user.id, nome: (user as any)?.user_metadata?.nome || 'Cliente', email: (user.email as string) || '' }])
+          .insert([{ nome: (user as any)?.user_metadata?.nome || 'Cliente', email: (user.email as string) || '' }])
           .select()
           .single();
         if (novoClienteError) {

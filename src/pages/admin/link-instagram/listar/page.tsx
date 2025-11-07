@@ -16,6 +16,7 @@ export default function LinkInstagramListarPage() {
     img_link: string | null;
     ativo?: boolean;
     created_at?: string;
+    ordem_exibicao?: number;
   }
 
   const [links, setLinks] = useState<InstagramLink[]>([]);
@@ -38,7 +39,8 @@ export default function LinkInstagramListarPage() {
       try {
         const { data, error } = await supabase
           .from('link_instagram')
-          .select('id, nome_link, link_img, img_link, ativo, created_at')
+          .select('id, nome_link, link_img, img_link, ativo, created_at, ordem_exibicao')
+          .order('ordem_exibicao', { ascending: true })
           .order('created_at', { ascending: false });
         if (error) throw error;
         setLinks(data || []);
@@ -51,6 +53,29 @@ export default function LinkInstagramListarPage() {
     };
     loadLinks();
   }, []);
+
+  const handleOrderChange = (id: string, value: number) => {
+    setLinks(prev => prev.map(l => l.id === id ? { ...l, ordem_exibicao: value } : l));
+  };
+
+  const saveOrder = async (id: string) => {
+    const link = links.find(l => l.id === id);
+    if (!link) return;
+    const newOrder = Number(link.ordem_exibicao) || 1;
+    try {
+      const { error } = await supabase
+        .from('link_instagram')
+        .update({ ordem_exibicao: newOrder })
+        .eq('id', id);
+      if (error) throw error;
+      showToast('Ordem atualizada.', 'success');
+      // Reordenar localmente
+      setLinks(prev => [...prev].sort((a, b) => (a.ordem_exibicao ?? 0) - (b.ordem_exibicao ?? 0)));
+    } catch (err: any) {
+      console.error('Erro ao atualizar ordem:', err);
+      showToast('Erro ao atualizar ordem.', 'error');
+    }
+  };
 
   const handleDelete = (id: string) => {
     setLinkToDelete(id);
@@ -120,6 +145,7 @@ export default function LinkInstagramListarPage() {
               <thead className="bg-gray-50 dark:bg-gray-900">
                <tr>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Imagem</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ordem</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nome</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">URL</th>
                   <th className="px-4 py-3"></th>
@@ -148,6 +174,17 @@ export default function LinkInstagramListarPage() {
                           src={(link.link_img || link.img_link || '/placeholder-small.svg') as string}
                           alt={link.nome_link}
                           className="w-12 h-12 rounded object-cover border"
+                        />
+                      </td>
+                      <td className="px-4 py-3 w-24">
+                        <input
+                          type="number"
+                          min={1}
+                          value={link.ordem_exibicao ?? 1}
+                          onChange={(e) => handleOrderChange(link.id, Number(e.target.value))}
+                          onBlur={() => saveOrder(link.id)}
+                          className="input-field"
+                          aria-label="Ordem de exibição"
                         />
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">{link.nome_link}</td>

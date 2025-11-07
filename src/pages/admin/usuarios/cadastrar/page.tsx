@@ -17,15 +17,10 @@ export default function CadastrarUsuarioPage() {
     email: '',
     senha: '',
     confirmarSenha: '',
-    telefone: '',
-    cpf: '',
     tipo: '',
     departamento: '',
     cargo: '',
-    dataAdmissao: '',
-    observacoes: '',
-    ativo: true,
-    receberNotificacoes: true
+    ativo: true
   });
 
   const [showPassword, setShowPassword] = useState(false);
@@ -53,8 +48,7 @@ export default function CadastrarUsuarioPage() {
 
   const tiposUsuario = [
     { id: 'admin', nome: 'Administrador' },
-    { id: 'atendente', nome: 'Atendente' },
-    { id: 'cliente', nome: 'Cliente' }
+    { id: 'atendente', nome: 'Atendente' }
   ];
 
   const departamentos = [
@@ -74,28 +68,7 @@ export default function CadastrarUsuarioPage() {
     }));
   };
 
-  const formatCPF = (value: string) => {
-    const numbers = value.replace(/\D/g, '');
-    return numbers.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
-  };
 
-  const formatPhone = (value: string) => {
-    const numbers = value.replace(/\D/g, '');
-    if (numbers.length <= 10) {
-      return numbers.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
-    }
-    return numbers.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
-  };
-
-  const handleCPFChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formatted = formatCPF(e.target.value);
-    setFormData(prev => ({ ...prev, cpf: formatted }));
-  };
-
-  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formatted = formatPhone(e.target.value);
-    setFormData(prev => ({ ...prev, telefone: formatted }));
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -126,7 +99,7 @@ export default function CadastrarUsuarioPage() {
           tipo: formData.tipo || 'admin',
           departamento: formData.departamento,
           cargo: formData.cargo,
-          data_admissao: formData.dataAdmissao
+          ativo: formData.ativo
         })
       });
 
@@ -134,7 +107,10 @@ export default function CadastrarUsuarioPage() {
 
       if (response.ok) {
         showToast('Usuário cadastrado com sucesso!', 'success');
-        navigate('/paineladmin/usuarios/listar');
+        // Forçar redirecionamento para o painel admin, ignorando qualquer lógica automática
+        setTimeout(() => {
+          navigate('/paineladmin/usuarios/listar');
+        }, 100);
 
         // Limpar formulário
         setFormData({
@@ -142,15 +118,10 @@ export default function CadastrarUsuarioPage() {
           email: '',
           senha: '',
           confirmarSenha: '',
-          telefone: '',
-          cpf: '',
           tipo: '',
           departamento: '',
           cargo: '',
-          dataAdmissao: '',
-          observacoes: '',
-          ativo: true,
-          receberNotificacoes: true
+          ativo: true
         });
       } else {
         showToast(result.error || 'Erro ao cadastrar usuário', 'error');
@@ -213,36 +184,7 @@ export default function CadastrarUsuarioPage() {
                           placeholder="joao@empresa.com"
                         />
                       </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                          CPF *
-                        </label>
-                        <input
-                          type="text"
-                          name="cpf"
-                          value={formData.cpf}
-                          onChange={handleCPFChange}
-                          required
-                          maxLength={14}
-                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                          placeholder="000.000.000-00"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                          Telefone *
-                        </label>
-                        <input
-                          type="text"
-                          name="telefone"
-                          value={formData.telefone}
-                          onChange={handlePhoneChange}
-                          required
-                          maxLength={15}
-                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                          placeholder="(99) 99999-9999"
-                        />
-                      </div>
+
                     </div>
                   </div>
 
@@ -320,6 +262,7 @@ export default function CadastrarUsuarioPage() {
                           ))}
                         </select>
                       </div>
+
                     </div>
                   </div>
 
@@ -361,36 +304,10 @@ export default function CadastrarUsuarioPage() {
                           placeholder="Ex: Vendedor Sênior"
                         />
                       </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                          Data de Admissão *
-                        </label>
-                        <input
-                          type="date"
-                          name="dataAdmissao"
-                          value={formData.dataAdmissao}
-                          onChange={handleInputChange}
-                          required
-                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                        />
-                      </div>
                     </div>
                   </div>
 
-                  {/* Observações */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Observações
-                    </label>
-                    <textarea
-                      name="observacoes"
-                      value={formData.observacoes}
-                      onChange={handleInputChange}
-                      rows={4}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none"
-                      placeholder="Informações adicionais sobre o usuário..."
-                    />
-                  </div>
+
 
                   {/* Configurações */}
                   <div className="space-y-4">
@@ -407,19 +324,7 @@ export default function CadastrarUsuarioPage() {
                         Usuário ativo
                       </label>
                     </div>
-                    <div className="flex items-center space-x-3">
-                      <input
-                        type="checkbox"
-                        id="receberNotificacoes"
-                        name="receberNotificacoes"
-                        checked={formData.receberNotificacoes}
-                        onChange={handleInputChange}
-                        className="w-4 h-4 text-pink-600 bg-gray-100 border-gray-300 rounded focus:ring-pink-500 dark:focus:ring-pink-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
-                      />
-                      <label htmlFor="receberNotificacoes" className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
-                        Receber notificações por email
-                      </label>
-                    </div>
+
                   </div>
 
                   {/* Buttons */}

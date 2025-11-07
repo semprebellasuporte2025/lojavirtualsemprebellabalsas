@@ -65,6 +65,7 @@ const AdminDebugUploadPage = lazy(() => import('../pages/admin/debug-upload'));
 const AdminDebugColorVariationsPage = lazy(() => import('../pages/admin/debug-color-variations'));
 
 import ProtectedRoute from './ProtectedRoute';
+import AdminOnlyRoute from './AdminOnlyRoute';
 
 const routes: RouteObject[] = [
   {
@@ -221,35 +222,48 @@ const routes: RouteObject[] = [
         path: 'banners/editar/:id',
         element: <Suspense fallback={<LoadingFallback />}><AdminBannersEditarPage /></Suspense>,
       },
+      // Admin-only group: Usuários e Configurações (gerais)
       {
-        path: 'usuarios/cadastrar',
-        element: <Suspense fallback={<LoadingFallback />}><AdminUsuariosCadastrarPage /></Suspense>,
-      },
-      {
-        path: 'usuarios/listar',
-        element: <Suspense fallback={<LoadingFallback />}><AdminUsuariosListarPage /></Suspense>,
+        element: <AdminOnlyRoute />,
+        children: [
+          {
+            path: 'usuarios/cadastrar',
+            element: <Suspense fallback={<LoadingFallback />}><AdminUsuariosCadastrarPage /></Suspense>,
+          },
+          {
+            path: 'usuarios/listar',
+            element: <Suspense fallback={<LoadingFallback />}><AdminUsuariosListarPage /></Suspense>,
+          },
+          {
+            path: 'configuracoes/gerais',
+            element: <Suspense fallback={<LoadingFallback />}><AdminConfiguracoesGeraisPage /></Suspense>,
+          },
+        ]
       },
       {
         path: 'conta',
         element: <Suspense fallback={<LoadingFallback />}><AdminContaPage /></Suspense>,
       },
-      {
-        path: 'configuracoes/gerais',
-        element: <Suspense fallback={<LoadingFallback />}><AdminConfiguracoesGeraisPage /></Suspense>,
-      },
     ]
   },
+  // Admin-only group para Configurações fora do agrupamento principal
   {
-    path: '/paineladmin/configuracoes/integracao',
-    element: <Suspense fallback={<LoadingFallback />}><AdminConfiguracoesIntegracaoPage /></Suspense>,
-  },
-  {
-    path: '/paineladmin/configuracoes/notificacoes',
-    element: <Suspense fallback={<LoadingFallback />}><AdminConfiguracoesNotificacoesPage /></Suspense>,
-  },
-  {
-    path: '/paineladmin/configuracoes/sistema',
-    element: <Suspense fallback={<LoadingFallback />}><AdminConfiguracoesSistemaPage /></Suspense>,
+    path: '/paineladmin/configuracoes',
+    element: <AdminOnlyRoute />,
+    children: [
+      {
+        path: 'integracao',
+        element: <Suspense fallback={<LoadingFallback />}><AdminConfiguracoesIntegracaoPage /></Suspense>,
+      },
+      {
+        path: 'notificacoes',
+        element: <Suspense fallback={<LoadingFallback />}><AdminConfiguracoesNotificacoesPage /></Suspense>,
+      },
+      {
+        path: 'sistema',
+        element: <Suspense fallback={<LoadingFallback />}><AdminConfiguracoesSistemaPage /></Suspense>,
+      },
+    ]
   },
   {
     path: '/paineladmin/ajuda',

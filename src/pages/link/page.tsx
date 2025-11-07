@@ -5,6 +5,7 @@ import { useToast } from '@/hooks/useToast';
 interface LinkItem {
   label: string;
   url: string;
+  imageUrl?: string; // Adicionado para a imagem
 }
 
 interface SocialLinks {
@@ -35,10 +36,12 @@ export default function LinkPage() {
   interface InstagramLinkRow {
     id: string;
     nome_link: string;
+    link: string; // Adicionado para o link de destino
     link_img: string | null; // URL pública da imagem (upload)
     img_link: string | null;  // campo alternativo encontrado no admin
     ativo?: boolean | null;
     created_at?: string | null;
+    ordem_exibicao?: number | null;
     img_topo?: string | null;
     linktopo_img_?: string | null;
     descricao_topo?: string | null;
@@ -56,7 +59,8 @@ export default function LinkPage() {
       try {
         const { data, error } = await supabase
           .from('link_instagram')
-          .select('id, nome_link, link_img, img_link, ativo, created_at, img_topo, linktopo_img_, descricao_topo')
+          .select('id, nome_link, link, link_img, img_link, ativo, created_at, ordem_exibicao, img_topo, linktopo_img_, descricao_topo')
+          .order('ordem_exibicao', { ascending: true })
           .order('created_at', { ascending: false });
         if (error) throw error;
 
@@ -75,12 +79,13 @@ export default function LinkPage() {
         }
 
         // Montar lista pública de links: usar nome_link como rótulo e o melhor destino disponível
-        const activeRows = rows.filter(r => r.ativo !== false); // exibe se ativo é true ou undefined
+        const activeRows = rows.filter(r => r.ativo !== false && !r.img_topo); // exibe se ativo é true ou undefined, e não é o item de topo
         const items: LinkItem[] = activeRows
           .filter(r => !!r.nome_link)
           .map(r => ({
             label: r.nome_link,
-            url: (r.img_link || r.link_img || '#') as string,
+            url: r.link || '#', // Usa o novo campo 'link'
+            imageUrl: r.link_img || r.img_link || undefined, // Adiciona a URL da imagem
           }));
         setLinks(items);
       } catch (err: any) {
@@ -94,7 +99,7 @@ export default function LinkPage() {
   }, [showToast]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-100 to-rose-50 flex items-center justify-center px-4 py-10">
+    <div className="min-h-screen bg-gradient-to-br from-pink-100 to-rose-50 flex items-start justify-center px-4 py-10">
       <div className="w-full max-w-md">
         <div className="flex flex-col items-center text-center">
           {/* Imagem Topo no topo da página */}
@@ -133,10 +138,13 @@ export default function LinkPage() {
                 href={item.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="block w-full rounded-2xl shadow-md px-5 py-3 text-center font-semibold bg-pink-600 text-white transition-transform duration-200 hover:scale-[1.02] hover:bg-pink-700 focus:outline-none focus:ring-2 focus:ring-pink-500 no-underline hover:no-underline focus:no-underline active:no-underline visited:no-underline"
+                className="flex items-center w-full rounded-2xl shadow-md px-4 py-3 font-semibold bg-pink-600 text-white transition-transform duration-200 hover:scale-[1.02] hover:bg-pink-700 focus:outline-none focus:ring-2 focus:ring-pink-500 no-underline hover:no-underline focus:no-underline active:no-underline visited:no-underline"
                 style={{ textDecoration: 'none' }}
               >
-                {item.label}
+                {item.imageUrl && (
+                  <img src={item.imageUrl} alt={item.label} className="w-10 h-10 rounded-full object-cover mr-4" />
+                )}
+                <span className="flex-grow text-center">{item.label}</span>
               </a>
             ))
           )}

@@ -7,7 +7,7 @@ import { useAuth } from '../../../hooks/useAuth';
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { user, loading, isAdmin, signIn, signOut, clearAdminCache, refreshAdminStatus } = useAuth();
+  const { user, loading, isAdmin, isAtendente, isUsuario, signIn, signOut, clearAdminCache, refreshAdminStatus } = useAuth();
 
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [rememberMe, setRememberMe] = useState(false);
@@ -91,13 +91,15 @@ export default function LoginPage() {
       console.log('[Login] Usuário logado detectado, verificando redirecionamento:', {
         email: user.email,
         isAdmin,
+        isAtendente,
+        isUsuario,
         currentPath: window.location.pathname
       });
 
       // Evitar redirecionamento se já estiver na página correta
       const currentPath = window.location.pathname;
 
-      if (isAdmin) {
+      if (isAdmin || isAtendente || isUsuario) {
         console.log('[Login] Usuário é admin, redirecionando para painel admin');
         if (!currentPath.startsWith('/paineladmin')) {
           forceRedirect('/paineladmin');
@@ -109,7 +111,7 @@ export default function LoginPage() {
         }
       }
     }
-  }, [user, loading, isAdmin, navigate]);
+  }, [user, loading, isAdmin, isAtendente, isUsuario, navigate]);
 
   if (loading) {
     return (
@@ -185,10 +187,10 @@ export default function LoginPage() {
                     <div className="flex items-center gap-3">
                       <button
                         type="button"
-                        onClick={() => navigate(isAdmin ? '/paineladmin' : '/minha-conta')}
+                        onClick={() => navigate((isAdmin || isAtendente || isUsuario) ? '/paineladmin' : '/minha-conta')}
                         className="px-5 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-colors whitespace-nowrap cursor-pointer font-medium"
                       >
-                        {isAdmin ? 'Ir para Painel Admin' : 'Ir para Minha Conta'}
+                        {(isAdmin || isAtendente || isUsuario) ? 'Ir para Painel Admin' : 'Ir para Minha Conta'}
                       </button>
                       <button
                         type="button"
@@ -198,7 +200,7 @@ export default function LoginPage() {
                         Sair
                       </button>
                     </div>
-                    {!isAdmin && (
+                    {!(isAdmin || isAtendente || isUsuario) && (
                       <button
                         type="button"
                         onClick={() => {

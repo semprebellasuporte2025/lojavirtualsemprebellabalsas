@@ -70,8 +70,8 @@ export default function MinhaContaPage() {
             const { data: clientData, error: clientError } = await supabase
                 .from('clientes')
                 .select('id, nome, telefone, cpf, data_nascimento, genero')
-                .eq('user_id', userId)
-                .single();
+                .eq('email', (auth.user?.email as string) || '')
+                .maybeSingle();
             if (clientError && clientError.code !== 'PGRST116') throw clientError;
             if (clientData) {
                 setFormData({
@@ -326,7 +326,7 @@ export default function MinhaContaPage() {
                 data_nascimento: formData.dataNascimento,
                 genero: formData.genero,
             })
-            .eq('user_id', user.id);
+            .eq('email', (auth.user?.email as string) || '');
         if (error) {
             showToast('Erro ao atualizar dados.', 'error');
         } else {
