@@ -244,6 +244,8 @@ export default function AdminBannersEditarPage() {
                   value={formData.ordem_exibicao}
                   onChange={(e) => setFormData({ ...formData, ordem_exibicao: parseInt(e.target.value, 10) || 0 })}
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                  min={1}
+                  required
                 />
               </div>
 

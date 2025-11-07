@@ -20,12 +20,41 @@ export default function CadastrarBanner() {
   const [imagePreview, setImagePreview] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<{ titulo?: string; image?: string; ordem?: string; link?: string }>({});
+
+  const isValidUrl = (value: string) => {
+    try {
+      new URL(value);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  const validateForm = () => {
+    const newErrors: { titulo?: string; image?: string; ordem?: string; link?: string } = {};
+    if (!formData.titulo.trim()) {
+      newErrors.titulo = 'Título é obrigatório';
+    }
+    if (!selectedFile) {
+      newErrors.image = 'Imagem do banner é obrigatória';
+    }
+    const ordemNum = parseInt(formData.ordem, 10);
+    if (!Number.isFinite(ordemNum) || ordemNum < 1) {
+      newErrors.ordem = 'Ordem deve ser um número maior ou igual a 1';
+    }
+    if (formData.link && !isValidUrl(formData.link)) {
+      newErrors.link = 'Informe uma URL válida (ex.: https://exemplo.com)';
+    }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!selectedFile) {
-      alert('Por favor, selecione uma imagem para o banner.');
+    if (!validateForm()) {
+      showToast('Preencha os campos obrigatórios corretamente.', 'error');
       return;
     }
 
@@ -43,7 +72,7 @@ export default function CadastrarBanner() {
 
       if (uploadError) {
         console.error('Erro no upload:', uploadError);
-        alert('Erro ao fazer upload da imagem. Tente novamente.');
+        showToast('Erro ao fazer upload da imagem. Tente novamente.', 'error');
         return;
       }
 
@@ -81,13 +110,13 @@ export default function CadastrarBanner() {
           .select();
         if (retry.error) {
           console.error('Erro ao salvar banner:', retry.error);
-          alert('Erro ao salvar banner. Tente novamente.');
+          showToast('Erro ao salvar banner. Tente novamente.', 'error');
           return;
         }
         data = retry.data;
       } else if (error) {
         console.error('Erro ao salvar banner:', error);
-        alert('Erro ao salvar banner. Tente novamente.');
+        showToast('Erro ao salvar banner. Tente novamente.', 'error');
         return;
       }
 
@@ -96,7 +125,7 @@ export default function CadastrarBanner() {
 
     } catch (error) {
       console.error('Erro inesperado:', error);
-      alert('Erro inesperado. Tente novamente.');
+      showToast('Erro inesperado. Tente novamente.', 'error');
     } finally {
       setLoading(false);
     }
@@ -149,6 +178,9 @@ export default function CadastrarBanner() {
                       </div>
                     )}
                   </label>
+                  {errors.image && (
+                    <p className="mt-2 text-sm text-red-600" role="alert">{errors.image}</p>
+                  )}
                 </div>
               </div>
 
@@ -163,7 +195,12 @@ export default function CadastrarBanner() {
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
                   placeholder="Ex: Promoção de Verão"
                   required
+                  aria-invalid={Boolean(errors.titulo)}
+                  aria-describedby={errors.titulo ? 'erro-titulo' : undefined}
                 />
+                {errors.titulo && (
+                  <p id="erro-titulo" className="mt-2 text-sm text-red-600" role="alert">{errors.titulo}</p>
+                )}
               </div>
 
               <div>
@@ -185,14 +222,19 @@ export default function CadastrarBanner() {
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Link de Destino
                     </label>
-                    <input
-                      type="url"
-                      value={formData.link}
-                      onChange={(e) => setFormData({ ...formData, link: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-                      placeholder="https://exemplo.com/promocao"
-                    />
-                  </div>
+                <input
+                  type="url"
+                  value={formData.link}
+                  onChange={(e) => setFormData({ ...formData, link: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                  placeholder="https://exemplo.com/promocao"
+                  aria-invalid={Boolean(errors.link)}
+                  aria-describedby={errors.link ? 'erro-link' : undefined}
+                />
+                {errors.link && (
+                  <p id="erro-link" className="mt-2 text-sm text-red-600" role="alert">{errors.link}</p>
+                )}
+              </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -211,15 +253,20 @@ export default function CadastrarBanner() {
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Ordem de Exibição *
                     </label>
-                    <input
-                      type="number"
-                      min="1"
-                      value={formData.ordem}
-                      onChange={(e) => setFormData({ ...formData, ordem: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-                      required
-                    />
-                  </div>
+                <input
+                  type="number"
+                  min="1"
+                  value={formData.ordem}
+                  onChange={(e) => setFormData({ ...formData, ordem: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                  required
+                  aria-invalid={Boolean(errors.ordem)}
+                  aria-describedby={errors.ordem ? 'erro-ordem' : undefined}
+                />
+                {errors.ordem && (
+                  <p id="erro-ordem" className="mt-2 text-sm text-red-600" role="alert">{errors.ordem}</p>
+                )}
+              </div>
                 </div>
               </div>
 
@@ -242,7 +289,7 @@ export default function CadastrarBanner() {
               onSave={handleSubmit}
               onBack={() => window.history.back()}
               saveText={loading ? "Salvando..." : "Salvar Banner"}
-              disabled={loading}
+              isSaveDisabled={loading}
             />
 
           </form>
