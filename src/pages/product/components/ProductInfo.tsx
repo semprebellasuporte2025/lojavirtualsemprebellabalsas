@@ -422,19 +422,19 @@ export default function ProductInfo({ produto, onAddToCart }: ProductInfoProps) 
       {/* Shipping Calculator */}
       <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 mt-4">
         <label className="block text-sm font-semibold text-gray-900 mb-3">Calcular Frete e Prazo</label>
-        <div className="flex space-x-3">
+        <div className="flex flex-col sm:flex-row gap-3">
           <input
             type="text"
             placeholder="Digite seu CEP"
             value={cep}
             onChange={handleCepChange}
-            className="flex-1 px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-pink-600 text-sm"
+            className="flex-1 h-12 px-4 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-pink-600 text-sm"
             maxLength={9}
           />
           <button
             onClick={calculateFrete}
             disabled={calculatingFrete}
-            className="px-6 py-2 bg-pink-600 text-white rounded-lg font-medium hover:bg-pink-700 transition-colors cursor-pointer whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
+            className="sm:w-auto w-full h-12 px-6 bg-pink-600 text-white rounded-lg font-medium hover:bg-pink-700 transition-colors cursor-pointer whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {calculatingFrete ? (
               <>
