@@ -120,7 +120,7 @@ export default function HomePage() {
                   )}
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 px-6 sm:px-8 md:px-12 lg:px-16 xl:px-20 2xl:px-24">
+                <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-5 px-0 sm:px-8 md:px-12 lg:px-16 xl:px-20 2xl:px-24">
                   {displayRecentProducts.map((produto) => {
                     const cores = getCoresUnicas(produto.variantes_produto || []);
                     const categoriaNome = produto.categorias?.nome || 'Produtos';

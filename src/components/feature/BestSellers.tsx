@@ -141,7 +141,7 @@ export default function BestSellers() {
           <h2 className="text-3xl font-bold text-gray-800">Queridinhos</h2>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 px-6 sm:px-8 md:px-12 lg:px-16 xl:px-20 2xl:px-24" data-product-shop>
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 px-0 sm:px-8 md:px-12 lg:px-16 xl:px-20 2xl:px-24" data-product-shop>
           {displayProdutos.map((produto) => {
             const cores = getCoresUnicas(produto.variantes_produto || []);
             const categoriaNome = produto.categorias?.nome || 'Produtos';

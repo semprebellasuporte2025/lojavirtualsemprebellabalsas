@@ -144,12 +144,12 @@ export default function ShippingCalculator({ onShippingCalculated, subtotal }: S
               onChange={handleCepChange}
               placeholder="00000-000"
               maxLength={9}
-              className="flex-1 h-12 px-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent text-sm"
+              className="flex-1 h-14 px-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent text-sm"
             />
             <button
               onClick={calculateShipping}
               disabled={loading || cep.length !== 9}
-              className="sm:w-auto w-full h-12 px-4 bg-pink-600 text-white rounded-lg hover:bg-pink-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors whitespace-nowrap cursor-pointer text-sm"
+              className="sm:w-auto w-full h-14 px-4 bg-pink-600 text-white rounded-lg hover:bg-pink-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors whitespace-nowrap cursor-pointer text-sm"
             >
               {loading ? (
                 <i className="ri-loader-4-line animate-spin"></i>
