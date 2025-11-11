@@ -5,6 +5,7 @@ import { useCart } from '../../hooks/useCart';
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
 import type { Categoria } from '../../lib/supabase';
+import { filterCategoriesWithProducts } from '../../utils/categoryFilter';
 
 export default function Header() {
   // Usa seletor puro para evitar qualquer efeito colateral ao obter a contagem
@@ -25,7 +26,10 @@ export default function Header() {
           .eq('ativa', true)
           .order('nome', { ascending: true });
         if (error) throw error;
-        setCategorias(data || []);
+        
+        // Filtrar categorias que possuem produtos ativos
+        const categoriasComProdutos = await filterCategoriesWithProducts(data || []);
+        setCategorias(categoriasComProdutos);
       } catch (err) {
         console.error('Erro ao carregar categorias:', err);
       } finally {

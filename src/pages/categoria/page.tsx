@@ -231,7 +231,7 @@ export default function CategoriaPage() {
         <HeroSlider />
 
 
-        <div className="container mx-auto px-4 sm:px-6 md:px-8 lg:px-10 xl:px-12 2xl:px-14 py-8">
+        <div className="container mx-auto px-2 sm:px-6 md:px-8 lg:px-10 xl:px-12 2xl:px-14 py-8">
           <div className="flex flex-col md:flex-row gap-4">
             <aside className="w-full md:w-64 flex-shrink-0 ml-2 sm:ml-3 md:ml-4 lg:ml-6 xl:ml-8 2xl:ml-10">
               <div className="bg-white rounded-lg shadow-md p-6 sticky top-4">
@@ -404,7 +404,7 @@ export default function CategoriaPage() {
                       <p className="text-gray-600">Nenhum produto encontrado</p>
                     </div>
                   ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 px-6 sm:px-8 md:px-12 lg:px-16 xl:px-20 2xl:px-24" data-product-shop>
+                    <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-5 px-0 sm:px-8 md:px-12 lg:px-16 xl:px-20 2xl:px-24" data-product-shop>
                       {produtosOrdenados.map((produto) => (
                         <div
                           key={produto.id}
@@ -432,7 +432,7 @@ export default function CategoriaPage() {
                                 img.onerror = null;
                                 img.src = '/placeholder-product.svg';
                               }}
-                              className="w-full h-96 object-contain object-top group-hover:scale-105 transition-transform duration-300 bg-gray-50"
+                              className="w-full h-72 sm:h-96 object-cover object-top group-hover:scale-105 transition-transform duration-300 bg-gray-50"
                             />
                           </div>
 

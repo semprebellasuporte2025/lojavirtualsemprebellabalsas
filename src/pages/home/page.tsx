@@ -10,10 +10,12 @@ import { supabase } from '../../lib/supabase';
 import type { Produto } from '../../lib/supabase';
 import { useNavigate, Link } from 'react-router-dom';
 import Newsletter from '../../components/feature/Newsletter';
+import { hasProductsInCategory } from '../../utils/categoryFilter';
 
 export default function HomePage() {
   const [recentProducts, setRecentProducts] = useState<Produto[]>([]);
   const [loading, setLoading] = useState(true);
+  const [categoriesToShow, setCategoriesToShow] = useState<string[]>([]);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -36,6 +38,37 @@ export default function HomePage() {
     } catch (err) {
       console.warn('Contador de visitas local indisponível:', (err as any)?.message);
     }
+  }, []);
+
+  // Verifica quais categorias têm produtos para exibir
+  useEffect(() => {
+    const checkCategoriesWithProducts = async () => {
+      const categoriesToCheck = [
+        'Vestidos',
+        'Blusas', 
+        'Calças',
+        'Saias',
+        'Fitness',
+        'Acessórios'
+      ];
+
+      const validCategories: string[] = [];
+
+      for (const category of categoriesToCheck) {
+        try {
+          const hasProducts = await hasProductsInCategory(category);
+          if (hasProducts) {
+            validCategories.push(category);
+          }
+        } catch (error) {
+          console.error(`Erro ao verificar categoria ${category}:`, error);
+        }
+      }
+
+      setCategoriesToShow(validCategories);
+    };
+
+    checkCategoriesWithProducts();
   }, []);
 
   const carregarProdutosRecentes = async (signal: AbortSignal) => {
@@ -107,8 +140,8 @@ export default function HomePage() {
           
           {!loading && recentProducts.length > 0 && (
             <section className="py-16 bg-gray-50">
-              <div className="container mx-auto px-4 sm:px-6 md:px-8 lg:px-10 xl:px-12 2xl:px-14">
-                <div className="flex justify-between items-center mb-8 px-6 sm:px-8 md:px-12 lg:px-16 xl:px-20 2xl:px-24">
+              <div className="container mx-auto px-2 sm:px-6 md:px-8 lg:px-10 xl:px-12 2xl:px-14">
+                <div className="flex justify-between items-center mb-8 px-2 sm:px-8 md:px-12 lg:px-16 xl:px-20 2xl:px-24">
                   <h2 className="text-3xl font-bold text-gray-800">Recém Chegados</h2>
                   {hasMoreRecent && (
                     <button
@@ -143,7 +176,7 @@ export default function HomePage() {
                           <img
                             src={produto.imagens?.[0] || '/placeholder-product.svg'}
                             alt={produto.nome}
-                            className="w-full h-96 object-contain object-top group-hover:scale-105 transition-transform duration-300 bg-gray-50"
+                            className="w-full h-72 sm:h-96 object-cover object-top group-hover:scale-105 transition-transform duration-300 bg-gray-50"
                             loading="lazy"
                             decoding="async"
                             onAbort={(e) => {
@@ -232,12 +265,13 @@ export default function HomePage() {
           )}
           
           <BestSellers />
-          <CategorySection title="Vestidos" categoryName="Vestidos" />
-          <CategorySection title="Blusas" categoryName="Blusas" />
-          <CategorySection title="Calças" categoryName="Calças" />
-          <CategorySection title="Saias" categoryName="Saias" />
-          <CategorySection title="Fitness" categoryName="Fitness" />
-          <CategorySection title="Acessórios" categoryName="Acessórios" />
+          {categoriesToShow.map(category => (
+            <CategorySection 
+              key={category}
+              title={category} 
+              categoryName={category} 
+            />
+          ))}
           <Newsletter />
 
         <Footer />

@@ -116,10 +116,10 @@ const ObrigadoInscricaoPage: React.FC = () => {
                         -{Math.round(((produto.preco - produto.preco_promocional) / produto.preco) * 100)}%
                       </div>
                     )}
-                    <img
+                      <img
                       src={produto.imagens?.[0] || '/placeholder-product.svg'}
                       alt={produto.nome}
-                      className="w-full h-96 object-contain object-top group-hover:scale-105 transition-transform duration-300 bg-gray-50"
+                      className="w-full h-72 sm:h-96 object-cover object-top group-hover:scale-105 transition-transform duration-300 bg-gray-50"
                     />
                   </div>
 

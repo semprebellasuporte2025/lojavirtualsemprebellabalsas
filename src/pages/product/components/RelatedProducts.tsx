@@ -97,7 +97,7 @@ export default function RelatedProducts({ categoriaId, produtoAtualId }: Related
                   <img
                     src={produto.imagens?.[0] || '/placeholder-product.svg'}
                     alt={produto.nome}
-                    className="w-full h-96 object-contain object-top bg-gray-50 group-hover:scale-105 transition-transform duration-300"
+                    className="w-full h-72 sm:h-96 object-cover object-top bg-gray-50 group-hover:scale-105 transition-transform duration-300"
                   />
                   {produto.preco_promocional && (
                     <div className="absolute top-3 left-3 bg-red-500 text-white px-2 py-1 rounded text-xs font-bold z-10">

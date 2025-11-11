@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../lib/supabase';
 import type { Categoria } from '../../lib/supabase';
+import { filterCategoriesWithProducts } from '../../utils/categoryFilter';
 
 export default function Categories({ initialCategorias, catalogLoading }: { initialCategorias?: Categoria[]; catalogLoading?: boolean }) {
   const [categorias, setCategorias] = useState<Categoria[]>([]);
@@ -45,7 +46,10 @@ export default function Categories({ initialCategorias, catalogLoading }: { init
         .eq('ativa', true);
 
       if (error) throw error;
-      setCategorias(data || []);
+      
+      // Filtrar categorias que possuem produtos ativos
+      const categoriasComProdutos = await filterCategoriesWithProducts(data || []);
+      setCategorias(categoriasComProdutos);
     } catch (error) {
       console.error('Erro ao carregar categorias:', error);
     } finally {
