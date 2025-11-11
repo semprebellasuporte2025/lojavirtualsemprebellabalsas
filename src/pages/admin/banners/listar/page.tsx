@@ -11,6 +11,7 @@ interface Banner {
   titulo: string;
   subtitulo: string;
   imagem_url: string;
+  imagem_url_mobile?: string | null;
   link_destino: string;
   ordem_exibicao: number;
   ativo: boolean;
@@ -193,9 +194,9 @@ export default function ListarBannersPage() {
                 {filteredBanners.map((banner) => (
                   <tr key={banner.id} className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700">
                     <td className="py-3 px-4">
-                      <img src={banner.imagem_url} alt={banner.titulo} className="w-24 h-16 object-cover rounded" />
+                      <img src={banner.imagem_url} alt={banner.titulo || 'Banner'} className="w-24 h-16 object-cover rounded" />
                     </td>
-                    <td className="py-3 px-4 text-sm text-gray-800 dark:text-gray-200">{banner.titulo}</td>
+                    <td className="py-3 px-4 text-sm text-gray-800 dark:text-gray-200">{banner.titulo || 'Sem título'}</td>
                     <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">{banner.subtitulo}</td>
                     <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">{banner.ordem_exibicao}</td>
                     <td className="py-3 px-4">

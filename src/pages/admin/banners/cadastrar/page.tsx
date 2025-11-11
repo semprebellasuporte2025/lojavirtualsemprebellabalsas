@@ -18,9 +18,20 @@ export default function CadastrarBanner() {
     ativo: true
   });
   const [imagePreview, setImagePreview] = useState('');
+  const [imagePreviewMobile, setImagePreviewMobile] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedFileMobile, setSelectedFileMobile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState<{ titulo?: string; image?: string; ordem?: string; link?: string }>({});
+  const [errors, setErrors] = useState<{ image?: string; ordem?: string; link?: string }>({});
+
+  const removeDesktopPreview = () => {
+    setSelectedFile(null);
+    setImagePreview('');
+  };
+  const removeMobilePreview = () => {
+    setSelectedFileMobile(null);
+    setImagePreviewMobile('');
+  };
 
   const isValidUrl = (value: string) => {
     try {
@@ -32,10 +43,7 @@ export default function CadastrarBanner() {
   };
 
   const validateForm = () => {
-    const newErrors: { titulo?: string; image?: string; ordem?: string; link?: string } = {};
-    if (!formData.titulo.trim()) {
-      newErrors.titulo = 'Título é obrigatório';
-    }
+    const newErrors: { image?: string; ordem?: string; link?: string } = {};
     if (!selectedFile) {
       newErrors.image = 'Imagem do banner é obrigatória';
     }
@@ -61,7 +69,7 @@ export default function CadastrarBanner() {
     setLoading(true);
 
     try {
-      // Upload da imagem para o Supabase Storage
+      // Upload da imagem desktop para o Supabase Storage
       const fileExt = selectedFile.name.split('.').pop();
       const fileName = `banner-${Date.now()}.${fileExt}`;
       const filePath = `banners/${fileName}`;
@@ -81,11 +89,36 @@ export default function CadastrarBanner() {
         .from('banners')
         .getPublicUrl(filePath);
 
+      // Upload opcional da imagem mobile
+      let publicUrlMobile: string | null = null;
+      if (selectedFileMobile) {
+        const mobileExt = selectedFileMobile.name.split('.').pop();
+        const mobileName = `banner-mobile-${Date.now()}.${mobileExt}`;
+        const mobilePath = `banners/mobile/${mobileName}`;
+
+        const { error: mobileUploadError } = await supabase.storage
+          .from('banners')
+          .upload(mobilePath, selectedFileMobile);
+
+        if (mobileUploadError) {
+          console.error('Erro no upload da imagem mobile:', mobileUploadError);
+          showToast('Erro ao fazer upload da imagem mobile. Tente novamente.', 'error');
+          return;
+        }
+
+        const { data: { publicUrl: publicUrlM } } = supabase.storage
+          .from('banners')
+          .getPublicUrl(mobilePath);
+        publicUrlMobile = publicUrlM;
+      }
+
       // Monta payload de inserção
       const payload: any = {
+        // título pode ficar em branco; banco aceita string vazia
         titulo: formData.titulo,
         subtitulo: formData.subtitulo || null,
         imagem_url: publicUrl,
+        imagem_url_mobile: publicUrlMobile,
         link_destino: formData.link || null,
         ordem_exibicao: parseInt(formData.ordem),
         ativo: formData.ativo,
@@ -101,9 +134,10 @@ export default function CadastrarBanner() {
         .insert([payload])
         .select();
 
-      // Se a coluna texto_botao não existir, faz fallback e insere sem ela
-      if (error && (String(error.message).includes('texto_botao') || String(error.message).includes('column'))) {
+      // Se a coluna imagem_url_mobile/texto_botao não existir, faz fallback e insere sem elas
+      if (error && (String(error.message).includes('imagem_url_mobile') || String(error.message).includes('texto_botao') || String(error.message).includes('column'))) {
         delete payload.texto_botao;
+        delete payload.imagem_url_mobile;
         const retry = await supabase
           .from('banners')
           .insert([payload])
@@ -143,6 +177,18 @@ export default function CadastrarBanner() {
     }
   };
 
+  const handleMobileImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedFileMobile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreviewMobile(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   return (
     <AdminLayout>
       <div className="p-6">
@@ -158,7 +204,7 @@ export default function CadastrarBanner() {
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Imagem do Banner *
                 </label>
-                <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center hover:border-pink-500 transition-colors cursor-pointer">
+                <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center hover:border-pink-500 transition-colors cursor-pointer relative">
                   <input
                     type="file"
                     accept="image/*"
@@ -167,6 +213,16 @@ export default function CadastrarBanner() {
                     id="banner-image"
                     required
                   />
+                  {imagePreview && (
+                    <button
+                      type="button"
+                      onClick={removeDesktopPreview}
+                      className="absolute top-3 right-3 bg-red-600 hover:bg-red-700 text-white text-xs px-3 py-1 rounded-md shadow"
+                      title="Remover imagem"
+                    >
+                      Remover
+                    </button>
+                  )}
                   <label htmlFor="banner-image" className="cursor-pointer">
                     {imagePreview ? (
                       <img src={imagePreview} alt="Preview" className="max-h-64 mx-auto rounded" />
@@ -184,9 +240,46 @@ export default function CadastrarBanner() {
                 </div>
               </div>
 
+              {/* Imagem Mobile opcional */}
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Imagem Mobile (opcional)
+                </label>
+                <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center hover:border-pink-500 transition-colors cursor-pointer relative">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleMobileImageChange}
+                    className="hidden"
+                    id="banner-image-mobile"
+                  />
+                  {imagePreviewMobile && (
+                    <button
+                      type="button"
+                      onClick={removeMobilePreview}
+                      className="absolute top-3 right-3 bg-red-600 hover:bg-red-700 text-white text-xs px-3 py-1 rounded-md shadow"
+                      title="Remover imagem mobile"
+                    >
+                      Remover
+                    </button>
+                  )}
+                  <label htmlFor="banner-image-mobile" className="cursor-pointer">
+                    {imagePreviewMobile ? (
+                      <img src={imagePreviewMobile} alt="Preview Mobile" className="max-h-64 mx-auto rounded" />
+                    ) : (
+                      <div>
+                        <i className="ri-smartphone-line text-4xl text-gray-400 mb-2"></i>
+                        <p className="text-gray-600 dark:text-gray-400">Clique para selecionar uma imagem para mobile</p>
+                        <p className="text-sm text-gray-500 mt-1">Recomendado: ~1080x1350 (proporção vertical)</p>
+                      </div>
+                    )}
+                  </label>
+                </div>
+              </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Título *
+                  Título
                 </label>
                 <input
                   type="text"
@@ -194,13 +287,8 @@ export default function CadastrarBanner() {
                   onChange={(e) => setFormData({ ...formData, titulo: e.target.value })}
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
                   placeholder="Ex: Promoção de Verão"
-                  required
-                  aria-invalid={Boolean(errors.titulo)}
-                  aria-describedby={errors.titulo ? 'erro-titulo' : undefined}
+                  aria-invalid={false}
                 />
-                {errors.titulo && (
-                  <p id="erro-titulo" className="mt-2 text-sm text-red-600" role="alert">{errors.titulo}</p>
-                )}
               </div>
 
               <div>

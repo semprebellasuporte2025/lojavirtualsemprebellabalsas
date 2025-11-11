@@ -46,8 +46,22 @@ export default function ProductInfo({ produto, onAddToCart }: ProductInfoProps) 
     return Array.from(set.values());
   })();
 
-  const selectedVariant = variantes.find(v => v.tamanho === selectedSize && v.cor === selectedColor);
+  // Corrigir comparação de cores - normalizar para evitar problemas de case sensitivity
+  const selectedVariant = variantes.find(v => 
+    v.tamanho === selectedSize && 
+    v.cor?.toLowerCase() === selectedColor?.toLowerCase()
+  );
   const stock = selectedVariant ? selectedVariant.estoque : produto?.estoque || 0;
+  
+  // Debug: verificar se há problema com o cálculo do estoque
+  console.log('Debug - Estoque calculado:', {
+    selectedSize,
+    selectedColor,
+    selectedVariant,
+    stock,
+    variantes: variantes.map(v => ({ tamanho: v.tamanho, cor: v.cor, estoque: v.estoque })),
+    produtoEstoque: produto?.estoque
+  });
 
   useEffect(() => {
     if (coresFromVariantes.length === 1) {

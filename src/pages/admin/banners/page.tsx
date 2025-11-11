@@ -171,7 +171,7 @@ export default function GerenciarBanners() {
                 <div className="relative">
                   <img
                     src={banner.imagem_url}
-                    alt={banner.titulo}
+                    alt={banner.titulo || 'Banner'}
                     className="w-full h-48 object-cover"
                   />
                   <div className="absolute top-2 right-2">
@@ -192,7 +192,7 @@ export default function GerenciarBanners() {
 
                 <div className="p-4">
                   <h3 className="font-semibold text-gray-800 dark:text-white mb-1">
-                    {banner.titulo}
+                    {banner.titulo || 'Sem título'}
                   </h3>
                   {banner.subtitulo && (
                     <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">

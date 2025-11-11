@@ -8,6 +8,7 @@ interface Banner {
   titulo: string;
   subtitulo: string | null;
   imagem_url: string;
+  imagem_url_mobile?: string | null;
   link_destino: string | null;
   texto_botao: string | null; // Adicionado
   ordem_exibicao: number;
@@ -48,16 +49,32 @@ export default function BannerSlider() {
     }
 
     try {
-      const { data, error } = await supabase
+      // Primeiro tenta buscar incluindo imagem_url_mobile; se coluna não existir, faz fallback
+      let { data, error } = await supabase
         .from('banners')
-        .select('id, titulo, subtitulo, imagem_url, link_destino, texto_botao, ordem_exibicao') // Selecionar apenas campos necessários
+        .select('id, titulo, subtitulo, imagem_url, imagem_url_mobile, link_destino, texto_botao, ordem_exibicao') // Selecionar apenas campos necessários
         .eq('ativo', true)
         .order('ordem_exibicao', { ascending: true })
         .limit(10); // Limitar número de banners
 
       if (error) {
-        console.error('Erro ao buscar banners:', error);
-        return;
+        // Fallback sem coluna mobile
+        if (String(error.message).includes('imagem_url_mobile') || String(error.message).includes('column')) {
+          const fallback = await supabase
+            .from('banners')
+            .select('id, titulo, subtitulo, imagem_url, link_destino, texto_botao, ordem_exibicao')
+            .eq('ativo', true)
+            .order('ordem_exibicao', { ascending: true })
+            .limit(10);
+          if (fallback.error) {
+            console.error('Erro ao buscar banners:', fallback.error);
+            return;
+          }
+          data = fallback.data;
+        } else {
+          console.error('Erro ao buscar banners:', error);
+          return;
+        }
       }
 
       const bannersData = data || [];
@@ -142,35 +159,40 @@ export default function BannerSlider() {
             className="min-w-full h-full relative cursor-pointer"
             onClick={() => handleBannerClick(banner)}
           >
-            <img
-              src={banner.imagem_url}
-              alt={banner.titulo}
-              className="w-full h-full object-cover object-top transition-opacity duration-300"
-              style={{
-                opacity: imagesLoaded.has(banner.imagem_url) ? 1 : 0,
-              }}
-              loading="lazy"
-              onLoad={() => handleImageLoad(banner.imagem_url)}
-              onAbort={(e) => {
-                const target = e.target as HTMLImageElement;
-                target.style.opacity = '1';
-                target.src = '/placeholder-large.svg';
-              }}
-              onError={(e) => {
-                // Fallback para imagem quebrada
-                const target = e.target as HTMLImageElement;
-                target.style.opacity = '1';
-                // Usa placeholder existente no projeto
-                target.src = '/placeholder-large.svg';
-              }}
-            />
+            <picture>
+              {banner.imagem_url_mobile && (
+                <source media="(max-width: 767px)" srcSet={banner.imagem_url_mobile} />
+              )}
+              <img
+                src={banner.imagem_url}
+                alt={banner.titulo || 'Banner'}
+                className="w-full h-full object-cover object-top transition-opacity duration-300"
+                style={{
+                  opacity: imagesLoaded.has(banner.imagem_url) ? 1 : 0,
+                }}
+                loading="lazy"
+                onLoad={() => handleImageLoad(banner.imagem_url)}
+                onAbort={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.style.opacity = '1';
+                  target.src = '/placeholder-large.svg';
+                }}
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.style.opacity = '1';
+                  target.src = '/placeholder-large.svg';
+                }}
+              />
+            </picture>
             
             {/* Conteúdo do banner */}
             <div className="absolute inset-0 flex items-end justify-start p-12 md:p-24 pb-16 md:pb-24">
               <div className="max-w-lg">
-                <h2 className="text-2xl md:text-4xl font-bold mb-2 md:mb-4 text-white text-shadow">
-                  {banner.titulo}
-                </h2>
+                {banner.titulo && (
+                  <h2 className="text-2xl md:text-4xl font-bold mb-2 md:mb-4 text-white text-shadow">
+                    {banner.titulo}
+                  </h2>
+                )}
                 {banner.subtitulo && (
                   <p className="text-lg md:text-xl mb-4 md:mb-6 text-white text-shadow opacity-90">
                     {banner.subtitulo}
