@@ -140,8 +140,8 @@ export default function HomePage() {
           
           {!loading && recentProducts.length > 0 && (
             <section className="py-16 bg-gray-50">
-              <div className="container mx-auto px-2 sm:px-6 md:px-8 lg:px-10 xl:px-12 2xl:px-14">
-                <div className="flex justify-between items-center mb-8 px-2 sm:px-8 md:px-12 lg:px-16 xl:px-20 2xl:px-24">
+              <div className="container mx-auto px-6 sm:px-12 md:px-20 lg:px-28 xl:px-36 2xl:px-48">
+                <div className="flex justify-between items-center mb-8">
                   <h2 className="text-3xl font-bold text-gray-800">Recém Chegados</h2>
                   {hasMoreRecent && (
                     <button
@@ -153,7 +153,7 @@ export default function HomePage() {
                   )}
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-5 px-0 sm:px-8 md:px-12 lg:px-16 xl:px-20 2xl:px-24">
+                <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-5">
                   {displayRecentProducts.map((produto) => {
                     const cores = getCoresUnicas(produto.variantes_produto || []);
                     const categoriaNome = produto.categorias?.nome || 'Produtos';

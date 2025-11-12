@@ -37,13 +37,13 @@ export default function ListarBannersPage() {
 
         if (error) {
           console.error('Erro ao buscar banners:', error);
-          showToast('error', 'Erro ao carregar banners');
+          showToast('Erro ao carregar banners', 'error');
         } else {
           setBanners(data || []);
         }
       } catch (error) {
         console.error('Erro inesperado:', error);
-        showToast('error', 'Erro inesperado ao carregar banners');
+        showToast('Erro inesperado ao carregar banners', 'error');
       } finally {
         setLoading(false);
       }
@@ -99,16 +99,16 @@ export default function ListarBannersPage() {
             // Log the image deletion error but don't block the success message
             // as the main record is already deleted.
             console.error('Erro ao excluir a imagem do storage, mas o banner foi removido do banco de dados:', deleteImageError);
-            showToast('warning', 'O banner foi excluído, mas houve um erro ao remover o arquivo de imagem.');
+            showToast('O banner foi excluído, mas houve um erro ao remover o arquivo de imagem.', 'info');
           }
         }
       }
 
       setBanners(banners.filter((banner) => banner.id !== bannerToDelete));
-      showToast('success', 'Banner excluído com sucesso!');
+      showToast('Banner excluído com sucesso!', 'success');
     } catch (error: any) {
       console.error('Erro ao excluir o banner:', error.message);
-      showToast('error', `Erro ao excluir o banner: ${error.message}`);
+      showToast(`Erro ao excluir o banner: ${error.message}`, 'error');
     } finally {
       setShowModal(false);
       setBannerToDelete(null);
@@ -124,16 +124,16 @@ export default function ListarBannersPage() {
 
       if (error) {
         console.error('Erro ao alterar status:', error);
-        showToast('error', 'Erro ao alterar status');
+        showToast('Erro ao alterar status', 'error');
       } else {
         setBanners(banners.map(banner =>
           banner.id === id ? { ...banner, ativo: !banner.ativo } : banner
         ));
-        showToast('success', 'Status alterado com sucesso!');
+        showToast('Status alterado com sucesso!', 'success');
       }
     } catch (error) {
       console.error('Erro inesperado:', error);
-      showToast('error', 'Erro inesperado ao alterar status');
+      showToast('Erro inesperado ao alterar status', 'error');
     }
   };
 

@@ -133,7 +133,7 @@ const ObrigadoInscricaoPage: React.FC = () => {
                     <div className="flex items-center gap-1 mb-1">
                       <div className="flex text-yellow-400">
                         {[...Array(5)].map((_, i) => {
-                          const rating = produto.average_rating || 0;
+                          const rating = produto.avaliacao || 0;
                           if (i < Math.floor(rating)) {
                             return <i key={i} className="ri-star-fill text-xs"></i>;
                           } else if (i < rating) {
@@ -143,7 +143,7 @@ const ObrigadoInscricaoPage: React.FC = () => {
                           }
                         })}
                       </div>
-                      <span className="text-xs text-gray-500 ml-1">({produto.review_count || 0})</span>
+                      <span className="text-xs text-gray-500 ml-1">({produto.total_avaliacoes || 0})</span>
                     </div>
 
                     {cores.length > 0 && (

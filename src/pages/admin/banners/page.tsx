@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../../lib/supabase';
+import { logBanner } from '../../../lib/logger';
 import AdminLayout from '../../../components/feature/AdminLayout';
 
 interface Banner {
@@ -17,7 +18,7 @@ interface Banner {
 }
 
 export default function GerenciarBanners() {
-  const router = useRouter();
+  const navigate = useNavigate();
   const [banners, setBanners] = useState<Banner[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState<string | null>(null);
@@ -34,14 +35,15 @@ export default function GerenciarBanners() {
         .order('ordem_exibicao', { ascending: true });
 
       if (error) {
-        console.error('Erro ao buscar banners:', error);
+        logBanner('error', 'Admin: erro ao buscar banners', error);
         alert('Erro ao carregar banners.');
         return;
       }
 
       setBanners(data || []);
+      logBanner('info', 'Admin: banners carregados', { count: (data || []).length });
     } catch (error) {
-      console.error('Erro inesperado:', error);
+      logBanner('error', 'Admin: erro inesperado ao carregar', error);
       alert('Erro inesperado ao carregar banners.');
     } finally {
       setLoading(false);
@@ -56,7 +58,7 @@ export default function GerenciarBanners() {
         .eq('id', id);
 
       if (error) {
-        console.error('Erro ao atualizar status:', error);
+        logBanner('error', 'Admin: erro ao atualizar status', error);
         alert('Erro ao atualizar status do banner.');
         return;
       }
@@ -65,8 +67,9 @@ export default function GerenciarBanners() {
       setBanners(banners.map(banner => 
         banner.id === id ? { ...banner, ativo: !currentStatus } : banner
       ));
+      logBanner('info', 'Admin: status atualizado', { id, ativo: !currentStatus });
     } catch (error) {
-      console.error('Erro inesperado:', error);
+      logBanner('error', 'Admin: erro inesperado ao atualizar status', error);
       alert('Erro inesperado ao atualizar status.');
     }
   };
@@ -90,7 +93,7 @@ export default function GerenciarBanners() {
         .remove([filePath]);
 
       if (storageError) {
-        console.warn('Erro ao excluir imagem do storage:', storageError);
+        logBanner('warn', 'Admin: erro ao excluir imagem do storage', storageError);
         // Continuar mesmo se houver erro no storage
       }
 
@@ -101,7 +104,7 @@ export default function GerenciarBanners() {
         .eq('id', id);
 
       if (error) {
-        console.error('Erro ao excluir banner:', error);
+        logBanner('error', 'Admin: erro ao excluir banner', error);
         alert('Erro ao excluir banner.');
         return;
       }
@@ -109,8 +112,9 @@ export default function GerenciarBanners() {
       // Atualizar estado local
       setBanners(banners.filter(banner => banner.id !== id));
       alert('Banner excluído com sucesso!');
+      logBanner('info', 'Admin: banner excluído', { id, imagemUrl });
     } catch (error) {
-      console.error('Erro inesperado:', error);
+      logBanner('error', 'Admin: erro inesperado ao excluir', error);
       alert('Erro inesperado ao excluir banner.');
     } finally {
       setDeleting(null);
@@ -140,7 +144,7 @@ export default function GerenciarBanners() {
             </p>
           </div>
           <button
-            onClick={() => router.push('/admin/banners/cadastrar')}
+            onClick={() => navigate('/paineladmin/banners/cadastrar')}
             className="bg-pink-600 hover:bg-pink-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
           >
             <i className="ri-add-line"></i>
@@ -158,7 +162,7 @@ export default function GerenciarBanners() {
               Comece criando seu primeiro banner para a loja.
             </p>
             <button
-              onClick={() => router.push('/admin/banners/cadastrar')}
+              onClick={() => navigate('/paineladmin/banners/cadastrar')}
               className="bg-pink-600 hover:bg-pink-700 text-white px-6 py-2 rounded-lg transition-colors"
             >
               Criar Primeiro Banner

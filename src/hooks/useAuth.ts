@@ -13,6 +13,31 @@ export interface AuthState {
   adminName?: string;
 }
 
+// Helper: formata nome em Title Case simples
+const toTitleCase = (s: string) => {
+  return s
+    .split(/\s+/)
+    .filter(Boolean)
+    .map(p => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase())
+    .join(' ');
+};
+
+// Helper: calcula o nome de exibição a partir do adminStatus ou metadados do usuário
+const computeDisplayName = (usr: User | null, adminStatus?: { adminName?: string }) => {
+  const meta = (usr as any)?.user_metadata || {};
+  const raw = (adminStatus?.adminName
+    || meta.name
+    || meta.full_name
+    || meta.nome
+    || meta.display_name
+    || (meta.first_name && meta.last_name && `${meta.first_name} ${meta.last_name}`)
+    || meta.first_name
+    || '') as string;
+  const fallbackEmail = (usr?.email || '').split('@')[0];
+  const resolved = (raw && raw.trim().length > 0) ? raw.trim() : fallbackEmail;
+  return resolved ? toTitleCase(String(resolved)) : undefined;
+};
+
 export const useAuth = () => {
   const [authState, setAuthState] = useState<AuthState>({
     user: null,
@@ -196,30 +221,6 @@ export const useAuth = () => {
     }, 12000);
 
     // Verificar sessão atual
-    // Helper: formata nome em Title Case simples
-    const toTitleCase = (s: string) => {
-      return s
-        .split(/\s+/)
-        .filter(Boolean)
-        .map(p => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase())
-        .join(' ');
-    };
-
-    // Helper: calcula o nome de exibição a partir do adminStatus ou metadados do usuário
-    const computeDisplayName = (usr: User | null, adminStatus?: { adminName?: string }) => {
-      const meta = (usr as any)?.user_metadata || {};
-      const raw = (adminStatus?.adminName
-        || meta.name
-        || meta.full_name
-        || meta.nome
-        || meta.display_name
-        || meta.first_name && meta.last_name && `${meta.first_name} ${meta.last_name}`
-        || meta.first_name
-        || '') as string;
-      const fallbackEmail = (usr?.email || '').split('@')[0];
-      const resolved = (raw && raw.trim().length > 0) ? raw.trim() : fallbackEmail;
-      return resolved ? toTitleCase(String(resolved)) : undefined;
-    };
 
     const initAuth = async () => {
       try {

@@ -148,12 +148,13 @@ export default function CheckoutForm({ cartItems, subtotal, shippingData, total 
 
     try {
       // Obter cliente (clientes.id) a partir do user_id (auth user id)
-      const { data: cliente, error: clienteError } = await supabase
+      const { data: clienteData, error: clienteError } = await supabase
         .from('clientes')
         .select('id, nome, email, cpf')
         .eq('email', (user.email as string) || '')
         .maybeSingle();
 
+      let cliente = clienteData;
       let clienteId = cliente?.id as string | undefined;
       if (clienteError || !clienteId) {
         // Se não existir, cria um cliente mínimo vinculado ao email
@@ -445,10 +446,12 @@ export default function CheckoutForm({ cartItems, subtotal, shippingData, total 
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">CPF <span className="text-red-500">*</span></label>
+                <label htmlFor="checkout-cpf" className="block text-sm font-medium text-gray-700 mb-1">CPF <span className="text-red-500">*</span></label>
                 {clienteInfo?.cpf ? (
                   <input
                     type="text"
+                    id="checkout-cpf"
+                    name="cpf"
                     value={formatCPF(clienteInfo.cpf)}
                     readOnly
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-sm"
@@ -456,6 +459,8 @@ export default function CheckoutForm({ cartItems, subtotal, shippingData, total 
                 ) : (
                   <input
                     type="text"
+                    id="checkout-cpf"
+                    name="cpf"
                     value={formatCPF(cpfInput)}
                     onChange={(e) => setCpfInput(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent text-sm"
@@ -478,10 +483,12 @@ export default function CheckoutForm({ cartItems, subtotal, shippingData, total 
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">CEP <span className="text-red-500">*</span></label>
+                <label htmlFor="checkout-cep" className="block text-sm font-medium text-gray-700 mb-1">CEP <span className="text-red-500">*</span></label>
                 <div className="relative">
                   <input
                     type="text"
+                    id="checkout-cep"
+                    name="cep"
                     inputMode="numeric"
                     pattern="\d{5}-?\d{3}"
                     required
@@ -502,9 +509,11 @@ export default function CheckoutForm({ cartItems, subtotal, shippingData, total 
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Número</label>
+                <label htmlFor="checkout-numero" className="block text-sm font-medium text-gray-700 mb-1">Número</label>
                 <input
                   type="text"
+                  id="checkout-numero"
+                  name="numero"
                   required
                   value={formData.numero}
                   onChange={(e) => setFormData({ ...formData, numero: e.target.value })}
@@ -514,9 +523,11 @@ export default function CheckoutForm({ cartItems, subtotal, shippingData, total 
               </div>
               
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Endereço</label>
+                <label htmlFor="checkout-endereco" className="block text-sm font-medium text-gray-700 mb-1">Endereço</label>
                 <input
                   type="text"
+                  id="checkout-endereco"
+                  name="endereco"
                   required
                   value={formData.endereco}
                   onChange={(e) => setFormData({ ...formData, endereco: e.target.value })}
@@ -526,9 +537,11 @@ export default function CheckoutForm({ cartItems, subtotal, shippingData, total 
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Complemento</label>
+                <label htmlFor="checkout-complemento" className="block text-sm font-medium text-gray-700 mb-1">Complemento</label>
                 <input
                   type="text"
+                  id="checkout-complemento"
+                  name="complemento"
                   value={formData.complemento}
                   onChange={(e) => setFormData({ ...formData, complemento: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent text-sm"
@@ -537,9 +550,11 @@ export default function CheckoutForm({ cartItems, subtotal, shippingData, total 
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Bairro</label>
+                <label htmlFor="checkout-bairro" className="block text-sm font-medium text-gray-700 mb-1">Bairro</label>
                 <input
                   type="text"
+                  id="checkout-bairro"
+                  name="bairro"
                   required
                   value={formData.bairro}
                   onChange={(e) => setFormData({ ...formData, bairro: e.target.value })}
@@ -549,9 +564,11 @@ export default function CheckoutForm({ cartItems, subtotal, shippingData, total 
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Cidade</label>
+                <label htmlFor="checkout-cidade" className="block text-sm font-medium text-gray-700 mb-1">Cidade</label>
                 <input
                   type="text"
+                  id="checkout-cidade"
+                  name="cidade"
                   required
                   value={formData.cidade}
                   onChange={(e) => setFormData({ ...formData, cidade: e.target.value })}
@@ -561,9 +578,11 @@ export default function CheckoutForm({ cartItems, subtotal, shippingData, total 
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Estado</label>
+                <label htmlFor="checkout-estado" className="block text-sm font-medium text-gray-700 mb-1">Estado</label>
                 <input
                   type="text"
+                  id="checkout-estado"
+                  name="estado"
                   required
                   value={formData.estado}
                   onChange={(e) => setFormData({ ...formData, estado: e.target.value.toUpperCase() })}

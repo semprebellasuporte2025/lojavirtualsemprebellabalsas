@@ -222,7 +222,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-pink-500">
           <button
-            onClick={async () => { await signOut(); navigate('/auth/login'); }}
+            onClick={async () => { await signOut(); window.location.href = '/auth/login'; }}
             className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-pink-700 transition-colors cursor-pointer"
             title="Sair"
           >

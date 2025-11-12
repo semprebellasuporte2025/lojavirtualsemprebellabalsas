@@ -11,7 +11,7 @@ export default function Categories({ initialCategorias, catalogLoading }: { init
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const touchStartX = useRef<number>(0);
   const touchEndX = useRef<number>(0);
-  const autoSlideRef = useRef<NodeJS.Timeout>();
+  const autoSlideRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     if (initialCategorias && initialCategorias.length > 0) {
@@ -126,7 +126,7 @@ export default function Categories({ initialCategorias, catalogLoading }: { init
   if (loading) {
     return (
       <section className="py-16 bg-gray-50">
-        <div className="container mx-auto px-4 sm:px-6 md:px-8 lg:px-12 xl:px-16 2xl:px-20">
+        <div className="container mx-auto px-6 sm:px-12 md:px-20 lg:px-28 xl:px-36 2xl:px-48">
           <div className="text-center">
             <i className="ri-loader-4-line text-4xl text-pink-600 animate-spin"></i>
           </div>
@@ -141,7 +141,7 @@ export default function Categories({ initialCategorias, catalogLoading }: { init
 
   return (
     <section className="py-16 bg-gray-50">
-      <div className="container mx-auto px-4 sm:px-6 md:px-8 lg:px-12 xl:px-16 2xl:px-20">
+      <div className="container mx-auto px-6 sm:px-12 md:px-20 lg:px-28 xl:px-36 2xl:px-48">
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-bold text-gray-800 mb-4">
             Categorias
@@ -179,7 +179,7 @@ export default function Categories({ initialCategorias, catalogLoading }: { init
                   transform: `translateX(-${currentIndex * 280}px)` // Ajustado para melhor espaçamento
                 }}
               >
-                {categorias.map((categoria, index) => (
+                {categorias.map((categoria) => (
                   <div
                     key={categoria.id}
                     onClick={() => handleCategoryClick(categoria.nome)}

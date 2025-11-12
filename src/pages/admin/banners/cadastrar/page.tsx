@@ -69,14 +69,22 @@ export default function CadastrarBanner() {
     setLoading(true);
 
     try {
+      // Garante que o arquivo de desktop está definido para evitar erros de tipo
+      const desktopFile = selectedFile;
+      if (!desktopFile) {
+        showToast('Imagem do banner é obrigatória.', 'error');
+        setLoading(false);
+        return;
+      }
+
       // Upload da imagem desktop para o Supabase Storage
-      const fileExt = selectedFile.name.split('.').pop();
+      const fileExt = desktopFile.name.split('.').pop();
       const fileName = `banner-${Date.now()}.${fileExt}`;
       const filePath = `banners/${fileName}`;
 
-      const { data: uploadData, error: uploadError } = await supabase.storage
+      const { error: uploadError } = await supabase.storage
         .from('banners')
-        .upload(filePath, selectedFile);
+        .upload(filePath, desktopFile);
 
       if (uploadError) {
         console.error('Erro no upload:', uploadError);
@@ -129,7 +137,7 @@ export default function CadastrarBanner() {
       }
 
       // Tenta inserir com todos os campos
-      let { data, error } = await supabase
+      const { error } = await supabase
         .from('banners')
         .insert([payload])
         .select();
@@ -147,7 +155,6 @@ export default function CadastrarBanner() {
           showToast('Erro ao salvar banner. Tente novamente.', 'error');
           return;
         }
-        data = retry.data;
       } else if (error) {
         console.error('Erro ao salvar banner:', error);
         showToast('Erro ao salvar banner. Tente novamente.', 'error');

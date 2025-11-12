@@ -1,7 +1,6 @@
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../hooks/useToast';
 import { supabase } from '../../lib/supabase';
@@ -55,9 +54,7 @@ export default function MinhaContaPage() {
     const [senhaData, setSenhaData] = useState({ senhaAtual: '', novaSenha: '', confirmarSenha: '' });
 
     // UI States
-    const [showSenhaAtual, setShowSenhaAtual] = useState(false);
-    const [showNovaSenha, setShowNovaSenha] = useState(false);
-    const [showConfirmarSenha, setShowConfirmarSenha] = useState(false);
+    
     const [showEnderecoModal, setShowEnderecoModal] = useState(false);
     const [isSavingData, setIsSavingData] = useState(false);
     const [enderecoEdit, setEnderecoEdit] = useState<Endereco | null>(null);
@@ -70,8 +67,8 @@ export default function MinhaContaPage() {
             const { data: clientData, error: clientError } = await supabase
                 .from('clientes')
                 .select('id, nome, telefone, cpf, data_nascimento, genero')
-                .eq('email', (auth.user?.email as string) || '')
-                .maybeSingle();
+                .eq('user_id', userId)
+                .single();
             if (clientError && clientError.code !== 'PGRST116') throw clientError;
             if (clientData) {
                 setFormData({
@@ -84,7 +81,7 @@ export default function MinhaContaPage() {
                 });
                 setClienteIdDb(clientData.id);
             } else if (auth.user) {
-                 setFormData(prev => ({...prev, email: auth.user.email || ''}));
+                 setFormData(prev => ({...prev, email: auth.user?.email || ''}));
                  setClienteIdDb(null);
             }
 
@@ -326,7 +323,7 @@ export default function MinhaContaPage() {
                 data_nascimento: formData.dataNascimento,
                 genero: formData.genero,
             })
-            .eq('email', (auth.user?.email as string) || '');
+            .eq('user_id', user.id);
         if (error) {
             showToast('Erro ao atualizar dados.', 'error');
         } else {

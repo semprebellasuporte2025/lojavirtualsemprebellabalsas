@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import Header from '../../../components/feature/Header';
 import Footer from '../../../components/feature/Footer';
 import SEOHead from '../../../components/feature/SEOHead';
 import { useAuth } from '../../../hooks/useAuth';
@@ -127,18 +126,12 @@ export default function LoginPage() {
   return (
     <>
       <SEOHead title="Fazer Login" />
-      <Header />
       <div className="bg-gray-50">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-10 lg:py-16">
           {/* Cabeçalho da página */}
-          <div className="flex items-center justify-between mb-8">
-            <div>
-              <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Entrar</h1>
-              <p className="text-sm text-gray-600 mt-1">Acesse sua conta para acompanhar pedidos e ofertas.</p>
-            </div>
-            <Link to="/" className="text-sm text-pink-600 hover:text-pink-700" aria-label="Voltar para a página inicial">
-              Voltar para Home
-            </Link>
+          <div className="mb-8 text-center">
+            <h1 className="text-3xl font-bold text-pink-600" style={{ fontFamily: '"Pacifico", serif' }}>Sempre Bella Balsas</h1>
+            <p className="text-sm text-gray-600 mt-1">Acesse sua conta para acompanhar pedidos e ofertas.</p>
           </div>
 
           {/* Layout com grid: texto/benefícios + formulário */}
@@ -227,9 +220,11 @@ export default function LoginPage() {
 
                   <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                      <label htmlFor="login-email" className="block text-sm font-medium text-gray-700 mb-1">Email</label>
                       <input
                         type="email"
+                        id="login-email"
+                        name="email"
                         required
                         value={formData.email}
                         onChange={(e) => setFormData({ ...formData, email: e.target.value })}
@@ -241,10 +236,12 @@ export default function LoginPage() {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Senha</label>
+                      <label htmlFor="login-password" className="block text-sm font-medium text-gray-700 mb-1">Senha</label>
                       <div className="relative">
                         <input
                           type={showPassword ? 'text' : 'password'}
+                          id="login-password"
+                          name="password"
                           required
                           value={formData.password}
                           onChange={(e) => setFormData({ ...formData, password: e.target.value })}

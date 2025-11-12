@@ -46,6 +46,8 @@ export default function Newsletter() {
         <form onSubmit={handleSubmit} className="max-w-md mx-auto flex gap-2">
           <input
             type="email"
+            id="newsletter-email"
+            name="newsletter-email"
             placeholder="Seu melhor e-mail"
             value={email}
             onChange={(e) => setEmail(e.target.value)}

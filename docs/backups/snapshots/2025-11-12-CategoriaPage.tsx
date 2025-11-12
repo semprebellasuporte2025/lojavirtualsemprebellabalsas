@@ -1,8 +1,8 @@
-
+// @ts-nocheck
 import { useState, useEffect } from 'react';
 import { useSearchParams, useParams, useNavigate, Link } from 'react-router-dom';
 import Header from '../../components/feature/Header';
-import Footer from '../../components/feature/Footer';
+import Footer from '../../components/layout/Footer';
 import SEOHead from '../../components/feature/SEOHead';
 import BannerSlider from '../../components/feature/BannerSlider';
 import { supabase } from '../../lib/supabase';

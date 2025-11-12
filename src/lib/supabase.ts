@@ -1,5 +1,5 @@
 
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 const supabaseUrl = import.meta.env.VITE_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_PUBLIC_SUPABASE_ANON_KEY;
@@ -8,41 +8,60 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Variáveis do Supabase não configuradas');
 }
 
+// Singleton para evitar múltiplas instâncias do GoTrueClient sob o mesmo storageKey
+declare global {
+  // eslint-disable-next-line no-var
+  var __semprebella_supabase__: SupabaseClient | undefined;
+  // eslint-disable-next-line no-var
+  var __semprebella_supabase_auth_listener__: boolean | undefined;
+}
+
+const getSingletonClient = (): SupabaseClient => {
+  if (globalThis.__semprebella_supabase__) {
+    return globalThis.__semprebella_supabase__;
+  }
+
+  const client = createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      autoRefreshToken: true,
+      persistSession: true,
+      detectSessionInUrl: true,
+      flowType: 'pkce',
+      storage: window.localStorage,
+      storageKey: 'semprebella-auth-token',
+    },
+    global: {
+      headers: {
+        'X-Client-Info': 'semprebella-admin',
+      },
+    },
+    realtime: {
+      params: {
+        eventsPerSecond: 2,
+      },
+    },
+  });
+
+  globalThis.__semprebella_supabase__ = client;
+  return client;
+};
+
 // Cliente principal (para todas as operações)
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: true,
-    flowType: 'pkce',
-    storage: window.localStorage,
-    storageKey: 'semprebella-auth-token',
-    // Configurações de tempo de sessão
-    refreshTokenRotationEnabled: true,
-    // Token expira em 2 horas (7200 segundos)
-    expiresIn: 7200,
-  },
-  global: {
-    headers: {
-      'X-Client-Info': 'semprebella-admin',
-    },
-  },
-  // Configurações de realtime para manter conexão ativa
-  realtime: {
-    params: {
-      eventsPerSecond: 2,
-    },
-  },
-});
+export const supabase = getSingletonClient();
 
 // Tratamento de erros de autenticação
-supabase.auth.onAuthStateChange((event, session) => {
-  if (event === 'TOKEN_REFRESHED') {
-    console.log('Token refreshed successfully');
-  } else if (event === 'SIGNED_OUT') {
-    console.log('User signed out');
-  }
-});
+if (!globalThis.__semprebella_supabase_auth_listener__) {
+  supabase.auth.onAuthStateChange((event, session) => {
+    // marcar 'session' como usada para evitar aviso TS6133
+    void session;
+    if (event === 'TOKEN_REFRESHED') {
+      console.log('Token refreshed successfully');
+    } else if (event === 'SIGNED_OUT') {
+      console.log('User signed out');
+    }
+  });
+  globalThis.__semprebella_supabase_auth_listener__ = true;
+}
 
 // Função para limpar sessão inválida
 export const clearInvalidSession = async () => {
@@ -106,7 +125,7 @@ export const insertWithTimeout = async (table: string, payload: any, ms = 15000)
     console.log(`[INSERT ${table}] Iniciando inserção...`);
     console.time(`[INSERT ${table}]`);
     
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from(table)
       .insert(payload)
       .select('*')
@@ -155,8 +174,13 @@ export interface Produto {
   desconto?: number;
   avaliacao?: number;
   total_avaliacoes?: number;
+  // Campos de rating provenientes da view 'products_with_ratings'
+  average_rating?: number;
+  review_count?: number;
   estoque?: number;
   tamanhos?: string[];
   cores?: { name: string; hex: string }[];
   variantes_produto?: any[];
+  // Categoria associada (mapeada manualmente em algumas telas)
+  categorias?: { id: string; nome: string };
 }

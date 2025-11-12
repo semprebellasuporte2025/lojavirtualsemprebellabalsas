@@ -442,7 +442,7 @@ export default function ProductInfo({ produto, onAddToCart }: ProductInfoProps) 
             placeholder="Digite seu CEP"
             value={cep}
             onChange={handleCepChange}
-            className="flex-1 h-14 px-4 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-pink-600 text-sm"
+            className="flex-1 h-[280px] sm:h-14 px-4 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-pink-600 text-lg"
             maxLength={9}
           />
           <button
@@ -564,7 +564,7 @@ export default function ProductInfo({ produto, onAddToCart }: ProductInfoProps) 
             <div className="p-4 overflow-y-auto flex-1">
               <div className="w-full">
                 <img
-                  src="https://cproxdqrraiujnewbsvp.supabase.co/storage/v1/object/sign/semprebellaimg/Captura%20de%20tela%202025-10-26%20082436.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9kNWU3YWZhNC1kYmRlLTQ3YWQtOTE4NS0xZWNkY2RjZmI2OTciLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJzZW1wcmViZWxsYWltZy9DYXB0dXJhIGRlIHRlbGEgMjAyNS0xMC0yNiAwODI0MzYucG5nIiwiaWF0IjoxNzYxNDgxNzAyLCJleHAiOjMxNzA4OTk0NTcwMn0.QpBvRrUrDbQc9uGv7nTyVK4JgMH5t_-dXXwHaWTk59Q"
+                  src="https://images.unsplash.com/photo-1496747611176-843222e1e57c?w=800&h=600&fit=crop"
                   alt="Guia de tamanhos"
                   className="w-full h-auto object-contain"
                   loading="lazy"
