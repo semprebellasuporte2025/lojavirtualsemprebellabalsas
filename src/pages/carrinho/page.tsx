@@ -15,11 +15,11 @@ export default function CarrinhoPage() {
   const [shippingCost, setShippingCost] = useState(0);
   const [shippingMethod, setShippingMethod] = useState('');
 
-  const handleQuantityChange = (id: number, newQuantity: number) => {
+  const handleQuantityChange = (id: string, newQuantity: number) => {
     updateQuantity(id, newQuantity);
   };
 
-  const handleRemove = (id: number) => {
+  const handleRemove = (id: string) => {
     removeItem(id);
   };
 

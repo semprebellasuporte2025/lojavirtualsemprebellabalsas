@@ -5,6 +5,7 @@ import { supabaseWithAuth } from '../../../../lib/supabaseAuth';
 import type { Categoria } from '../../../../lib/supabase';
 import AdminLayout from '../../../../components/feature/AdminLayout';
 import ConfirmationModal from '../../../../components/feature/modal/ConfirmationModal';
+import { generateSlug } from '../../../../utils/formatters';
 
 export default function ListarCategoriasPage() {
   const navigate = useNavigate();
@@ -63,8 +64,9 @@ export default function ListarCategoriasPage() {
     }
   };
 
-  const handleRowClick = (nome: string) => {
-    navigate(`/categoria/${encodeURIComponent(nome)}`);
+  const handleRowClick = (categoria: Categoria) => {
+    const slug = categoria.slug || generateSlug(categoria.nome);
+    navigate(`/categoria/${slug}`);
   };
 
   const handleDelete = (id: string) => {
@@ -182,7 +184,7 @@ export default function ListarCategoriasPage() {
                 {filteredCategorias.map((categoria) => (
                   <tr
                     key={categoria.id}
-                    onClick={() => handleRowClick(categoria.nome)}
+                    onClick={() => handleRowClick(categoria)}
                     className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
                   >
                     <td className="py-3 px-4">
@@ -218,7 +220,8 @@ export default function ListarCategoriasPage() {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            window.open(`/categoria/${encodeURIComponent(categoria.nome)}`, '_blank');
+                            const slug = categoria.slug || generateSlug(categoria.nome);
+                            window.open(`/categoria/${slug}`, '_blank');
                           }}
                           className="text-gray-500 hover:text-gray-700"
                           title="Ver"
@@ -282,7 +285,8 @@ export default function ListarCategoriasPage() {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            window.open(`/categoria/${encodeURIComponent(categoria.nome)}`, '_blank');
+                            const slug = categoria.slug || generateSlug(categoria.nome);
+                            window.open(`/categoria/${slug}`, '_blank');
                           }}
                           className="text-gray-500 hover:text-gray-700"
                           title="Ver"

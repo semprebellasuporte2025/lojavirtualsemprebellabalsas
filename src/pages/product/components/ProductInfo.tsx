@@ -2,6 +2,7 @@
 import { useState, useRef, useEffect } from 'react';
 import Button from '../../../components/base/Button';
 import { useToast } from '../../../hooks/useToast';
+import { supabase } from '../../../lib/supabase';
 
 interface ProductInfoProps {
   produto: any;
@@ -12,19 +13,102 @@ export default function ProductInfo({ produto, onAddToCart }: ProductInfoProps) 
   const [selectedSize, setSelectedSize] = useState('');
   const [selectedColor, setSelectedColor] = useState('');
   const [quantity, setQuantity] = useState(1);
+  const [combinations, setCombinations] = useState<{ size: string; color: string }[]>([]);
+  const [validationMsg, setValidationMsg] = useState<string>('');
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [cep, setCep] = useState('');
   const [freteResults, setFreteResults] = useState<any[]>([]);
   const [calculatingFrete, setCalculatingFrete] = useState(false);
   const [freteError, setFreteError] = useState('');
   const [isSizeGuideOpen, setIsSizeGuideOpen] = useState(false);
-  const [showSelectionModal, setShowSelectionModal] = useState(false);
   const [highlightSize, setHighlightSize] = useState(false);
   const sizeSectionRef = useRef<HTMLDivElement>(null);
   const { showToast } = useToast();
 
-  // Derivar cores e tamanhos a partir das variantes do produto
-  const variantes: any[] = Array.isArray(produto?.variantes_produto) ? produto?.variantes_produto : [];
+  // Estado para estoque real do Supabase
+  const [variantesState, setVariantesState] = useState<any[]>(Array.isArray(produto?.variantes_produto) ? produto?.variantes_produto : []);
+  const [productStock, setProductStock] = useState<number>(Number(produto?.estoque ?? 0));
+  const [loadingStock, setLoadingStock] = useState<boolean>(false);
+  const [stockError, setStockError] = useState<string>('');
+
+  // Busca inicial e assinatura em tempo real do estoque
+  useEffect(() => {
+    if (!produto?.id) return;
+
+    const refreshStock = async () => {
+      try {
+        setLoadingStock(true);
+        setStockError('');
+
+        const { data: variantsData, error: vError } = await supabase
+          .from('variantes_produto')
+          .select('id, tamanho, cor, cor_hex, estoque, ativo')
+          .eq('produto_id', produto.id);
+
+        if (vError) throw vError;
+        setVariantesState(Array.isArray(variantsData) ? variantsData : []);
+
+        const { data: productData, error: pError } = await supabase
+          .from('produtos')
+          .select('estoque')
+          .eq('id', produto.id)
+          .maybeSingle();
+
+        if (pError) throw pError;
+        setProductStock(Number(productData?.estoque ?? 0));
+      } catch (err: any) {
+        console.error('Erro ao consultar estoque no Supabase:', err);
+        setStockError('Falha ao consultar estoque');
+      } finally {
+        setLoadingStock(false);
+      }
+    };
+
+    // Consulta inicial
+    refreshStock();
+
+    // Assinaturas em tempo real (variantes e produto)
+    const channel = supabase
+      .channel(`realtime:produto_estoque:${produto.id}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'variantes_produto', filter: `produto_id=eq.${produto.id}` },
+        (payload: any) => {
+          try {
+            setVariantesState((prev: any[]) => {
+              const list = Array.isArray(prev) ? [...prev] : [];
+              if (payload.eventType === 'INSERT') {
+                return [...list, payload.new];
+              }
+              if (payload.eventType === 'UPDATE') {
+                return list.map((v) => (v.id === payload.new.id ? payload.new : v));
+              }
+              if (payload.eventType === 'DELETE') {
+                return list.filter((v) => v.id !== payload.old.id);
+              }
+              return list;
+            });
+          } catch (e) {
+            console.error('Erro ao aplicar atualização de variante:', e);
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'produtos', filter: `id=eq.${produto.id}` },
+        (payload: any) => {
+          setProductStock(Number(payload.new?.estoque ?? 0));
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [produto?.id]);
+
+  // Derivar cores e tamanhos a partir das variantes do produto (estado em tempo real)
+  const variantes: any[] = Array.isArray(variantesState) ? variantesState : [];
   const coresFromVariantes = (() => {
     const map = new Map<string, { name: string; hex: string }>();
     variantes.forEach(v => {
@@ -46,22 +130,28 @@ export default function ProductInfo({ produto, onAddToCart }: ProductInfoProps) 
     return Array.from(set.values());
   })();
 
+  // Estoque por combinação (tamanho|cor)
+  const variantStockMap: Record<string, number> = (() => {
+    const map: Record<string, number> = {};
+    variantes.forEach(v => {
+      const key = `${String(v.tamanho)}|${String(v.cor).toLowerCase()}`;
+      map[key] = Number(v?.estoque ?? 0);
+    });
+    return map;
+  })();
+
   // Corrigir comparação de cores - normalizar para evitar problemas de case sensitivity
   const selectedVariant = variantes.find(v => 
     v.tamanho === selectedSize && 
     v.cor?.toLowerCase() === selectedColor?.toLowerCase()
   );
-  const stock = selectedVariant ? selectedVariant.estoque : produto?.estoque || 0;
-  
-  // Debug: verificar se há problema com o cálculo do estoque
-  console.log('Debug - Estoque calculado:', {
-    selectedSize,
-    selectedColor,
-    selectedVariant,
-    stock,
-    variantes: variantes.map(v => ({ tamanho: v.tamanho, cor: v.cor, estoque: v.estoque })),
-    produtoEstoque: produto?.estoque
-  });
+  // Calcular estoque disponível
+  const aggregatedStock = variantes.reduce((acc, v) => acc + Number(v?.estoque ?? 0), 0);
+  const fallbackStock = (typeof productStock === 'number' && productStock > 0) ? productStock : aggregatedStock;
+  const stock = selectedVariant ? Number(selectedVariant?.estoque ?? 0) : fallbackStock;
+  // Estoque máximo permitido para compra (agregado quando em modo múltiplo)
+  const maxPurchaseStock = fallbackStock;
+  const stockForQuantityControl = (quantity > 1) ? maxPurchaseStock : stock;
 
   useEffect(() => {
     if (coresFromVariantes.length === 1) {
@@ -71,6 +161,55 @@ export default function ProductInfo({ produto, onAddToCart }: ProductInfoProps) 
       setSelectedSize(sizesFromVariantes[0]);
     }
   }, [coresFromVariantes, sizesFromVariantes]);
+
+  // Garantir que o número de combinações não ultrapasse a quantidade
+  useEffect(() => {
+    if (combinations.length > quantity) {
+      setCombinations(prev => prev.slice(0, quantity));
+    }
+  }, [quantity]);
+
+  // Validação em tempo real das regras de seleção
+  useEffect(() => {
+    const isMultiple = quantity > 1;
+    if (!isMultiple) {
+      if (!selectedSize || !selectedColor) {
+        setValidationMsg('Selecione cor e tamanho antes de adicionar ao carrinho.');
+        setHighlightSize(true);
+      } else {
+        setValidationMsg('');
+        setHighlightSize(false);
+      }
+      return;
+    }
+
+    // Em modo múltiplo, não bloquear quando faltarem combinações:
+    // completaremos com a última seleção no momento de adicionar ao carrinho.
+
+    const counts: Record<string, number> = {};
+    combinations.forEach(c => {
+      const key = `${c.size}|${c.color.toLowerCase()}`;
+      counts[key] = (counts[key] ?? 0) + 1;
+    });
+    // Bloqueia se alguma combinação exceder seu estoque específico
+    const overStock = Object.entries(counts).find(([key, qty]) => {
+      const available = variantStockMap[key];
+      return typeof available === 'number' ? qty > available : true; // true quando combinação inexiste
+    });
+    if (overStock) {
+      setValidationMsg('Quantidade excede o estoque disponível (ou combinação indisponível).');
+      return;
+    }
+
+    setValidationMsg('');
+  }, [selectedSize, selectedColor, combinations, quantity, stock]);
+
+  // Limpar destaque ao escolher cor e tamanho
+  useEffect(() => {
+    if (selectedSize && selectedColor) {
+      setHighlightSize(false);
+    }
+  }, [selectedSize, selectedColor]);
 
   // Valores padrão somente quando não há dados
   const product = {
@@ -88,26 +227,133 @@ export default function ProductInfo({ produto, onAddToCart }: ProductInfoProps) 
   };
 
   const handleAddToCart = () => {
-    if (!selectedSize || !selectedColor) {
-      setShowSelectionModal(true);
+    const isMultiple = quantity > 1;
+    if (!isMultiple) {
+      if (!selectedSize || !selectedColor) {
+        setValidationMsg('Selecione cor e tamanho antes de adicionar ao carrinho.');
+        setHighlightSize(true);
+        return;
+      }
+      if (onAddToCart) {
+        const itemId = `${product.id}|${selectedSize}|${String(selectedColor).toLowerCase()}`;
+        onAddToCart({
+          id: itemId,
+          name: product.name,
+          price: product.price,
+          image: product.images[0],
+          quantity,
+          size: selectedSize,
+          color: selectedColor,
+          material: produto?.material || undefined
+        });
+        showToast('Produto adicionado ao carrinho!', 'success');
+      }
       return;
     }
 
+    // Múltiplas combinações: completar automaticamente com a última seleção quando necessário
+    let combosToUse: { size: string; color: string }[] = [...combinations];
+    if (combosToUse.length < quantity) {
+      const fallbackBase = (selectedSize && selectedColor)
+        ? { size: selectedSize, color: selectedColor }
+        : (combosToUse.length > 0 ? combosToUse[combosToUse.length - 1] : null);
+
+      if (!fallbackBase) {
+        setValidationMsg('Selecione cor e tamanho para completar a quantidade.');
+        setHighlightSize(true);
+        return;
+      }
+
+      const baseKey = `${fallbackBase.size}|${String(fallbackBase.color).toLowerCase()}`;
+      const baseAvailable = variantStockMap[baseKey];
+      if (baseAvailable === undefined) {
+        setValidationMsg('Combinação indisponível para este produto.');
+        return;
+      }
+
+      const currentCount = combosToUse.filter(c => `${c.size}|${c.color.toLowerCase()}` === baseKey).length;
+      const remainingSlots = quantity - combosToUse.length;
+      const canDuplicate = Math.max(0, Math.min(remainingSlots, baseAvailable - currentCount));
+      for (let i = 0; i < canDuplicate; i++) {
+        combosToUse.push({ size: fallbackBase.size, color: fallbackBase.color });
+      }
+
+      if (combosToUse.length < quantity) {
+        setValidationMsg('Estoque insuficiente para completar a quantidade desejada.');
+        return;
+      }
+    }
+
     if (onAddToCart) {
-      onAddToCart({
-        id: product.id,
-        name: product.name,
-        price: product.price,
-        image: product.images[0],
-        quantity,
-        size: selectedSize,
-        color: selectedColor,
-        material: produto?.material || undefined
+      const aggregated: Record<string, { size: string; color: string; qty: number }> = {};
+      combosToUse.forEach(c => {
+        const key = `${c.size}|${c.color.toLowerCase()}`;
+        if (!aggregated[key]) aggregated[key] = { size: c.size, color: c.color, qty: 0 };
+        aggregated[key].qty += 1;
       });
-      // Toast de sucesso ao adicionar ao carrinho
-      showToast('Produto adicionado ao carrinho!', 'success');
+
+      Object.values(aggregated).forEach(({ size, color, qty }) => {
+        const itemId = `${product.id}|${size}|${color.toLowerCase()}`;
+        onAddToCart({
+          id: itemId,
+          name: product.name,
+          price: product.price,
+          image: product.images[0],
+          quantity: qty,
+          size,
+          color,
+          material: produto?.material || undefined
+        });
+      });
+
+      showToast('Itens adicionados ao carrinho!', 'success');
     }
   };
+
+  // handleAddCombination removido: agora o fluxo de seleção e preenchimento
+  // acontece automaticamente em tryAutoAddCombination e na finalização em handleAddToCart.
+
+  // Adiciona automaticamente a combinação ao selecionar cor/tamanho quando quantidade > 1
+  const tryAutoAddCombination = (nextSize?: string, nextColor?: string) => {
+    if (quantity <= 1) return;
+    const size = nextSize ?? selectedSize;
+    const color = (nextColor ?? selectedColor);
+    if (!size && !color) return;
+
+    if (combinations.length >= quantity) {
+      setValidationMsg('Você já adicionou todas as combinações necessárias.');
+      return;
+    }
+
+    const key = `${size}|${String(color).toLowerCase()}`;
+    const currentCount = combinations.filter(c => `${c.size}|${c.color.toLowerCase()}` === key).length;
+    const available = variantStockMap[key];
+    if (available === undefined) {
+      setValidationMsg('Combinação indisponível para este produto.');
+      return;
+    }
+    if (currentCount + 1 > available) {
+      setValidationMsg('Estoque insuficiente para esta combinação.');
+      return;
+    }
+
+    setCombinations(prev => [...prev, { size, color }]);
+    setValidationMsg('');
+  };
+
+  const handleSelectSize = (size: string) => {
+    setSelectedSize(size);
+    tryAutoAddCombination(size, undefined);
+  };
+
+  const handleSelectColor = (colorName: string) => {
+    setSelectedColor(colorName);
+    // Ao selecionar a cor, se já houver tamanho selecionado e quantidade > 1,
+    // adiciona automaticamente a combinação respeitando estoque e quantidade.
+    tryAutoAddCombination(undefined, colorName);
+  };
+
+  // handleRemoveCombination removido: não há UI para remoção manual de combinações.
 
   const calculateFrete = async () => {
     const cepLimpo = cep.replace(/\D/g, '');
@@ -245,6 +491,21 @@ export default function ProductInfo({ produto, onAddToCart }: ProductInfoProps) 
               <i className="ri-close-line"></i> Fora de estoque
             </span>
           )}
+          {loadingStock && (
+            <span className="text-gray-600 text-sm flex items-center gap-1" title="Atualizando estoque">
+              <i className="ri-loader-4-line animate-spin"></i> atualizando
+            </span>
+          )}
+          {!loadingStock && stockError && (
+            <span className="text-red-600 text-sm flex items-center gap-1" title="Erro ao verificar estoque">
+              <i className="ri-alert-line"></i> erro de conexão
+            </span>
+          )}
+          {!loadingStock && !stockError && (
+            <span className="text-gray-500 text-sm flex items-center gap-1" title="Estoque em tempo real">
+              <i className="ri-database-2-line"></i> realtime
+            </span>
+          )}
         </div>
         <div className="mt-2">
           <button
@@ -294,7 +555,7 @@ export default function ProductInfo({ produto, onAddToCart }: ProductInfoProps) 
             return (
               <div key={color.name} className="flex flex-col items-center w-16">
                 <button
-                  onClick={() => setSelectedColor(color.name)}
+                  onClick={() => handleSelectColor(color.name)}
                   className={`relative w-12 h-12 rounded-full cursor-pointer transition-all ${
                     selected ? 'ring-2 ring-pink-600 ring-offset-2 scale-110' : 'hover:scale-105'
                   } ${isWhite ? 'border border-gray-300' : ''}`}
@@ -326,7 +587,7 @@ export default function ProductInfo({ produto, onAddToCart }: ProductInfoProps) 
           {product.sizes.map((size: string) => (
             <button
               key={size}
-              onClick={() => setSelectedSize(size)}
+              onClick={() => handleSelectSize(size)}
               className={`px-6 py-3 border-2 rounded-lg font-medium cursor-pointer transition-all whitespace-nowrap ${
                 selectedSize === size
                   ? 'border-pink-600 bg-pink-600 text-white'
@@ -337,6 +598,12 @@ export default function ProductInfo({ produto, onAddToCart }: ProductInfoProps) 
             </button>
           ))}
         </div>
+        {quantity > 2 && (
+          <p className="mt-3 text-xs text-gray-600">
+            Quantidade maior que 2: selecione até {quantity} combinações (Cor + Tamanho).
+            Se selecionar menos, completaremos com a sua última escolha ao adicionar ao carrinho.
+          </p>
+        )}
       </div>
 
       {/* Quantity */}
@@ -354,26 +621,59 @@ export default function ProductInfo({ produto, onAddToCart }: ProductInfoProps) 
             <button
               onClick={() => setQuantity(quantity + 1)}
               className="px-4 py-2 text-gray-600 hover:text-pink-600 cursor-pointer"
-              disabled={quantity >= stock}
+              disabled={quantity >= stockForQuantityControl}
             >
               <i className="ri-add-line text-xl"></i>
             </button>
           </div>
-          {stock > 0 && (
-            <span className="text-sm text-gray-600">{stock} unidades disponíveis</span>
+          {(quantity > 1 ? maxPurchaseStock : stock) > 0 && (
+            <span className="text-sm text-gray-600">{quantity > 1 ? maxPurchaseStock : stock} unidades disponíveis</span>
           )}
-          {stock === 0 && (
+          {(quantity > 1 ? maxPurchaseStock : stock) === 0 && (
             <span className="text-sm text-red-600">Produto esgotado</span>
           )}
         </div>
       </div>
 
+      {/* Combinações selecionadas (visualização apenas) */}
+      {quantity > 1 && combinations.length > 0 && (
+        <div className="border-t border-gray-200 pt-4">
+          <div className="flex items-center justify-between mb-3">
+            <label className="block text-sm font-semibold text-gray-900">
+              Combinações selecionadas ({combinations.length}/{quantity})
+            </label>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {combinations.map((combo, index) => (
+              <div
+                key={index}
+                className="px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg text-sm text-gray-700"
+              >
+                {combo.size} - {combo.color}
+              </div>
+            ))}
+          </div>
+          {combinations.length < quantity && (
+            <p className="text-xs text-gray-600 mt-2">
+              {quantity - combinations.length} combinação(ões) serão completadas automaticamente com sua última escolha ao adicionar ao carrinho.
+            </p>
+          )}
+        </div>
+      )}
+
       {/* Action Buttons */}
       <div className="space-y-3 pt-4">
-        <Button variant="primary" size="lg" className="w-full" onClick={handleAddToCart}>
+        <Button variant="primary" size="lg" className="w-full" onClick={handleAddToCart} disabled={Boolean(validationMsg)}>
           <i className="ri-shopping-cart-line mr-2 text-xl"></i>
           Adicionar ao Carrinho
         </Button>
+
+        {validationMsg && (
+          <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-800">
+            <i className="ri-information-line mr-1"></i>
+            {validationMsg}
+          </div>
+        )}
 
         <div className="grid grid-cols-2 gap-3">
           <Button variant="outline" size="md" className="w-full">

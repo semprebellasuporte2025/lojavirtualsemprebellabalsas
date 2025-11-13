@@ -1,7 +1,7 @@
 
 interface CartItemProps {
   item: {
-    id: number;
+    id: string;
     name: string;
     price: number;
     originalPrice?: number;
@@ -10,8 +10,8 @@ interface CartItemProps {
     color: string;
     quantity: number;
   };
-  onQuantityChange: (id: number, quantity: number) => void;
-  onRemove: (id: number) => void;
+  onQuantityChange: (id: string, quantity: number) => void;
+  onRemove: (id: string) => void;
 }
 
 export default function CartItem({ item, onQuantityChange, onRemove }: CartItemProps) {

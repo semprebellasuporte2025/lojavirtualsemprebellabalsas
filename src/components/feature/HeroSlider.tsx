@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Button from '../base/Button';
+import { generateSlug } from '../../utils/formatters';
 
 const slides = [
   {
@@ -71,7 +72,8 @@ export default function HeroSlider() {
   };
 
   const handleCategoryClick = (category: string) => {
-    navigate(`/categoria/${category}`);
+    const slug = generateSlug(category);
+    navigate(`/categoria/${slug}`);
   };
 
   return (

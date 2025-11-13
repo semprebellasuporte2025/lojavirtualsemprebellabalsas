@@ -4,6 +4,8 @@ import { useToast } from '../../../../hooks/useToast';
 import { supabaseWithAuth } from '../../../../lib/supabaseAuth';
 import AdminLayout from '../../../../components/feature/AdminLayout';
 import AdminFormButtons from '../../../../components/feature/AdminFormButtons/AdminFormButtons';
+import { generateSlug } from '../../../../utils/formatters';
+import { getSlugValidationError, isUniqueSlug } from '../../../../utils/slugValidation';
 
 export default function EditarCategoriaPage() {
   const { id } = useParams<{ id: string }>();
@@ -17,9 +19,12 @@ export default function EditarCategoriaPage() {
     descricao: '',
     imagem_url: '',
     ativa: true,
+    slug: '',
   });
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
+  const [slugManuallyEdited, setSlugManuallyEdited] = useState(false);
+  const [slugError, setSlugError] = useState<string | null>(null);
 
   useEffect(() => {
     if (id) {
@@ -44,6 +49,7 @@ export default function EditarCategoriaPage() {
           descricao: data.descricao || '',
           imagem_url: data.imagem_url || '',
           ativa: data.ativa ?? true,
+          slug: data.slug || generateSlug(data.nome || ''),
         });
         if (data.imagem_url) {
           setImagePreview(data.imagem_url);
@@ -88,6 +94,25 @@ export default function EditarCategoriaPage() {
         imagemUrlFinal = urlData.publicUrl;
       }
 
+      // Validar e garantir unicidade do slug
+      const slugToUse = formData.slug || generateSlug(formData.nome);
+      const validationError = getSlugValidationError(slugToUse);
+      if (validationError) {
+        setSlugError(validationError);
+        showToast(validationError, 'error');
+        setSaving(false);
+        return;
+      }
+
+      const unique = await isUniqueSlug(slugToUse, id);
+      if (!unique) {
+        const msg = 'Slug já existe. Escolha outro.';
+        setSlugError(msg);
+        showToast(msg, 'error');
+        setSaving(false);
+        return;
+      }
+
       const { error } = await supabaseWithAuth
         .from('categorias')
         .update({
@@ -95,6 +120,7 @@ export default function EditarCategoriaPage() {
           descricao: formData.descricao,
           imagem_url: imagemUrlFinal,
           ativa: formData.ativa,
+          slug: slugToUse,
         })
         .eq('id', id);
 
@@ -154,10 +180,43 @@ export default function EditarCategoriaPage() {
               <input
                 type="text"
                 value={formData.nome}
-                onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
+                onChange={(e) => {
+                  const nome = e.target.value;
+                  setFormData((prev) => ({ ...prev, nome }));
+                  if (!slugManuallyEdited) {
+                    const auto = generateSlug(nome);
+                    setFormData((prev) => ({ ...prev, slug: auto }));
+                    setSlugError(getSlugValidationError(auto));
+                  }
+                }}
                 className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
                 required
               />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Slug da Categoria *
+              </label>
+              <input
+                type="text"
+                value={formData.slug}
+                onChange={(e) => {
+                  setSlugManuallyEdited(true);
+                  const value = e.target.value;
+                  setFormData((prev) => ({ ...prev, slug: value }));
+                  setSlugError(getSlugValidationError(value));
+                }}
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                placeholder="ex.: maquiagem, roupas-infantis"
+                required
+              />
+              {slugError && (
+                <p className="text-sm text-red-600 mt-1">{slugError}</p>
+              )}
+              {!slugError && formData.slug && (
+                <p className="text-sm text-gray-500 mt-1">URL gerada: /categoria/{formData.slug}</p>
+              )}
             </div>
 
             <div>

@@ -6,12 +6,11 @@ import Footer from '../../components/feature/Footer';
 import LoginModal from './components/LoginModal';
 import CheckoutForm from './components/CheckoutForm';
 import SEOHead from '../../components/feature/SEOHead';
-import { useToast } from '../../hooks/useToast';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { useCart } from '../../hooks/useCart';
 
 interface CartItemType {
-  id: number;
+  id: string;
   name: string;
   price: number;
   originalPrice?: number;
@@ -23,8 +22,6 @@ interface CartItemType {
 }
 
 export default function CheckoutPage() {
-  const { toast, showToast, hideToast } = useToast();
-  const navigate = useNavigate();
   const location = useLocation();
   const { user, loading } = useAuth();
   const { items } = useCart();
@@ -42,13 +39,7 @@ export default function CheckoutPage() {
   const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   const total = subtotal + shippingData.cost;
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    showToast('Pedido realizado com sucesso!', 'success');
-    setTimeout(() => {
-      navigate('/');
-    }, 2000);
-  };
+  // Submissão e toasts são tratados dentro de CheckoutForm
 
   if (loading) {
     return (

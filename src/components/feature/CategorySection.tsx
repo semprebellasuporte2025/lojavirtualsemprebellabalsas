@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import type { Produto } from '../../lib/supabase';
 import { useNavigate, Link } from 'react-router-dom';
+import { generateSlug } from '../../utils/formatters';
 
 interface CategorySectionProps {
   title: string;
@@ -99,7 +100,8 @@ export default function CategorySection({ title, categoryName }: CategorySection
   };
 
   const handleVerMais = () => {
-    navigate(`/categoria/${encodeURIComponent(categoryName)}`);
+    const slug = generateSlug(categoryName);
+    navigate(`/categoria/${slug}`);
   };
 
   const getCoresUnicas = (variantes: any[]) => {

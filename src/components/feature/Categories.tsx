@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../lib/supabase';
 import type { Categoria } from '../../lib/supabase';
 import { filterCategoriesWithProducts } from '../../utils/categoryFilter';
+import { generateSlug } from '../../utils/formatters';
 
 export default function Categories({ initialCategorias, catalogLoading }: { initialCategorias?: Categoria[]; catalogLoading?: boolean }) {
   const [categorias, setCategorias] = useState<Categoria[]>([]);
@@ -57,12 +58,13 @@ export default function Categories({ initialCategorias, catalogLoading }: { init
     }
   };
 
-  const handleCategoryClick = (nome: string) => {
+  const handleCategoryClick = (categoria: any) => {
+    const slug = categoria.slug || generateSlug(categoria.nome);
     if (typeof window.REACT_APP_NAVIGATE === 'function') {
-      window.REACT_APP_NAVIGATE(`/categoria/${encodeURIComponent(nome)}`);
+      window.REACT_APP_NAVIGATE(`/categoria/${slug}`);
     } else {
       // Fallback para navegação padrão caso a função não esteja disponível
-      window.location.href = `/categoria/${encodeURIComponent(nome)}`;
+      window.location.href = `/categoria/${slug}`;
     }
   };
 
@@ -182,7 +184,7 @@ export default function Categories({ initialCategorias, catalogLoading }: { init
                 {categorias.map((categoria) => (
                   <div
                     key={categoria.id}
-                    onClick={() => handleCategoryClick(categoria.nome)}
+                    onClick={() => handleCategoryClick(categoria)}
                     className="flex flex-col items-center cursor-pointer group min-w-[240px]" // Largura fixa para desktop
                   >
                     <div className="relative w-48 h-48 rounded-full overflow-hidden mb-4 shadow-md group-hover:shadow-xl transition-all">
@@ -223,7 +225,7 @@ export default function Categories({ initialCategorias, catalogLoading }: { init
                 {categorias.map((categoria) => (
                   <div
                     key={categoria.id}
-                    onClick={() => handleCategoryClick(categoria.nome)}
+                    onClick={() => handleCategoryClick(categoria)}
                     className="flex flex-col items-center cursor-pointer group"
                   >
                     <div className="relative w-32 h-32 rounded-full overflow-hidden mb-3 shadow-md group-hover:shadow-xl transition-all">

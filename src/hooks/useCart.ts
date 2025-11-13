@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
 interface CartItem {
-  id: number;
+  id: string; // chave única do item no carrinho: produto|tamanho|cor
   name: string;
   price: number;
   originalPrice?: number;
@@ -16,8 +16,8 @@ interface CartItem {
 interface CartStore {
   items: CartItem[];
   addItem: (item: CartItem) => void;
-  removeItem: (id: number) => void;
-  updateQuantity: (id: number, quantity: number) => void;
+  removeItem: (id: string) => void;
+  updateQuantity: (id: string, quantity: number) => void;
   clearCart: () => void;
   getTotalItems: () => number;
 }

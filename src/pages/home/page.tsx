@@ -10,7 +10,7 @@ import { supabase } from '../../lib/supabase';
 import type { Produto } from '../../lib/supabase';
 import { useNavigate, Link } from 'react-router-dom';
 import Newsletter from '../../components/feature/Newsletter';
-import { hasProductsInCategory } from '../../utils/categoryFilter';
+import { getCategoriesWithProductsByNames } from '../../utils/categoryFilter';
 
 export default function HomePage() {
   const [recentProducts, setRecentProducts] = useState<Produto[]>([]);
@@ -52,20 +52,12 @@ export default function HomePage() {
         'Acessórios'
       ];
 
-      const validCategories: string[] = [];
-
-      for (const category of categoriesToCheck) {
-        try {
-          const hasProducts = await hasProductsInCategory(category);
-          if (hasProducts) {
-            validCategories.push(category);
-          }
-        } catch (error) {
-          console.error(`Erro ao verificar categoria ${category}:`, error);
-        }
+      try {
+        const valid = await getCategoriesWithProductsByNames(categoriesToCheck);
+        setCategoriesToShow(valid);
+      } catch (error) {
+        console.error('Erro ao verificar categorias com produtos:', error);
       }
-
-      setCategoriesToShow(validCategories);
     };
 
     checkCategoriesWithProducts();

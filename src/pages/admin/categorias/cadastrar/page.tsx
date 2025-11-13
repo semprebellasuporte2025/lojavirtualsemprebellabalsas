@@ -5,6 +5,8 @@ import AdminLayout from '../../../../components/feature/AdminLayout';
 import AdminFormButtons from '../../../../components/feature/AdminFormButtons/AdminFormButtons';
 import { supabaseWithAuth } from '../../../../lib/supabaseAuth';
 import { useToast } from '../../../../hooks/useToast';
+import { generateSlug } from '../../../../utils/formatters';
+import { getSlugValidationError, isUniqueSlug } from '../../../../utils/slugValidation';
 
 export default function CadastrarCategoria() {
   const navigate = useNavigate();
@@ -13,8 +15,11 @@ export default function CadastrarCategoria() {
     nome: '',
     descricao: '',
     ordem: '1',
-    ativo: true
+    ativo: true,
+    slug: '',
   });
+  const [slugManuallyEdited, setSlugManuallyEdited] = useState(false);
+  const [slugError, setSlugError] = useState<string | null>(null);
   const [imagePreview, setImagePreview] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -27,7 +32,7 @@ export default function CadastrarCategoria() {
         const file = await dataURLtoFile(imagePreview, `categoria-${Date.now()}.jpg`);
         const fileName = `categorias/${Date.now()}-${file.name}`;
         
-        const { data: uploadData, error: uploadError } = await supabaseWithAuth.storage
+        const { error: uploadError } = await supabaseWithAuth.storage
           .from('categorias')
           .upload(fileName, file);
           
@@ -41,6 +46,23 @@ export default function CadastrarCategoria() {
         imagemUrlFinal = urlData.publicUrl;
       }
 
+      // Validar slug
+      const slugToUse = formData.slug || generateSlug(formData.nome);
+      const validationError = getSlugValidationError(slugToUse);
+      if (validationError) {
+        setSlugError(validationError);
+        showToast(validationError, 'error');
+        return;
+      }
+
+      const unique = await isUniqueSlug(slugToUse);
+      if (!unique) {
+        const msg = 'Slug já existe. Escolha outro.';
+        setSlugError(msg);
+        showToast(msg, 'error');
+        return;
+      }
+
       const { error } = await supabaseWithAuth
         .from('categorias')
         .insert([
@@ -49,6 +71,7 @@ export default function CadastrarCategoria() {
             descricao: formData.descricao || null,
             imagem_url: imagemUrlFinal,
             ativa: formData.ativo,
+            slug: slugToUse,
           },
         ]);
 
@@ -88,6 +111,23 @@ export default function CadastrarCategoria() {
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  const handleNomeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const nome = e.target.value;
+    setFormData((prev) => ({ ...prev, nome }));
+    if (!slugManuallyEdited) {
+      const auto = generateSlug(nome);
+      setFormData((prev) => ({ ...prev, slug: auto }));
+      setSlugError(getSlugValidationError(auto));
+    }
+  };
+
+  const handleSlugChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setSlugManuallyEdited(true);
+    setFormData((prev) => ({ ...prev, slug: value }));
+    setSlugError(getSlugValidationError(value));
   };
 
   return (
@@ -134,11 +174,31 @@ export default function CadastrarCategoria() {
                 <input
                   type="text"
                   value={formData.nome}
-                  onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
+                  onChange={handleNomeChange}
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
                   placeholder="Ex: Maquiagem"
                   required
                 />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Slug da Categoria *
+                </label>
+                <input
+                  type="text"
+                  value={formData.slug}
+                  onChange={handleSlugChange}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                  placeholder="ex.: maquiagem, roupas-infantis"
+                  required
+                />
+                {slugError && (
+                  <p className="text-sm text-red-600 mt-1">{slugError}</p>
+                )}
+                {!slugError && formData.slug && (
+                  <p className="text-sm text-gray-500 mt-1">URL gerada: /categoria/{formData.slug}</p>
+                )}
               </div>
 
               <div>
@@ -186,6 +246,7 @@ export default function CadastrarCategoria() {
             </div>
 
             <AdminFormButtons
+              onSave={handleSubmit}
               onBack={() => window.history.back()}
               saveText="Salvar Categoria"
             />

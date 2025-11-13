@@ -4,7 +4,7 @@ import { useAuth } from '../../../hooks/useAuth';
 import { useCart } from '../../../hooks/useCart';
 
 interface CartItemType {
-  id: number;
+  id: string;
   name: string;
   price: number;
   originalPrice?: number;

@@ -6,12 +6,13 @@ import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
 import type { Categoria } from '../../lib/supabase';
 import { filterCategoriesWithProducts } from '../../utils/categoryFilter';
+import { generateSlug } from '../../utils/formatters';
 
 export default function Header() {
   // Usa seletor puro para evitar qualquer efeito colateral ao obter a contagem
   const cartItemCount = useCart((state) => state.items.reduce((total, item) => total + item.quantity, 0));
   const navigate = useNavigate();
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isMenuOpen] = useState(false);
   const { user, signOut } = useAuth(); // Adicionando signOut do hook useAuth
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
@@ -170,7 +171,7 @@ export default function Header() {
             {!categoriasLoading && categorias.map((cat) => (
               <li key={cat.id || cat.nome}>
                 <NavLink
-                  to={`/categoria/${encodeURIComponent(cat.nome)}`}
+                  to={`/categoria/${cat.slug || generateSlug(cat.nome)}`}
                   className={({ isActive }) =>
                     `block py-2 font-medium cursor-pointer whitespace-nowrap ${
                       isActive ? 'text-pink-600 font-semibold border-b-2 border-pink-600' : 'text-gray-700 hover:text-pink-600'

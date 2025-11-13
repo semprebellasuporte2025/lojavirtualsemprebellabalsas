@@ -146,12 +146,14 @@ export const insertWithTimeout = async (table: string, payload: any, ms = 15000)
 
 // Tipos para o banco de dados
 export interface Categoria {
-  id: number;
+  id: string; // uuid
   nome: string;
-  descricao: string;
-  imagem_url: string;
-  criado_em: string;
-  ativo: boolean;
+  descricao: string | null;
+  imagem_url: string | null;
+  ativa: boolean;
+  created_at?: string;
+  updated_at?: string;
+  slug?: string | null;
 }
 
 export interface Produto {
@@ -161,7 +163,9 @@ export interface Produto {
   preco: number;
   categoria_id: string;
   imagem_url: string;
-  criado_em: string;
+  created_at?: string;
+  updated_at?: string;
+  slug?: string | null;
   ativo: boolean;
   // Flags de sessões especiais
   destaque?: boolean;

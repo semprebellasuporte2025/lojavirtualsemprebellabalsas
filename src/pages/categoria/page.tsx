@@ -8,6 +8,8 @@ import BannerSlider from '../../components/feature/BannerSlider';
 import { supabase } from '../../lib/supabase';
 import type { Produto } from '../../lib/supabase';
 import Newsletter from '../../components/feature/Newsletter';
+import { isSlugLike, isUuid, buildCategoryUrl } from '../../utils/categoryRoutes';
+import { generateSlug } from '../../utils/formatters';
 
 export default function CategoriaPage() {
   const { categoria: categoriaParam } = useParams();
@@ -30,6 +32,34 @@ export default function CategoriaPage() {
   useEffect(() => {
     carregarFiltros();
   }, []);
+
+  // Redirecionamento de URLs antigas: nome com acentos/maiúsculas ou ID
+  useEffect(() => {
+    const redirectIfNeeded = async () => {
+      if (!categoria) return;
+      // Tratar primeiro UUID para evitar colisão com regex de slug
+      if (isUuid(categoria)) {
+        const { data } = await supabase
+          .from('categorias')
+          .select('slug, nome')
+          .eq('id', categoria)
+          .limit(1);
+        const row = Array.isArray(data) ? data[0] : null;
+        const slug = row?.slug || (row?.nome ? generateSlug(row.nome) : null);
+        if (slug) navigate(buildCategoryUrl(slug), { replace: true });
+        return;
+      }
+
+      // Se já estiver em formato slug válido, não faz nada
+      if (isSlugLike(categoria)) return;
+
+      const normalized = generateSlug(categoria);
+      if (normalized && normalized !== categoria) {
+        navigate(buildCategoryUrl(normalized), { replace: true });
+      }
+    };
+    redirectIfNeeded();
+  }, [categoria, navigate]);
 
   useEffect(() => {
     carregarProdutos();
@@ -86,13 +116,14 @@ export default function CategoriaPage() {
       // Verificar se é uma busca por produtos em destaque
       const isDestaque = searchParams.get('destaque') === 'true';
 
-      // Descobrir ID da categoria, se houver nome informado
+      // Descobrir ID da categoria, se houver slug informado
       let categoriaId: string | null = null;
       if (categoria && !isDestaque) {
+        // Buscar categoria pelo slug (sem necessidade de decodificação)
         const { data: catRows, error: catErr } = await supabase
           .from('categorias')
           .select('id')
-          .eq('nome', categoria)
+          .eq('slug', categoria)
           .order('created_at', { ascending: false })
           .limit(1);
         if (!catErr) {
@@ -204,12 +235,6 @@ export default function CategoriaPage() {
       tamanho: setFiltroTamanho,
       cor: setFiltroCor,
       categoria: setFiltroCategoria,
-    }[filtro];
-
-    const state = {
-      tamanho: filtroTamanho,
-      cor: filtroCor,
-      categoria: filtroCategoria,
     }[filtro];
 
     setter((prev: string[]) => 
