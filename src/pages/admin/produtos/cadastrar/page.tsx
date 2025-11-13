@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../../../../components/feature/AdminLayout';
-import { supabase, clearInvalidSession, ensureSession, insertWithTimeout } from '../../../../lib/supabase';
+import { supabase } from '../../../../lib/supabase';
 import { useToast } from '../../../../hooks/useToast';
 import RichTextEditor from '../../../../components/base/RichTextEditor';
 import { AVAILABLE_COLORS, AVAILABLE_SIZES, findClosestColorName } from '../../../../constants/colors';
@@ -18,7 +18,7 @@ interface ProductVariation {
 
 const CadastrarProdutoCopy = () => {
   const navigate = useNavigate();
-  const { toast, showToast, hideToast } = useToast();
+  const { showToast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [showConfirmationModal, setShowConfirmationModal] = useState(false);
 
@@ -35,8 +35,6 @@ const CadastrarProdutoCopy = () => {
     altura: '',
     largura: '',
     profundidade: '',
-    estoque: '',
-    estoque_minimo: '',
     ativo: true,
     destaque: false,
     recemChegado: false
@@ -47,7 +45,6 @@ const CadastrarProdutoCopy = () => {
   const [availableSizes] = useState(AVAILABLE_SIZES);
   const [availableColors] = useState<ColorOption[]>(AVAILABLE_COLORS);
   const [categorias, setCategorias] = useState<{ id: string; nome: string }[]>([]);
-  const saveTimeoutRef = useRef<number | null>(null);
   const saveAttemptsRef = useRef<number>(0); // Contador de tentativas de salvamento
   const isSavingRef = useRef<boolean>(false); // Proteção contra dupla execução
   const precoPromocionalRef = useRef<HTMLInputElement>(null);
@@ -55,22 +52,6 @@ const CadastrarProdutoCopy = () => {
   const alturaRef = useRef<HTMLInputElement>(null);
   const larguraRef = useRef<HTMLInputElement>(null);
   const profundidadeRef = useRef<HTMLInputElement>(null);
-
-  // Tempos padronizados (ms)
-  const CATEGORY_TIMEOUT_MS = 30000; // Aumentado para 30 segundos
-  const PRODUTO_TIMEOUT_MS = 20000;     // Aumentado para 20 segundos
-  const VARIACOES_TIMEOUT_MS = 20000;   // Aumentado para 20 segundos
-  // Timeout geral calculado para não conflitar com os tempos por etapa
-  const GLOBAL_SAVE_TIMEOUT_MS = CATEGORY_TIMEOUT_MS + PRODUTO_TIMEOUT_MS + VARIACOES_TIMEOUT_MS + 10000; // margem extra de 10 segundos
-
-  const clearSaveTimeout = () => {
-    if (saveTimeoutRef.current) {
-      clearTimeout(saveTimeoutRef.current);
-      saveTimeoutRef.current = null;
-    }
-    // Reset do contador de tentativas quando o timeout é limpo
-    saveAttemptsRef.current = 0;
-  };
 
   useEffect(() => {
     const fetchCategorias = async () => {
@@ -87,13 +68,7 @@ const CadastrarProdutoCopy = () => {
     fetchCategorias();
   }, []);
 
-  const slugify = (str: string) =>
-    (str || '')
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/(^-|-$)/g, '') || 'produto';
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -181,8 +156,6 @@ const CadastrarProdutoCopy = () => {
           altura: formData.altura ? parseFloat(formData.altura) : null,
           largura: formData.largura ? parseFloat(formData.largura) : null,
           profundidade: formData.profundidade ? parseFloat(formData.profundidade) : null,
-          estoque: formData.estoque ? parseInt(formData.estoque) : 0,
-          estoque_minimo: formData.estoque_minimo ? parseInt(formData.estoque_minimo) : 0,
           imagens: images,
           ativo: formData.ativo,
           destaque: formData.destaque,
@@ -230,7 +203,8 @@ const CadastrarProdutoCopy = () => {
 
     } catch (error) {
       console.error('[CadastrarProduto] ❌ Erro ao enviar para n8n:', error);
-      showToast(`Erro ao cadastrar produto: ${error.message}`, 'error');
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+      showToast(`Erro ao cadastrar produto: ${errorMessage}`, 'error');
     } finally {
       setIsLoading(false);
       isSavingRef.current = false;
@@ -331,7 +305,8 @@ const CadastrarProdutoCopy = () => {
             );
             
             console.log(`[Upload] Aguardando resposta do upload para ${fileName}...`);
-            const { data, error } = await Promise.race([uploadPromise, timeoutPromise]);
+            const result = await Promise.race([uploadPromise, timeoutPromise]);
+            const { data, error } = result as { data: any; error: any };
             
             if (error) {
               console.log(`[Upload] Erro detectado para ${fileName}:`, error.message);
@@ -397,7 +372,7 @@ const CadastrarProdutoCopy = () => {
       
       if (publicUrls.length > 0) {
         if (failedCount > 0) {
-          showToast(`${publicUrls.length} imagem(ns) enviada(s) com sucesso! ${failedCount} falharam.`, 'warning');
+          showToast(`${publicUrls.length} imagem(ns) enviada(s) com sucesso! ${failedCount} falharam.`, 'info');
         } else {
           showToast(`${publicUrls.length} imagem(ns) enviada(s) com sucesso!`, 'success');
         }
@@ -431,22 +406,7 @@ const CadastrarProdutoCopy = () => {
     setVariations([...variations, newVariation]);
   };
 
-  // Utilidades para mapear HEX -> nome mais próximo
-  const hexToRgb = (hex: string) => {
-    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-    return result ? {
-      r: parseInt(result[1], 16),
-      g: parseInt(result[2], 16),
-      b: parseInt(result[3], 16)
-    } : null;
-  };
 
-  const colorDistance = (c1: any, c2: any) => {
-    const dr = c1.r - c2.r;
-    const dg = c1.g - c2.g;
-    const db = c1.b - c2.b;
-    return dr * dr + dg * dg + db * db;
-  };
 
   const updateVariation = (id: string, field: keyof ProductVariation, value: string | number) => {
     setVariations(variations.map(variation => {
@@ -506,8 +466,6 @@ const CadastrarProdutoCopy = () => {
       altura: '',
       largura: '',
       profundidade: '',
-      estoque: '',
-      estoque_minimo: '',
       ativo: true,
       destaque: false,
       recemChegado: false
@@ -632,7 +590,7 @@ const CadastrarProdutoCopy = () => {
                 </div>
                 <div className="mt-4 grid grid-cols-3 gap-4">
                   {images.map((image, index) => (
-                    <div key={index} className="relative">
+                    <div key={image} className="relative">
                       <img src={image} alt={`Imagem do produto ${index + 1}`} className="h-24 w-full object-cover rounded-md" />
                       <button onClick={() => removeImage(index)} className="absolute top-0 right-0 bg-red-500 text-white rounded-full p-1 text-xs">&times;</button>
                     </div>
@@ -671,14 +629,7 @@ const CadastrarProdutoCopy = () => {
                     <label htmlFor="profundidade" className="block text-sm font-medium text-gray-700">Profundidade (cm)</label>
                     <input type="number" id="profundidade" name="profundidade" value={formData.profundidade} onChange={(e) => setFormData({ ...formData, profundidade: e.target.value })} ref={profundidadeRef} onBlur={() => document.getElementById('descricao')?.focus()} onKeyDown={(e) => { if (e.key === 'Enter') document.getElementById('descricao')?.focus(); }} className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
                   </div>
-                  <div>
-                    <label htmlFor="estoque" className="block text-sm font-medium text-gray-700">Estoque</label>
-                    <input type="number" id="estoque" name="estoque" value={formData.estoque} onChange={(e) => setFormData({ ...formData, estoque: e.target.value })} className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" min="0" />
-                  </div>
-                  <div>
-                    <label htmlFor="estoque_minimo" className="block text-sm font-medium text-gray-700">Estoque Mínimo</label>
-                    <input type="number" id="estoque_minimo" name="estoque_minimo" value={formData.estoque_minimo} onChange={(e) => setFormData({ ...formData, estoque_minimo: e.target.value })} className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" min="0" />
-                  </div>
+
                 </div>
               </div>
 
@@ -713,7 +664,7 @@ const CadastrarProdutoCopy = () => {
           {/* Variações do Produto */}
           <div className="bg-gray-50 p-4 rounded-lg mt-6">
             <h3 className="text-lg font-medium text-gray-900 mb-4">Variações do Produto</h3>
-            {variations.map((variation, index) => (
+            {variations.map((variation) => (
               <div key={variation.id} className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4 p-4 border rounded-md">
                 <div className="col-span-1 md:col-span-2">
                   <label htmlFor={`size-${variation.id}`} className="block text-sm font-medium text-gray-700">Tamanho</label>

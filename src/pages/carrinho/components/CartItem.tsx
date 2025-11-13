@@ -12,9 +12,10 @@ interface CartItemProps {
   };
   onQuantityChange: (id: string, quantity: number) => void;
   onRemove: (id: string) => void;
+  maxStock?: number; // Nova prop para estoque máximo
 }
 
-export default function CartItem({ item, onQuantityChange, onRemove }: CartItemProps) {
+export default function CartItem({ item, onQuantityChange, onRemove, maxStock }: CartItemProps) {
   return (
     <div className="bg-white rounded-lg shadow-sm border p-6">
       <div className="flex items-start space-x-4">
@@ -65,8 +66,9 @@ export default function CartItem({ item, onQuantityChange, onRemove }: CartItemP
                 <button
                   onClick={() => onQuantityChange(item.id, item.quantity + 1)}
                   className="p-2 hover:bg-gray-50 transition-colors cursor-pointer"
+                  disabled={maxStock !== undefined && item.quantity >= maxStock}
                 >
-                  <i className="ri-add-line text-gray-600"></i>
+                  <i className={`ri-add-line ${maxStock !== undefined && item.quantity >= maxStock ? 'text-gray-300' : 'text-gray-600'}`}></i>
                 </button>
               </div>
 

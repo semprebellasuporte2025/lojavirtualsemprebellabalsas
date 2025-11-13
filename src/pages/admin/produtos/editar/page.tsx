@@ -41,8 +41,6 @@ const EditarProduto = () => {
     altura: '',
     largura: '',
     profundidade: '',
-    estoque: '',
-    estoque_minimo: '',
     ativo: true,
     destaque: false,
     recemChegado: false
@@ -121,8 +119,6 @@ const EditarProduto = () => {
         altura: produto.altura?.toString() || '',
         largura: produto.largura?.toString() || '',
         profundidade: produto.profundidade?.toString() || '',
-        estoque: produto.estoque?.toString() || '',
-        estoque_minimo: produto.estoque_minimo?.toString() || '',
         ativo: produto.ativo ?? true,
         destaque: produto.destaque ?? false,
         recemChegado: produto.recem_chegado ?? false
@@ -191,8 +187,6 @@ const EditarProduto = () => {
           altura: formData.altura ? parseFloat(formData.altura) : null,
           largura: formData.largura ? parseFloat(formData.largura) : null,
           profundidade: formData.profundidade ? parseFloat(formData.profundidade) : null,
-          estoque: formData.estoque ? parseInt(formData.estoque) : 0,
-          estoque_minimo: formData.estoque_minimo ? parseInt(formData.estoque_minimo) : 0,
           imagens: images,
           ativo: formData.ativo,
           destaque: formData.destaque,
@@ -217,8 +211,6 @@ const EditarProduto = () => {
               altura: formData.altura ? parseFloat(formData.altura) : null,
               largura: formData.largura ? parseFloat(formData.largura) : null,
               profundidade: formData.profundidade ? parseFloat(formData.profundidade) : null,
-              estoque: formData.estoque ? parseInt(formData.estoque) : 0,
-              estoque_minimo: formData.estoque_minimo ? parseInt(formData.estoque_minimo) : 0,
               imagens: images,
               ativo: formData.ativo,
               destaque: formData.destaque,
@@ -648,33 +640,7 @@ const EditarProduto = () => {
                     />
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Estoque
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      value={formData.estoque}
-                      onChange={(e) => setFormData({ ...formData, estoque: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-                      placeholder="Ex: 100"
-                    />
-                  </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Estoque Mínimo
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      value={formData.estoque_minimo}
-                      onChange={(e) => setFormData({ ...formData, estoque_minimo: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-                      placeholder="Ex: 10"
-                    />
-                  </div>
                 </div>
                 <p className="text-sm text-gray-500 -mt-4">
                   <i className="ri-information-line mr-1"></i>

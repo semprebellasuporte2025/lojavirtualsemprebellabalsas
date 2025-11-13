@@ -610,29 +610,32 @@ export default function ProductInfo({ produto, onAddToCart }: ProductInfoProps) 
       <div>
         <label className="block text-sm font-semibold text-gray-900 mb-3">Quantidade</label>
         <div className="flex items-center space-x-4">
-          <div className="flex items-center border-2 border-gray-300 rounded-lg">
-            <button
-              onClick={() => setQuantity(Math.max(1, quantity - 1))}
-              className="px-4 py-2 text-gray-600 hover:text-pink-600 cursor-pointer"
-            >
-              <i className="ri-subtract-line text-xl"></i>
-            </button>
-            <span className="px-6 py-2 font-semibold text-gray-900 border-x-2 border-gray-300">{quantity}</span>
-            <button
-              onClick={() => setQuantity(quantity + 1)}
-              className="px-4 py-2 text-gray-600 hover:text-pink-600 cursor-pointer"
-              disabled={quantity >= stockForQuantityControl}
-            >
-              <i className="ri-add-line text-xl"></i>
-            </button>
+            <div className="flex items-center border-2 border-gray-300 rounded-lg">
+              <button
+                onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                className="px-4 py-2 text-gray-600 hover:text-pink-600 cursor-pointer"
+              >
+                <i className="ri-subtract-line text-xl"></i>
+              </button>
+              <span className="px-6 py-2 font-semibold text-gray-900 border-x-2 border-gray-300">{quantity}</span>
+              <button
+                onClick={() => setQuantity(quantity + 1)}
+                className="px-4 py-2 text-gray-600 hover:text-pink-600 cursor-pointer"
+                disabled={quantity >= stockForQuantityControl || stockForQuantityControl === 1}
+              >
+                <i className="ri-add-line text-xl"></i>
+              </button>
+            </div>
+            {(quantity > 1 ? maxPurchaseStock : stock) > 1 && (
+              <span className="text-sm text-gray-600">{quantity > 1 ? maxPurchaseStock : stock} unidades disponíveis</span>
+            )}
+            {(quantity > 1 ? maxPurchaseStock : stock) === 1 && (
+              <span className="text-sm text-orange-600 font-medium">Última unidade disponível</span>
+            )}
+            {(quantity > 1 ? maxPurchaseStock : stock) === 0 && (
+              <span className="text-sm text-red-600">Produto esgotado</span>
+            )}
           </div>
-          {(quantity > 1 ? maxPurchaseStock : stock) > 0 && (
-            <span className="text-sm text-gray-600">{quantity > 1 ? maxPurchaseStock : stock} unidades disponíveis</span>
-          )}
-          {(quantity > 1 ? maxPurchaseStock : stock) === 0 && (
-            <span className="text-sm text-red-600">Produto esgotado</span>
-          )}
-        </div>
       </div>
 
       {/* Combinações selecionadas (visualização apenas) */}

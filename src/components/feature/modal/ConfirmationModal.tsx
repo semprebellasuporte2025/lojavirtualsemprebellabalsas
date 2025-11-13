@@ -7,9 +7,23 @@ interface ConfirmationModalProps {
   onConfirm: () => void;
   title: string;
   body: string;
+  confirmText?: string;
+  cancelText?: string;
+  variant?: string;
+  isLoading?: boolean;
 }
 
-const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ show, onHide, onConfirm, title, body }) => {
+const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ 
+  show, 
+  onHide, 
+  onConfirm, 
+  title, 
+  body,
+  confirmText = "Confirmar",
+  cancelText = "Cancelar",
+  variant = "danger",
+  isLoading = false
+}) => {
   return (
     <Modal show={show} onHide={onHide} centered>
       <Modal.Header closeButton>
@@ -17,11 +31,22 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ show, onHide, onC
       </Modal.Header>
       <Modal.Body>{body}</Modal.Body>
       <Modal.Footer>
-        <Button variant="secondary" onClick={onHide}>
-          Cancelar
+        <Button variant="secondary" onClick={onHide} disabled={isLoading}>
+          {cancelText}
         </Button>
-        <Button variant="danger" onClick={onConfirm}>
-          Confirmar
+        <Button 
+          variant={variant === "danger" ? "danger" : "primary"} 
+          onClick={onConfirm} 
+          disabled={isLoading}
+        >
+          {isLoading ? (
+            <>
+              <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+              {confirmText}
+            </>
+          ) : (
+            confirmText
+          )}
         </Button>
       </Modal.Footer>
     </Modal>

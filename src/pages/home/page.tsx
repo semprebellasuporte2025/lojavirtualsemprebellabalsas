@@ -70,6 +70,7 @@ export default function HomePage() {
         .from('produtos')
         .select('*, categorias(nome), variantes_produto(cor, cor_hex)')
         .eq('ativo', true)
+        .gt('estoque', 0) // Filtrar apenas produtos com estoque maior que zero
         .order('created_at', { ascending: false })
         .limit(12)
         .abortSignal(signal);

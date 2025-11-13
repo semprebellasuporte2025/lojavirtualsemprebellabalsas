@@ -1,6 +1,6 @@
 
 import SEOHead from '../../components/feature/SEOHead';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import Header from '../../components/feature/Header';
 import Footer from '../../components/feature/Footer';
 import CartItem from './components/CartItem';
@@ -8,15 +8,52 @@ import ShippingCalculator from './components/ShippingCalculator';
 import CartSummary from './components/CartSummary';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../../hooks/useCart';
+import { useProductStock } from '../../hooks/useProductStock';
 
 export default function CarrinhoPage() {
   const navigate = useNavigate();
   const { items, updateQuantity, removeItem } = useCart();
   const [shippingCost, setShippingCost] = useState(0);
   const [shippingMethod, setShippingMethod] = useState('');
+  
+  // Extrair IDs dos produtos para buscar estoque (usando useMemo para evitar loops)
+  const productIds = useMemo(() => {
+    return items.map(item => {
+      // O ID do item no carrinho é composto por: produto|tamanho|cor
+      // Precisamos extrair apenas o ID do produto
+      const parts = item.id.split('|');
+      return parts[0]; // Primeira parte é o ID do produto
+    });
+  }, [items]);
+  
+  const { stockInfo } = useProductStock(productIds);
+  
+  // Criar mapa de estoque por produto ID
+  const stockMap = new Map<string, number>();
+  stockInfo.forEach(info => {
+    stockMap.set(info.productId, info.stock);
+  });
 
   const handleQuantityChange = (id: string, newQuantity: number) => {
-    updateQuantity(id, newQuantity);
+    // Extrair ID do produto para verificar estoque
+    const productId = id.split('|')[0];
+    const maxStock = stockMap.get(productId);
+    
+    console.log(`handleQuantityChange - ID: ${id}, Produto: ${productId}, Nova Qtd: ${newQuantity}, MaxStock: ${maxStock}`);
+    
+    // Validar se a nova quantidade não excede o estoque disponível
+    if (maxStock !== undefined && newQuantity > maxStock) {
+      console.log(`Tentativa de aumentar além do estoque. Definindo como ${maxStock}`);
+      // Se tentar aumentar além do estoque, definir como estoque máximo
+      updateQuantity(id, maxStock);
+    } else if (newQuantity < 1) {
+      console.log(`Tentativa de diminuir abaixo de 1. Definindo como 1`);
+      // Não permitir quantidade menor que 1
+      updateQuantity(id, 1);
+    } else {
+      console.log(`Quantidade válida. Atualizando para ${newQuantity}`);
+      updateQuantity(id, newQuantity);
+    }
   };
 
   const handleRemove = (id: string) => {
@@ -66,14 +103,21 @@ export default function CarrinhoPage() {
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Cart Items */}
                 <div className="lg:col-span-2 space-y-4">
-                  {items.map((item) => (
-                    <CartItem
-                      key={item.id}
-                      item={item}
-                      onQuantityChange={handleQuantityChange}
-                      onRemove={handleRemove}
-                    />
-                  ))}
+                  {items.map((item) => {
+                    // Extrair ID do produto do item do carrinho
+                    const productId = item.id.split('|')[0];
+                    const maxStock = stockMap.get(productId);
+                    
+                    return (
+                      <CartItem
+                        key={item.id}
+                        item={item}
+                        onQuantityChange={handleQuantityChange}
+                        onRemove={handleRemove}
+                        maxStock={maxStock}
+                      />
+                    );
+                  })}
 
                   <button
                     onClick={() => navigate('/')}

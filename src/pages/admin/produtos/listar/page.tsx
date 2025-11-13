@@ -9,7 +9,7 @@ import ConfirmationModal from '../../../../components/feature/modal/Confirmation
 
 export default function ListarProdutosPage() {
   const navigate = useNavigate();
-  const { toast, showToast, hideToast } = useToast();
+  const { showToast } = useToast();
 
   const [produtos, setProdutos] = useState<Produto[]>([]);
   const [loading, setLoading] = useState(true);
@@ -56,9 +56,17 @@ export default function ListarProdutosPage() {
     }
   };
 
+  const calcularEstoqueTotal = (produto: any) => {
+    if (produto.variantes_produto && produto.variantes_produto.length > 0) {
+      return produto.variantes_produto.reduce((total: number, variante: any) => {
+        return total + (variante.estoque || 0);
+      }, 0);
+    }
+    return 0;
+  };
+
   const filteredProdutos = produtos.filter(produto => {
     const matchSearch = produto.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                       (produto.sku && produto.sku.toLowerCase().includes(searchTerm.toLowerCase())) ||
                        (produto.variantes_produto && produto.variantes_produto.some(variante => 
                          variante.sku && variante.sku.toLowerCase().includes(searchTerm.toLowerCase())
                        ));
@@ -67,7 +75,7 @@ export default function ListarProdutosPage() {
                        (filterStatus === 'ativo' && produto.ativo) ||
                        (filterStatus === 'inativo' && !produto.ativo) ||
                        (filterStatus === 'destaque' && produto.destaque) ||
-                       (filterStatus === 'sem-estoque' && produto.estoque === 0);
+                       (filterStatus === 'sem-estoque' && calcularEstoqueTotal(produto) === 0);
     return matchSearch && matchCategoria && matchStatus;
   });
 
@@ -272,24 +280,7 @@ export default function ListarProdutosPage() {
         onHide={() => setShowDeleteModal(false)}
         onConfirm={confirmDelete}
         title="Confirmar Exclusão"
-        body={
-          <div>
-            <p className="mb-3">Tem certeza que deseja excluir este produto? Esta ação não pode ser desfeita.</p>
-            <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3 text-sm text-yellow-800">
-              <i className="ri-error-warning-line mr-1"></i>
-              <strong>Atenção:</strong> Esta operação irá excluir:
-              <ul className="mt-1 ml-4 list-disc">
-                <li>O produto do banco de dados</li>
-                <li>Todas as imagens associadas do storage</li>
-                <li>Variações de cores e tamanhos</li>
-                <li>Avaliações e favoritos do produto</li>
-              </ul>
-            </div>
-            <p className="mt-3 text-sm text-gray-600">
-              A exclusão será bloqueada automaticamente se existirem pedidos vinculados a este produto.
-            </p>
-          </div>
-        }
+        body="Tem certeza que deseja excluir este produto? Esta ação não pode ser desfeita. Atenção: Esta operação irá excluir o produto do banco de dados, todas as imagens associadas do storage, variações de cores e tamanhos, e avaliações e favoritos do produto. A exclusão será bloqueada automaticamente se existirem pedidos vinculados a este produto."
         confirmText={isLoading ? "Excluindo..." : "Confirmar Exclusão"}
         cancelText="Cancelar"
         variant="danger"
@@ -420,17 +411,17 @@ export default function ListarProdutosPage() {
                     <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
                       {produto.variantes_produto && produto.variantes_produto.length > 0 ? (
                         <div className="space-y-1">
-                          {produto.variantes_produto.map((variante, index) => (
+                          {produto.variantes_produto?.map((variante, index) => (
                             <div key={variante.id} className="text-xs">
                               {variante.sku || '-'}
-                              {index < produto.variantes_produto.length - 1 && produto.variantes_produto.length > 1 && (
+                              {index < (produto.variantes_produto?.length || 0) - 1 && (produto.variantes_produto?.length || 0) > 1 && (
                                 <span className="text-gray-400"> | </span>
                               )}
                             </div>
                           ))}
                         </div>
                       ) : (
-                        produto.sku || '-'
+                        '-'
                       )}
                     </td>
                     <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
@@ -449,8 +440,8 @@ export default function ListarProdutosPage() {
                       </div>
                     </td>
                     <td className="py-3 px-4">
-                      <span className={`text-sm font-medium ${produto.estoque === 0 ? 'text-red-600' : produto.estoque < 50 ? 'text-yellow-600' : 'text-green-600'}`}>
-                        {produto.estoque} un.
+                      <span className={`text-sm font-medium ${calcularEstoqueTotal(produto) === 0 ? 'text-red-600' : calcularEstoqueTotal(produto) < 50 ? 'text-yellow-600' : 'text-green-600'}`}>
+                        {calcularEstoqueTotal(produto)} un.
                       </span>
                     </td>
                     <td className="py-3 px-4">
@@ -540,7 +531,7 @@ export default function ListarProdutosPage() {
                       {produto.ativo ? 'Ativo' : 'Inativo'}
                     </button>
                   </div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{produto.categorias.nome}</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{produto.categorias?.nome || '-'}</p>
                   <p className="text-lg font-bold text-pink-600 dark:text-pink-400">R$ {produto.preco.toFixed(2)}</p>
                   <div className="flex justify-end gap-2 mt-4">
                         <a

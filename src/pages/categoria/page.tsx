@@ -138,7 +138,8 @@ export default function CategoriaPage() {
       let query = supabase
         .from('products_with_ratings')
         .select(`*, categorias(nome), variantes_produto(cor, cor_hex, tamanho)`)
-        .eq('ativo', true);
+        .eq('ativo', true)
+        .gt('estoque', 0); // Filtrar apenas produtos com estoque maior que zero
       
       if (isDestaque) {
         query = query.eq('destaque', true);
@@ -156,7 +157,8 @@ export default function CategoriaPage() {
         let fallback = supabase
           .from('produtos')
           .select(`*, categorias(nome), variantes_produto(cor, cor_hex, tamanho)`)
-          .eq('ativo', true);
+          .eq('ativo', true)
+          .gt('estoque', 0); // Filtrar apenas produtos com estoque maior que zero
         
         if (isDestaque) {
           fallback = fallback.eq('destaque', true);
