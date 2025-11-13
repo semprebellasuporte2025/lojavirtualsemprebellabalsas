@@ -36,14 +36,14 @@ export default function Newsletter() {
 
   return (
     <section className="py-16 bg-pink-600">
-      <div className="container mx-auto px-4 sm:px-6 md:px-8 lg:px-12 xl:px-16 2xl:px-20 text-center">
-        <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+      <div className="container mx-auto px-6 sm:px-8 md:px-10 lg:px-12 xl:px-16 2xl:px-20 text-center">
+        <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-4">
           Inscreva-se e Ganhe 10% OFF
         </h2>
-        <p className="text-white/90 mb-8 max-w-2xl mx-auto">
+        <p className="text-white/90 mb-8 max-w-2xl mx-auto text-sm sm:text-base">
           Receba em primeira mão nossas novidades, promoções exclusivas e dicas de moda
         </p>
-        <form onSubmit={handleSubmit} className="max-w-md mx-auto flex gap-2">
+        <form onSubmit={handleSubmit} className="max-w-md mx-auto flex flex-col sm:flex-row gap-3 sm:gap-2 px-4 sm:px-0">
           <input
             type="email"
             id="newsletter-email"
@@ -51,13 +51,13 @@ export default function Newsletter() {
             placeholder="Seu melhor e-mail"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="flex-1 px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-white"
+            className="flex-1 px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-white text-sm sm:text-base"
             required
             disabled={loading}
           />
           <button 
             type="submit"
-            className="px-6 py-3 bg-white text-pink-600 rounded-lg font-semibold hover:bg-gray-100 transition-colors whitespace-nowrap disabled:opacity-50"
+            className="px-6 py-3 bg-white text-pink-600 rounded-lg font-semibold hover:bg-gray-100 transition-colors whitespace-nowrap disabled:opacity-50 text-sm sm:text-base"
             disabled={loading}
           >
             {loading ? 'Enviando...' : 'Inscrever'}

@@ -237,7 +237,7 @@ export default function CadastrarBanner() {
                       <div>
                         <i className="ri-image-add-line text-4xl text-gray-400 mb-2"></i>
                         <p className="text-gray-600 dark:text-gray-400">Clique para selecionar uma imagem</p>
-                        <p className="text-sm text-gray-500 mt-1">Recomendado: 1920x600px</p>
+                        <p className="text-sm text-gray-500 mt-1">Recomendado: 1720x600px</p>
                       </div>
                     )}
                   </label>
@@ -277,7 +277,7 @@ export default function CadastrarBanner() {
                       <div>
                         <i className="ri-smartphone-line text-4xl text-gray-400 mb-2"></i>
                         <p className="text-gray-600 dark:text-gray-400">Clique para selecionar uma imagem para mobile</p>
-                        <p className="text-sm text-gray-500 mt-1">Recomendado: ~1080x1350 (proporção vertical)</p>
+                        <p className="text-sm text-gray-500 mt-1">Recomendado: 1080x1350px</p>
                       </div>
                     )}
                   </label>

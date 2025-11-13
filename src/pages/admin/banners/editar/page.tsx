@@ -402,6 +402,7 @@ export default function AdminBannersEditarPage() {
                   onChange={handleImageChange}
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
                 />
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Recomendado: 1720x600px</p>
               </div>
 
               {imagePreview && (
@@ -455,6 +456,7 @@ export default function AdminBannersEditarPage() {
                     onChange={handleImageMobileChange}
                     className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
                   />
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Recomendado: 1080x1350px</p>
                 </div>
                 {imagePreviewMobile && (
                   <div className="mt-4 relative">

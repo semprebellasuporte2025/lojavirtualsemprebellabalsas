@@ -67,26 +67,58 @@ export function subscribeToBannerChanges(
   client: SupabaseClient,
   onChange: (payload: any) => void
 ): () => void {
-  const channel = client
-    .channel('banners-realtime')
-    .on(
-      'postgres_changes',
-      { event: '*', schema: 'public', table: 'banners' },
-      (payload) => {
-        try {
-          onChange(payload);
-        } catch (e) {
-          console.warn('Erro no callback de mudanças de banners:', e);
+  try {
+    const channel = client
+      .channel('banners-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'banners' },
+        (payload) => {
+          try {
+            onChange(payload);
+          } catch (e) {
+            console.warn('Erro no callback de mudanças de banners:', e);
+          }
         }
-      }
-    )
-    .subscribe();
+      );
 
-  return () => {
-    try {
-      client.removeChannel(channel);
-    } catch (e) {
-      // noop
-    }
-  };
+    // Tenta assinar com timeout para evitar bloqueio por falha de WebSocket
+    const subscribePromise = channel.subscribe();
+    
+    // Timeout para evitar que falhas de WebSocket bloqueiem a aplicação
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Timeout na conexão WebSocket')), 5000);
+    });
+
+    Promise.race([subscribePromise, timeoutPromise])
+      .then(() => {
+        console.log('Assinatura realtime de banners bem-sucedida');
+      })
+      .catch((error) => {
+        // Log mais detalhado para erros de WebSocket
+        if (error.message.includes('WebSocket') || error.message.includes('connection')) {
+          console.warn('Falha na conexão WebSocket para banners em tempo real. Esta funcionalidade requer WebSockets habilitados no navegador.');
+        } else {
+          console.warn('Falha na assinatura realtime de banners:', error.message);
+        }
+        // Remove o canal em caso de falha
+        try {
+          client.removeChannel(channel);
+        } catch (e) {
+          // noop
+        }
+      });
+
+    return () => {
+      try {
+        client.removeChannel(channel);
+      } catch (e) {
+        // noop
+      }
+    };
+  } catch (error) {
+    console.warn('Erro ao criar canal realtime de banners:', error);
+    // Retorna função vazia para unsubscribe
+    return () => {};
+  }
 }

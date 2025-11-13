@@ -1,4 +1,4 @@
-export function toSupabaseRenderUrl(url: string, width?: number) {
+export function toSupabaseRenderUrl(url: string, width?: number, height?: number) {
   try {
     const u = new URL(url);
     if (!u.hostname.endsWith('.supabase.co')) return url;
@@ -22,6 +22,7 @@ export function toSupabaseRenderUrl(url: string, width?: number) {
       // Adiciona parâmetros de renderização
       const sp = u.searchParams;
       if (width && !sp.has('width')) sp.set('width', String(width));
+      if (height && !sp.has('height')) sp.set('height', String(height));
       if (!sp.has('quality')) sp.set('quality', '85');
       if (!sp.has('format')) sp.set('format', 'webp');
       return u.toString();

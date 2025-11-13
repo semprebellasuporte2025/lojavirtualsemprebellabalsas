@@ -43,7 +43,7 @@ export default function BannerSlider() {
     fetchBanners();
 
     // Assina mudanças em tempo real para atualizar rapidamente após cadastro/edição/exclusão
-    const unsubscribe = subscribeToBannerChanges(isAdmin ? supabase : supabasePublic, async (payload) => {
+    const unsubscribe = subscribeToBannerChanges(supabasePublic, async (payload) => {
       logBanner('info', 'Evento Realtime recebido', payload);
       // Log explícito solicitado: bypass de cache após evento realtime
       logBanner('info', 'Bypass de cache após realtime');
@@ -143,7 +143,8 @@ export default function BannerSlider() {
     }
 
     try {
-      const client = isAdmin ? supabase : supabasePublic;
+      // Sempre usar cliente público para garantir exibição para usuários não logados
+      const client = supabasePublic;
       const bannersData = await fetchActiveBanners(client, { includeInactive: isAdmin });
       // Se a consulta retornar zero, manter os banners anteriores (não-fallback) para evitar sumir na UI
       if (!bannersData || bannersData.length === 0) {
@@ -157,13 +158,10 @@ export default function BannerSlider() {
             const desktopPairs = prev.map((b) => [b.id, b.imagem_url] as const);
             setResolvedDesktop(Object.fromEntries(desktopPairs));
             const mobilePairs = prev.map((b) => {
-              if (!b.imagem_url_mobile) return [b.id, ''] as const;
-              try {
-                const renderUrl = toSupabaseRenderUrl(b.imagem_url_mobile, 1080);
-                return [b.id, renderUrl] as const;
-              } catch {
-                return [b.id, ''] as const;
-              }
+              const url = b.imagem_url_mobile && b.imagem_url_mobile.trim() !== ''
+                ? b.imagem_url_mobile
+                : b.imagem_url;
+              return [b.id, url] as const;
             });
             setResolvedMobile(Object.fromEntries(mobilePairs));
           } catch (e) {
@@ -215,15 +213,12 @@ export default function BannerSlider() {
         setResolvedDesktop(resolvedDesktopObj);
         logBanner('debug', 'Desktop URLs resolvidas (originais)', resolvedDesktopObj);
 
-        // URLs mobile - usar transformação específica de 1080x1080
+        // URLs mobile - usar URL original sem transformações; fallback para desktop
         const mobilePairs = bannersData.map((b) => {
-          if (!b.imagem_url_mobile) return [b.id, ''] as const;
-          try {
-            const renderUrl = toSupabaseRenderUrl(b.imagem_url_mobile, 1080);
-            return [b.id, renderUrl] as const;
-          } catch {
-            return [b.id, ''] as const;
-          }
+          const url = b.imagem_url_mobile && b.imagem_url_mobile.trim() !== ''
+            ? b.imagem_url_mobile
+            : b.imagem_url;
+          return [b.id, url] as const;
         });
         const resolvedMobileObj = Object.fromEntries(mobilePairs);
         setResolvedMobile(resolvedMobileObj);
@@ -338,8 +333,8 @@ export default function BannerSlider() {
     );
   }
 
-  if (banners.length === 0) {
-    return null; // Não exibe nada se não houver banners
+  if (banners.length === 0 || banners.every(banner => !banner.id)) {
+    return null; // Não exibe nada se não houver banners ou se todos os banners não têm ID
   }
 
   return (
@@ -352,7 +347,7 @@ export default function BannerSlider() {
         {banners.map((banner) => (
           <div
             key={banner.id}
-            className="min-w-full h-full relative cursor-pointer"
+            className={`min-w-full h-full relative ${banner.link_destino ? 'cursor-pointer' : 'cursor-default'}`}
             onClick={() => handleBannerClick(banner)}
           >
             <picture>
@@ -367,17 +362,19 @@ export default function BannerSlider() {
                   opacity: 1,
                 }}
                 loading="lazy"
-                onAbort={(e) => {
-                  const target = e.target as HTMLImageElement;
-                  target.style.opacity = '1';
-                  target.src = '/placeholder-large.svg';
-                }}
-                onError={(e) => {
-                  const target = e.target as HTMLImageElement;
-                  target.style.opacity = '1';
-                  target.src = '/placeholder-large.svg';
-                }}
-              />
+              onAbort={(e) => {
+                const target = e.target as HTMLImageElement;
+                target.style.opacity = '1';
+                const desktop = resolvedDesktop[banner.id];
+                target.src = desktop ?? '/placeholder-large.svg';
+              }}
+              onError={(e) => {
+                const target = e.target as HTMLImageElement;
+                target.style.opacity = '1';
+                const desktop = resolvedDesktop[banner.id];
+                target.src = desktop ?? '/placeholder-large.svg';
+              }}
+            />
             </picture>
             
             {/* Conteúdo do banner */}
@@ -393,8 +390,16 @@ export default function BannerSlider() {
                     {banner.subtitulo}
                   </p>
                 )}
-                {banner.link_destino && banner.texto_botao && (
-                  <button className="bg-pink-600 hover:bg-pink-700 text-white px-6 py-3 rounded-lg font-medium transition-colors">
+                {banner.texto_botao && (
+                  <button 
+                    className="bg-pink-600 hover:bg-pink-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (banner.link_destino) {
+                        window.open(banner.link_destino, '_blank');
+                      }
+                    }}
+                  >
                     {banner.texto_botao}
                   </button>
                 )}

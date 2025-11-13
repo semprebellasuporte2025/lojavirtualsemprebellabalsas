@@ -43,8 +43,9 @@ CREATE POLICY "Banners são visíveis publicamente" ON public.banners
     FOR SELECT USING (ativo = true);
 
 -- Política para administradores (CRUD completo)
-CREATE POLICY "Usuários autenticados podem gerenciar banners" ON public.banners
-    FOR ALL USING (true);
+CREATE POLICY "Administradores podem gerenciar banners" ON public.banners
+    FOR ALL USING (auth.role() = 'authenticated' AND 
+                 EXISTS (SELECT 1 FROM public.usuarios_admin WHERE id = auth.uid() AND ativo = true));
 
 -- Conceder permissões
 GRANT SELECT ON public.banners TO anon, authenticated;
