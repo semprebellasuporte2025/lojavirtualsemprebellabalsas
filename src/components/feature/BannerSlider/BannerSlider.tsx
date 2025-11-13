@@ -29,6 +29,7 @@ export default function BannerSlider() {
   const [loading, setLoading] = useState(true);
   const [resolvedDesktop, setResolvedDesktop] = useState<Record<string, string>>({});
   const [resolvedMobile, setResolvedMobile] = useState<Record<string, string>>({});
+  const [isMobile, setIsMobile] = useState(false);
   const cacheRef = useRef<{
     banners: Banner[];
     timestamp: number;
@@ -66,6 +67,28 @@ export default function BannerSlider() {
       unsubscribe();
     };
   }, [isAdmin]);
+
+  // Detecta viewport mobile para decidir qual URL usar diretamente no <img>
+  useEffect(() => {
+    try {
+      const mq = window.matchMedia('(max-width: 767px)');
+      const handler = (e: MediaQueryListEvent | MediaQueryList) => {
+        // MediaQueryListEvent em navegadores modernos; MediaQueryList no primeiro set
+        const matches = 'matches' in e ? (e as MediaQueryListEvent).matches : (e as MediaQueryList).matches;
+        setIsMobile(!!matches);
+      };
+      // Inicial
+      setIsMobile(mq.matches);
+      // Listener
+      mq.addEventListener?.('change', handler as any);
+      // Fallback para Safari antigo
+      mq.addListener?.(handler as any);
+      return () => {
+        mq.removeEventListener?.('change', handler as any);
+        mq.removeListener?.(handler as any);
+      };
+    } catch {}
+  }, []);
 
   // Quando detectar admin, forçar refetch imediato ignorando cache
   useEffect(() => {
@@ -117,6 +140,20 @@ export default function BannerSlider() {
         } else {
           logBanner('info', 'Cache sessionStorage HIT', { count: cachedSession.length });
           setBanners(cachedSession);
+          // Recalcular URLs resolvidas a partir do cache
+          try {
+            const desktopPairs = cachedSession.map((b) => [b.id, b.imagem_url] as const);
+            setResolvedDesktop(Object.fromEntries(desktopPairs));
+            const mobilePairs = cachedSession.map((b) => {
+              const url = b.imagem_url_mobile && b.imagem_url_mobile.trim() !== ''
+                ? b.imagem_url_mobile
+                : b.imagem_url;
+              return [b.id, url] as const;
+            });
+            setResolvedMobile(Object.fromEntries(mobilePairs));
+          } catch (e) {
+            logBanner('warn', 'Falha ao recalcular URLs resolvidas do cache de sessão', e);
+          }
           // Atualiza last good
           if (cachedSession.length > 0) lastGoodRef.current = cachedSession;
           setLoading(false);
@@ -135,6 +172,20 @@ export default function BannerSlider() {
         } else {
           logBanner('info', 'Cache in-memory HIT', { count: cacheRef.current.banners.length });
           setBanners(cacheRef.current.banners);
+          // Recalcular URLs resolvidas a partir do cache em memória
+          try {
+            const desktopPairs = cacheRef.current.banners.map((b) => [b.id, b.imagem_url] as const);
+            setResolvedDesktop(Object.fromEntries(desktopPairs));
+            const mobilePairs = cacheRef.current.banners.map((b) => {
+              const url = b.imagem_url_mobile && b.imagem_url_mobile.trim() !== ''
+                ? b.imagem_url_mobile
+                : b.imagem_url;
+              return [b.id, url] as const;
+            });
+            setResolvedMobile(Object.fromEntries(mobilePairs));
+          } catch (e) {
+            logBanner('warn', 'Falha ao recalcular URLs resolvidas do cache em memória', e);
+          }
           if (cacheRef.current.banners.length > 0) lastGoodRef.current = cacheRef.current.banners;
           setLoading(false);
           return;
@@ -351,11 +402,12 @@ export default function BannerSlider() {
             onClick={() => handleBannerClick(banner)}
           >
             <picture>
-              {resolvedMobile[banner.id] && (
-                <source media="(max-width: 767px)" srcSet={resolvedMobile[banner.id]} />
-              )}
               <img
-                src={resolvedDesktop[banner.id] ?? '/placeholder-large.svg'}
+                src={
+                  isMobile
+                    ? (resolvedMobile[banner.id] ?? resolvedDesktop[banner.id] ?? '/placeholder-large.svg')
+                    : (resolvedDesktop[banner.id] ?? '/placeholder-large.svg')
+                }
                 alt={banner.titulo || 'Banner'}
                 className="w-full h-full object-cover object-top"
                 style={{
@@ -374,7 +426,7 @@ export default function BannerSlider() {
                 const desktop = resolvedDesktop[banner.id];
                 target.src = desktop ?? '/placeholder-large.svg';
               }}
-            />
+              />
             </picture>
             
             {/* Conteúdo do banner */}
