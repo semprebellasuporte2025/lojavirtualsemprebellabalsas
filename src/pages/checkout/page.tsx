@@ -30,14 +30,15 @@ export default function CheckoutPage() {
   // Itens do carrinho vindos da store
   const cartItems: CartItemType[] = items as CartItemType[];
   // Frete vindo da navegação (fallbacks: custo 0 e método "A definir")
-  const navState = location.state as { shippingCost?: number; shippingMethod?: string } | undefined;
+  const navState = location.state as { shippingCost?: number; shippingMethod?: string; coupon?: { nome: string; desconto_percentual: number } } | undefined;
   const shippingData = {
     cost: navState?.shippingCost ?? 0,
     method: navState?.shippingMethod ?? 'A definir'
   };
 
   const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-  const total = subtotal + shippingData.cost;
+  const couponDiscount = navState?.coupon ? subtotal * ((Number(navState.coupon.desconto_percentual) || 0) / 100) : 0;
+  const total = subtotal + shippingData.cost - couponDiscount;
 
   // Submissão e toasts são tratados dentro de CheckoutForm
 
@@ -84,6 +85,7 @@ export default function CheckoutPage() {
               subtotal={subtotal}
               shippingData={shippingData}
               total={total}
+              coupon={navState?.coupon}
             />
           ) : (
             <div className="text-center py-16">

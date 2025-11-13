@@ -94,6 +94,14 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       ],
     },
     {
+      title: 'Cupons',
+      icon: 'ri-ticket-line',
+      submenu: [
+        { title: 'Cadastrar Cupom', path: '/paineladmin/cupons/cadastrar' },
+        { title: 'Listar Cupons', path: '/paineladmin/cupons/listar' },
+      ],
+    },
+    {
       title: 'Link Instagram',
       icon: 'ri-instagram-line',
       submenu: [
@@ -145,7 +153,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
   // Ocultar menus restritos para atendente
   const displayMenuItems = isAtendente
-    ? menuItems.filter((item) => item.title !== 'Usuários' && item.title !== 'Configurações')
+    ? menuItems.filter((item) => item.title !== 'Usuários' && item.title !== 'Configurações' && item.title !== 'Cupons')
     : menuItems;
 
   return (

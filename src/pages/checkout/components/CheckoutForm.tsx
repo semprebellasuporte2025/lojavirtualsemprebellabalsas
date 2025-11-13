@@ -20,9 +20,10 @@ interface CheckoutFormProps {
   subtotal: number;
   shippingData: { cost: number; method: string };
   total: number;
+  coupon?: { nome: string; desconto_percentual: number };
 }
 
-export default function CheckoutForm({ cartItems, subtotal, shippingData, total }: CheckoutFormProps) {
+export default function CheckoutForm({ cartItems, subtotal, shippingData, total, coupon }: CheckoutFormProps) {
   const { user } = useAuth();
   const { clearCart } = useCart();
   const [loading, setLoading] = useState(false);
@@ -44,10 +45,11 @@ export default function CheckoutForm({ cartItems, subtotal, shippingData, total 
     paymentMethod: 'pix'
   });
 
-  // Calcular desconto de 10% para pagamento via PIX
+  // Calcular descontos
   const hasPixDiscount = formData.paymentMethod === 'pix';
-  const discountAmount = hasPixDiscount ? subtotal * 0.1 : 0;
-  const finalTotal = hasPixDiscount ? total - discountAmount : total;
+  const pixDiscountAmount = hasPixDiscount ? subtotal * 0.1 : 0;
+  const couponDiscountAmount = coupon ? subtotal * ((Number(coupon.desconto_percentual) || 0) / 100) : 0;
+  const finalTotal = total - pixDiscountAmount;
 
   // Helpers CPF
   const formatCPF = (value: string) => {
@@ -309,9 +311,9 @@ export default function CheckoutForm({ cartItems, subtotal, shippingData, total 
               estado: formData.estado
             },
             subtotal: subtotal,
-            desconto: 0,
+            desconto: pixDiscountAmount + couponDiscountAmount,
             frete: shippingData.cost,
-            total: total,
+            total: finalTotal,
             status: 'pendente',
             forma_pagamento: formData.paymentMethod
           }
@@ -327,26 +329,46 @@ export default function CheckoutForm({ cartItems, subtotal, shippingData, total 
       // Inserir itens do pedido
       const itensParaInserir = cartItems.map(item => ({
         pedido_id: pedido.id,
-        produto_id: item.id.toString(),
+        produto_id: item.id.split('|')[0], // Extrai apenas o ID do produto (remove tamanho e cor)
         nome: item.name,
         quantidade: item.quantity,
         preco_unitario: item.price,
         subtotal: item.price * item.quantity,
         tamanho: item.size || null,
         cor: item.color || null,
-        material: item.material || null,
         imagem: item.image || null
       }));
 
-      const { error: itensError } = await supabase
-        .from('itens_pedido')
-        .insert(itensParaInserir);
+      // Usar RPC para inserir itens do pedido e evitar problemas de column filtering
+      const { error: itensError } = await supabase.rpc('inserir_itens_pedido', {
+        itens: itensParaInserir.map(item => ({
+          pedido_id: item.pedido_id,
+          produto_id: item.produto_id,
+          nome: item.nome,
+          quantidade: item.quantidade,
+          preco_unitario: item.preco_unitario,
+          subtotal: item.subtotal,
+          tamanho: item.tamanho,
+          cor: item.cor,
+          imagem: item.imagem
+        }))
+      });
 
       if (itensError) {
         const msg = String((itensError as any)?.message || '');
         console.error('Erro ao inserir itens do pedido:', itensError);
         if (/column\s+.*material.*does not exist|material.*column/i.test(msg)) {
-          const itensSemMaterial = itensParaInserir.map(({ material, ...rest }) => ({ ...rest }));
+          const itensSemMaterial = itensParaInserir.map(item => ({
+            pedido_id: item.pedido_id,
+            produto_id: item.produto_id,
+            nome: item.nome,
+            quantidade: item.quantidade,
+            preco_unitario: item.preco_unitario,
+            subtotal: item.subtotal,
+            tamanho: item.tamanho,
+            cor: item.cor,
+            imagem: item.imagem
+          }));
           const { error: itensFallbackError } = await supabase
             .from('itens_pedido')
             .insert(itensSemMaterial);
@@ -423,7 +445,7 @@ export default function CheckoutForm({ cartItems, subtotal, shippingData, total 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
       <div className="lg:col-span-2">
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form id="checkout-form" onSubmit={handleSubmit} className="space-y-6">
           {/* Dados do Cliente */}
           <div className="bg-white rounded-lg shadow-sm border p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">
@@ -599,7 +621,7 @@ export default function CheckoutForm({ cartItems, subtotal, shippingData, total 
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-pink-600 text-white py-4 rounded-lg font-semibold text-lg hover:bg-pink-700 transition-colors disabled:opacity-50 whitespace-nowrap cursor-pointer"
+            className="w-full bg-pink-600 text-white py-4 rounded-lg font-semibold text-lg hover:bg-pink-700 transition-colors disabled:opacity-50 whitespace-nowrap cursor-pointer hidden lg:block"
           >
             {loading ? (
               <div className="flex items-center justify-center">
@@ -651,10 +673,16 @@ export default function CheckoutForm({ cartItems, subtotal, shippingData, total 
               <span className="text-gray-600">Frete ({shippingData.method})</span>
               <span>R$ {shippingData.cost.toFixed(2)}</span>
             </div>
+            {coupon && (
+              <div className="flex justify-between text-sm">
+                <span className="text-green-600">Desconto Cupom ({Number(coupon.desconto_percentual)}%)</span>
+                <span className="text-green-600">-R$ {couponDiscountAmount.toFixed(2)}</span>
+              </div>
+            )}
             {hasPixDiscount && (
               <div className="flex justify-between text-sm">
                 <span className="text-green-600">Desconto PIX (10%)</span>
-                <span className="text-green-600">-R$ {discountAmount.toFixed(2)}</span>
+                <span className="text-green-600">-R$ {pixDiscountAmount.toFixed(2)}</span>
               </div>
             )}
             <hr className="my-2" />
@@ -669,6 +697,28 @@ export default function CheckoutForm({ cartItems, subtotal, shippingData, total 
               <i className="ri-shield-check-line mr-2"></i>
               <span className="text-sm font-medium">Compra 100% Segura</span>
             </div>
+          </div>
+
+          {/* Botão Finalizar Pedido para mobile */}
+          <div className="mt-6 lg:hidden">
+            <button
+              type="submit"
+              disabled={loading}
+              form="checkout-form"
+              className="w-full bg-pink-600 text-white py-4 rounded-lg font-semibold text-lg hover:bg-pink-700 transition-colors disabled:opacity-50 whitespace-nowrap cursor-pointer"
+            >
+              {loading ? (
+                <div className="flex items-center justify-center">
+                  <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                  Finalizando Pedido...
+                </div>
+              ) : (
+                <>
+                  <i className="ri-secure-payment-line mr-2"></i>
+                  Finalizar Pedido
+                </>
+              )}
+            </button>
           </div>
         </div>
       </div>

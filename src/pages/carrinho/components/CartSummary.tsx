@@ -1,28 +1,95 @@
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { supabase } from '@/lib/supabase';
+import { useToast } from '@/hooks/useToast';
 
 interface CartSummaryProps {
   subtotal: number;
   shipping: any;
-  onFinalizePurchase: (paymentMethod: string) => void;
+  onFinalizePurchase: (paymentMethod: string, appliedCoupon?: { nome: string; desconto_percentual: number }) => void;
 }
 
 export default function CartSummary({ subtotal, shipping, onFinalizePurchase }: CartSummaryProps) {
+  const { showToast } = useToast();
   const [couponCode, setCouponCode] = useState('');
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('pix');
+  const [isCheckingCoupon, setIsCheckingCoupon] = useState(false);
+  const [couponValid, setCouponValid] = useState(false);
+  const [couponData, setCouponData] = useState<{ nome: string; desconto_percentual: number } | null>(null);
+  const [appliedCoupon, setAppliedCoupon] = useState<{ nome: string; desconto_percentual: number } | null>(null);
 
   const shippingCost = typeof shipping?.price === 'number' ? shipping.price : null;
   const shippingMethod = shipping?.name || '';
 
   const isShippingSelected = !!shippingMethod;
 
-  const discount = selectedPaymentMethod === 'pix' ? subtotal * 0.1 : 0;
+  const pixDiscount = selectedPaymentMethod === 'pix' ? subtotal * 0.1 : 0;
+  const couponDiscount = useMemo(() => {
+    if (!appliedCoupon) return 0;
+    const pct = Number(appliedCoupon.desconto_percentual) || 0;
+    return subtotal * (pct / 100);
+  }, [subtotal, appliedCoupon]);
+  const discount = pixDiscount + couponDiscount;
   const total = subtotal + (shippingCost ?? 0) - discount;
+
+  // validação de cupom com debounce
+  useEffect(() => {
+    const code = couponCode.trim();
+    if (!code) {
+      // Ao apagar o código, interrompe qualquer estado de verificação e reseta tudo
+      setIsCheckingCoupon(false);
+      setCouponValid(false);
+      setCouponData(null);
+      setAppliedCoupon(null);
+      return;
+    }
+    setIsCheckingCoupon(true);
+    const handle = setTimeout(async () => {
+      try {
+        const codeUpper = code.toUpperCase();
+        const { data, error } = await supabase
+          .from('cupons')
+          .select('id, nome, desconto_percentual, inicio_em, fim_em, status')
+          .eq('nome', codeUpper)
+          .limit(1);
+        if (error) {
+          console.error('Erro ao validar cupom:', error);
+          setCouponValid(false);
+          setCouponData(null);
+        } else if (data && data.length > 0) {
+          const c = data[0] as any;
+          const now = new Date();
+          const startsOk = !c.inicio_em || new Date(c.inicio_em) <= now;
+          const endsOk = !c.fim_em || new Date(c.fim_em) >= now;
+          const isActive = c.status === 'ativo';
+          const valid = startsOk && endsOk && isActive;
+          setCouponValid(valid);
+          setCouponData(valid ? { nome: c.nome, desconto_percentual: Number(c.desconto_percentual) } : null);
+        } else {
+          setCouponValid(false);
+          setCouponData(null);
+        }
+      } catch (e) {
+        console.error('Erro inesperado ao validar cupom:', e);
+        setCouponValid(false);
+        setCouponData(null);
+      } finally {
+        setIsCheckingCoupon(false);
+      }
+    }, 400);
+    return () => clearTimeout(handle);
+  }, [couponCode]);
 
   const handleFinalize = () => {
     if (isShippingSelected) {
-      onFinalizePurchase(selectedPaymentMethod);
+      onFinalizePurchase(selectedPaymentMethod, appliedCoupon || undefined);
     }
+  };
+
+  const handleApplyCoupon = async () => {
+    if (!couponValid || !couponData) return;
+    setAppliedCoupon({ ...couponData });
+    showToast(`Cupom ${couponData.nome} aplicado (-${couponData.desconto_percentual}%).`, 'success');
   };
 
   return (
@@ -128,14 +195,31 @@ export default function CartSummary({ subtotal, shipping, onFinalizePurchase }: 
           <input
             type="text"
             value={couponCode}
-            onChange={(e) => setCouponCode(e.target.value)}
+            onChange={(e) => { setCouponCode(e.target.value); setAppliedCoupon(null); }}
             placeholder="Digite o código"
             className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent text-sm"
           />
-          <button className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors cursor-pointer whitespace-nowrap text-sm">
-            Aplicar
+          <button
+            onClick={handleApplyCoupon}
+            disabled={!couponValid || isCheckingCoupon || !!appliedCoupon}
+            className={`px-4 py-2 rounded-lg transition-colors whitespace-nowrap text-sm ${
+              !couponValid || isCheckingCoupon || !!appliedCoupon
+                ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                : 'bg-pink-600 text-white hover:bg-pink-700 cursor-pointer'
+            }`}
+          >
+            {isCheckingCoupon ? 'Verificando...' : appliedCoupon ? 'Aplicado' : 'Aplicar'}
           </button>
         </div>
+        {couponCode && (
+          <p className={`mt-2 text-sm ${couponValid ? 'text-green-600' : 'text-red-600'}`}>
+            {isCheckingCoupon
+              ? 'Validando cupom...'
+              : couponValid && couponData
+                ? `Cupom válido: ${couponData.desconto_percentual}% de desconto`
+                : 'Cupom inválido, expirado ou inativo'}
+          </p>
+        )}
       </div>
 
       {/* Botão Finalizar */}

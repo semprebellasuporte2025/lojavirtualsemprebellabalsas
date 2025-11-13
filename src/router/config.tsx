@@ -46,6 +46,9 @@ const AdminClientesEditarPage = lazy(() => import('../pages/admin/clientes/edita
 const AdminEstoqueEntradaPage = lazy(() => import('../pages/admin/estoque/entrada/page'));
 const AdminEstoqueListarPage = lazy(() => import('../pages/admin/estoque/listar/page'));
 const AdminVendasListarPage = lazy(() => import('../pages/admin/vendas/listar/page'));
+const AdminCuponsCadastrarPage = lazy(() => import('../pages/admin/cupons/cadastrar/page'));
+const AdminCuponsListarPage = lazy(() => import('../pages/admin/cupons/listar/page'));
+const AdminCuponsEditarPage = lazy(() => import('../pages/admin/cupons/editar/page'));
 const AdminLinkInstagramCadastrarPage = lazy(() => import('../pages/admin/link-instagram/cadastrar/page'));
 const AdminLinkInstagramListarPage = lazy(() => import('../pages/admin/link-instagram/listar/page'));
 const AdminLinkInstagramEditarPage = lazy(() => import('../pages/admin/link-instagram/editar/page'));
@@ -183,6 +186,10 @@ const routes: RouteObject[] = [
         element: <Suspense fallback={<LoadingFallback />}><AdminClientesListarPage /></Suspense>,
       },
       {
+        path: 'clientes/editar/:id',
+        element: <Suspense fallback={<LoadingFallback />}><AdminClientesEditarPage /></Suspense>,
+      },
+      {
         path: 'estoque/entrada',
         element: <Suspense fallback={<LoadingFallback />}><AdminEstoqueEntradaPage /></Suspense>,
       },
@@ -193,6 +200,18 @@ const routes: RouteObject[] = [
       {
         path: 'vendas/listar',
         element: <Suspense fallback={<LoadingFallback />}><AdminVendasListarPage /></Suspense>,
+      },
+      {
+        path: 'cupons/cadastrar',
+        element: <Suspense fallback={<LoadingFallback />}><AdminCuponsCadastrarPage /></Suspense>,
+      },
+      {
+        path: 'cupons/listar',
+        element: <Suspense fallback={<LoadingFallback />}><AdminCuponsListarPage /></Suspense>,
+      },
+      {
+        path: 'cupons/editar/:id',
+        element: <Suspense fallback={<LoadingFallback />}><AdminCuponsEditarPage /></Suspense>,
       },
       {
         path: 'link-instagram/cadastrar',

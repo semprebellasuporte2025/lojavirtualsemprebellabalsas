@@ -20,7 +20,7 @@ interface Movimentacao {
 }
 
 export default function ListarEstoquePage() {
-  const { toast, showToast, hideToast } = useToast();
+  const { showToast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
   const [movimentacoes, setMovimentacoes] = useState<Movimentacao[]>([]);
   const [filtros, setFiltros] = useState({
@@ -368,13 +368,7 @@ export default function ListarEstoquePage() {
         </div>
       </div>
       
-      {toast && (
-        <Toast
-          message={toast.message}
-          type={toast.type}
-          onClose={hideToast}
-        />
-      )}
+
     </AdminLayout>
   );
 }

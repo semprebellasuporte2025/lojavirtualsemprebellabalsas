@@ -28,9 +28,9 @@ export default function CarrinhoPage() {
     setShippingMethod(method);
   };
 
-  const handleFinalizePurchase = (paymentMethod: string) => {
+  const handleFinalizePurchase = (paymentMethod: string, appliedCoupon?: { nome: string; desconto_percentual: number }) => {
     if (shippingMethod) {
-      navigate('/checkout', { state: { shippingCost, shippingMethod, paymentMethod } });
+      navigate('/checkout', { state: { shippingCost, shippingMethod, paymentMethod, coupon: appliedCoupon } });
     }
   };
 
