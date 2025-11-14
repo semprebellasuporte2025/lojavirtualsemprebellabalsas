@@ -65,12 +65,12 @@ export default function HomePage() {
 
   const carregarProdutosRecentes = async (signal: AbortSignal) => {
     try {
-      // Usar diretamente a tabela produtos para evitar problemas com a view
+      // Usar a view que já soma estoque das variantes
       const { data, error } = await supabase
-        .from('produtos')
+        .from('products_with_ratings')
         .select('*, categorias(nome), variantes_produto(cor, cor_hex)')
         .eq('ativo', true)
-        .gt('estoque', 0) // Filtrar apenas produtos com estoque maior que zero
+        .gt('estoque', 0) // Filtrar apenas produtos com estoque maior que zero (estoque calculado pelas variantes)
         .order('created_at', { ascending: false })
         .limit(12)
         .abortSignal(signal);

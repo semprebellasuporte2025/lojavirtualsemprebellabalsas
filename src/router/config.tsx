@@ -69,6 +69,7 @@ const AdminDebugColorVariationsPage = lazy(() => import('../pages/admin/debug-co
 
 import ProtectedRoute from './ProtectedRoute';
 import AdminOnlyRoute from './AdminOnlyRoute';
+import AdminAliasRedirect from './AdminAliasRedirect';
 
 const routes: RouteObject[] = [
   {
@@ -141,6 +142,10 @@ const routes: RouteObject[] = [
     element: <Suspense fallback={<LoadingFallback />}><ObrigadoInscricaoPage /></Suspense>,
   },
   // Admin routes
+  {
+    path: '/admin/*',
+    element: <Suspense fallback={<LoadingFallback />}><AdminAliasRedirect /></Suspense>,
+  },
   {
     path: '/paineladmin',
     element: <ProtectedRoute />,

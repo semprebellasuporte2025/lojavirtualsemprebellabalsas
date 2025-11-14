@@ -57,18 +57,19 @@ serve(async (req) => {
       )
     }
 
-    // Inserir dados na tabela usuarios_admin
+    // Inserir dados na tabela usuarios_admin usando chave primária 'id'.
+    // Não definir 'data_admissao' explicitamente para evitar erro se a coluna tiver sido removida;
+    // quando existir, o DEFAULT cuidará disso.
     const { data: adminUser, error: dbError } = await supabaseClient
       .from('usuarios_admin')
       .insert({
         id: authUser.user.id,
         nome: nome,
         email: email,
-        tipo: tipo || 'admin',
-        departamento: departamento || 'Administração',
-        cargo: cargo || 'Administrador',
-        data_admissao: new Date().toISOString().split('T')[0],
-        ativo: true
+        tipo: (tipo || 'admin'),
+        departamento: (departamento || 'Administração'),
+        cargo: (cargo || 'Administrador'),
+        ativo: true,
       })
       .select()
       .single()

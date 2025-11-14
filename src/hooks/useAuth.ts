@@ -87,9 +87,9 @@ export const useAuth = () => {
     const checkActivity = () => {
       const lastActivity = localStorage.getItem('lastActivity');
       const now = Date.now();
-      const twoHours = 2 * 60 * 60 * 1000; // 2 horas em millisegundos
-      
-      if (lastActivity && (now - parseInt(lastActivity)) > twoHours) {
+      const IDLE_TIMEOUT_MS = 2 * 60 * 60 * 1000; // 2 horas em produção
+
+      if (lastActivity && (now - parseInt(lastActivity)) > IDLE_TIMEOUT_MS) {
         console.log('[Auth] Sessão expirada por inatividade (2h)');
         supabase.auth.signOut();
         return false;
@@ -109,12 +109,12 @@ export const useAuth = () => {
       document.addEventListener(event, handleActivity, true);
     });
 
-    // Verificar atividade a cada 5 minutos
+    // Verificar atividade periodicamente (intervalo seguro em produção)
     activityTimer = window.setInterval(() => {
       if (mounted && authState.user) {
         checkActivity();
       }
-    }, 5 * 60 * 1000); // 5 minutos
+    }, 60000);
 
     // Inicializar última atividade
     updateLastActivity();
@@ -241,6 +241,8 @@ export const useAuth = () => {
             isUsuario: adminStatus.isUsuario,
             adminName: displayName,
           });
+          // Reinicia contador de inatividade após login
+          updateLastActivity();
         } else {
           if (safetyTimer) clearTimeout(safetyTimer);
           setAuthState({
@@ -330,6 +332,8 @@ export const useAuth = () => {
               isUsuario: adminStatus.isUsuario,
               adminName: displayName,
             });
+            // Reinicia contador de inatividade após eventos de login
+            updateLastActivity();
             
             console.log('[Auth] ✅ Estado atualizado com sucesso');
           } catch (error) {

@@ -13,7 +13,7 @@ async function verificarEstoque() {
   try {
     // 1. Buscar todos os produtos ativos
     const { data: produtos, error } = await supabase
-      .from('produtos')
+      .from('products_with_ratings')
       .select('id, nome, estoque, ativo')
       .eq('ativo', true)
       .order('nome');
@@ -78,7 +78,7 @@ async function verificarEstoque() {
     console.log('💡 RECOMENDAÇÕES:');
     console.log('   1. Verifique se o estoque está realmente zerado no banco');
     console.log('   2. Confirme se há variantes com estoque disponível');
-    console.log('   3. Atualize o campo estoque dos produtos que devem ter estoque');
+    console.log('   3. Atualize o estoque nas variantes dos produtos (campo variantes_produto.estoque)');
     console.log('   4. Verifique a lógica em ProductInfo.tsx para cálculo de estoque');
 
   } catch (error) {

@@ -30,10 +30,9 @@ const getSingletonClient = (): SupabaseClient => {
       storage: window.localStorage,
       storageKey: 'semprebella-auth-token',
     },
+    // Removido header personalizado que pode causar problemas com Edge Functions
     global: {
-      headers: {
-        'X-Client-Info': 'semprebella-admin',
-      },
+      headers: {},
     },
     realtime: {
       params: {

@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '../../../../lib/supabase';
 import AdminLayout from '../../../../components/feature/AdminLayout';
 import AdminFormButtons from '../../../../components/feature/AdminFormButtons/AdminFormButtons';
 import { useToast } from '../../../../hooks/useToast';
@@ -17,22 +18,19 @@ export default function CadastrarUsuarioPage() {
     email: '',
     senha: '',
     confirmarSenha: '',
-    tipo: '',
-    departamento: '',
-    cargo: '',
+    tipo: 'admin',
+    departamento: 'Administração',
+    cargo: 'Administrador',
     ativo: true
   });
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
-  // Verificar se o usuário tem permissão para cadastrar usuários
-  useEffect(() => {
-    if (!loading && !isAdmin) {
-      showToast('Apenas administradores podem cadastrar usuários', 'error');
-      navigate('/paineladmin');
-    }
-  }, [loading, isAdmin, navigate, showToast]);
+  // Removido guarda redundante de permissão aqui; o AdminLayout já
+  // restringe acesso ao painel para admins/atendentes e oculta menus
+  // para perfis sem acesso. Isso evita redirecionamentos durante o envio.
 
   if (loading) {
     return (
@@ -42,9 +40,7 @@ export default function CadastrarUsuarioPage() {
     );
   }
 
-  if (!isAdmin) {
-    return null; // Não renderiza nada enquanto redireciona
-  }
+  // Não esconder a página aqui para evitar telas em branco em condições de corrida.
 
   const tiposUsuario = [
     { id: 'admin', nome: 'Administrador' },
@@ -52,6 +48,7 @@ export default function CadastrarUsuarioPage() {
   ];
 
   const departamentos = [
+    'Administração',
     'Vendas',
     'Marketing',
     'Financeiro',
@@ -85,37 +82,62 @@ export default function CadastrarUsuarioPage() {
     }
 
     try {
-      // Função de cadastro local (fallback para quando o Supabase não está disponível)
-      // Simular uma resposta bem-sucedida já que a função do Supabase não existe mais
-      const result = { 
-        success: true, 
-        message: 'Usuário cadastrado localmente (modo fallback)' 
-      };
+      setIsSaving(true);
+      console.log('Enviando cadastro de usuário', {
+        nome: formData.nome,
+        email: formData.email,
+        tipo: formData.tipo || 'admin',
+        departamento: formData.departamento || 'Administração',
+        cargo: formData.cargo || 'Administrador',
+      });
+      // Invoca a Edge Function oficial para cadastrar administradores
+      const { data, error } = await supabase.functions.invoke('cadastrar-admin', {
+        body: {
+          nome: formData.nome,
+          email: formData.email,
+          senha: formData.senha,
+          tipo: formData.tipo || 'admin',
+          departamento: formData.departamento || 'Administração',
+          cargo: formData.cargo || 'Administrador',
+        }
+      });
 
-      if (result.success) {
+      if (error) {
+        const errInfo: any = {
+          name: (error as any)?.name,
+          message: (error as any)?.message,
+          context: (error as any)?.context ?? null,
+        };
+        console.error('Erro na função cadastrar-admin:', errInfo);
+        showToast(errInfo.message || 'Erro ao cadastrar usuário', 'error');
+        return;
+      }
+
+      if (data?.success) {
         showToast('Usuário cadastrado com sucesso!', 'success');
-        // Forçar redirecionamento para o painel admin, ignorando qualquer lógica automática
+        // Redireciona para a listagem para visualizar o novo usuário
         setTimeout(() => {
           navigate('/paineladmin/usuarios/listar');
-        }, 100);
-
+        }, 300);
         // Limpar formulário
         setFormData({
           nome: '',
           email: '',
           senha: '',
           confirmarSenha: '',
-          tipo: '',
-          departamento: '',
-          cargo: '',
+          tipo: 'admin',
+          departamento: 'Administração',
+          cargo: 'Administrador',
           ativo: true
         });
       } else {
-        showToast(result.error || 'Erro ao cadastrar usuário', 'error');
+        showToast('Falha ao cadastrar usuário (resposta inválida)', 'error');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao cadastrar usuário:', error);
-      showToast('Erro ao cadastrar usuário', 'error');
+      showToast(error?.message || 'Erro ao cadastrar usuário', 'error');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -318,7 +340,8 @@ export default function CadastrarUsuarioPage() {
                   <AdminFormButtons
                     onSave={handleSubmit}
                     onBack={() => window.history.back()}
-                    saveText="Salvar Usuário"
+                    saveText={isSaving ? 'Salvando...' : 'Salvar Usuário'}
+                    isSaveDisabled={isSaving}
                   />
 
                 </form>

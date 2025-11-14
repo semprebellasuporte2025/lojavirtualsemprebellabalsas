@@ -182,6 +182,27 @@ export default function ListarVendas() {
 
       console.log('Itens encontrados:', todosItens?.length || 0);
 
+      // Buscar nomes dos produtos para itens sem nome
+      const produtoIds = Array.from(new Set((todosItens || [])
+        .map((item: any) => item?.produto_id)
+        .filter((id: string | null | undefined) => !!id)));
+
+      let produtoNomePorId = new Map<string, string>();
+      if (produtoIds.length > 0) {
+        const { data: produtos, error: produtosError } = await supabase
+          .from('produtos')
+          .select('id, nome')
+          .in('id', produtoIds);
+
+        if (produtosError) {
+          console.warn('Falha ao buscar nomes de produtos:', produtosError.message);
+        } else {
+          produtos?.forEach((p: any) => {
+            if (p?.id) produtoNomePorId.set(p.id, p?.nome || '');
+          });
+        }
+      }
+
       // Criar mapa de itens por pedido_id
       const itensPorPedido = new Map<string, ItemPedido[]>();
       todosItens?.forEach(item => {
@@ -191,7 +212,7 @@ export default function ListarVendas() {
         itensPorPedido.get(item.pedido_id)?.push({
           id: item.id,
           produto_id: item.produto_id,
-          nome: item.nome,
+          nome: item.nome || produtoNomePorId.get(item.produto_id) || 'Produto não encontrado',
           quantidade: item.quantidade,
           preco_unitario: item.preco_unitario,
           subtotal: item.subtotal,

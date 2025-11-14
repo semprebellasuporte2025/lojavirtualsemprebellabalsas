@@ -25,11 +25,11 @@ export const useProductStock = (productIds: string[]) => {
         setLoading(true);
         setError(undefined);
 
-        // Buscar informações de estoque dos produtos diretamente da tabela products
-        const { data, error: supabaseError } = await supabase
-          .from('products')
-          .select('id, estoque')
-          .in('id', productIds)
+        // Buscar estoque real somando as variantes ativas por produto
+        const { data: variantes, error: supabaseError } = await supabase
+          .from('variantes_produto')
+          .select('produto_id, estoque, ativo')
+          .in('produto_id', productIds)
           .eq('ativo', true);
 
         if (supabaseError) {
@@ -37,15 +37,20 @@ export const useProductStock = (productIds: string[]) => {
         }
 
         // Mapear os resultados para o formato esperado
-        const stockData: ProductStockInfo[] = productIds.map(productId => {
-          const productData = data?.find(p => p.id === productId);
-          const stock = productData?.estoque || 0;
-          return {
-            productId,
-            stock: stock,
-            loading: false
-          };
+        // Agregar estoque por produto_id
+        const aggregatedMap = new Map<string, number>();
+        (variantes || []).forEach(v => {
+          const pid = v?.produto_id;
+          const qtd = Number(v?.estoque ?? 0);
+          if (!pid) return;
+          aggregatedMap.set(pid, (aggregatedMap.get(pid) || 0) + qtd);
         });
+
+        const stockData: ProductStockInfo[] = productIds.map(productId => ({
+          productId,
+          stock: aggregatedMap.get(productId) || 0,
+          loading: false
+        }));
 
         setStockInfo(stockData);
       } catch (err) {

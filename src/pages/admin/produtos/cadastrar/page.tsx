@@ -120,7 +120,6 @@ const CadastrarProdutoCopy = () => {
           tamanho: variation.size,
           cor: variation.color,
           cor_hex: variation.colorHex,
-          estoque: variation.stock,
           sku: variation.sku || formData.referencia
         }))
       };
@@ -179,7 +178,6 @@ const CadastrarProdutoCopy = () => {
         tamanho: variation.size,
         cor: variation.color,
         cor_hex: variation.colorHex,
-        estoque: variation.stock,
         sku: variation.sku // Usar apenas o SKU específico da variação, não gerar automaticamente
       }));
 
@@ -686,10 +684,7 @@ const CadastrarProdutoCopy = () => {
                     <input type="color" value={variation.colorHex} onChange={(e) => updateVariation(variation.id, 'colorHex', e.target.value)} className="h-8 w-8 rounded-md border-gray-300" />
                   </div>
                 </div>
-                <div className="col-span-1">
-                  <label htmlFor={`stock-${variation.id}`} className="block text sm font-medium text-gray-700">Estoque</label>
-                  <input type="number" id={`stock-${variation.id}`} value={variation.stock} onChange={(e) => updateVariation(variation.id, 'stock', e.target.value === '' ? 0 : parseInt(e.target.value, 10))} className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
-                </div>
+                {/* Campo de estoque removido do cadastro; estoque é gerenciado por movimentações e disponibilidade das variantes */}
                 <div className="col-span-1 md:col-span-4">
                   <label htmlFor={`sku-${variation.id}`} className="block text-sm font-medium text-gray-700">SKU</label>
                   <input type="text" id={`sku-${variation.id}`} value={variation.sku} onChange={(e) => updateVariation(variation.id, 'sku', e.target.value)} className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="Opcional" />

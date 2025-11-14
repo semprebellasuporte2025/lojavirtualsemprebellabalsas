@@ -57,6 +57,13 @@ FOR INSERT
 TO authenticated
 WITH CHECK (true);
 
+-- Política para permitir que o service_role (funções edge) criem administradores
+CREATE POLICY "Service role pode criar administradores"
+ON public.usuarios_admin
+FOR INSERT
+TO service_role
+WITH CHECK (true);
+
 -- Política para permitir que usuários autenticados atualizem administradores
 CREATE POLICY "Usuários autenticados podem atualizar administradores"
 ON public.usuarios_admin
@@ -65,11 +72,26 @@ TO authenticated
 USING (true)
 WITH CHECK (true);
 
+-- Política para permitir que o service_role atualize administradores
+CREATE POLICY "Service role pode atualizar administradores"
+ON public.usuarios_admin
+FOR UPDATE
+TO service_role
+USING (true)
+WITH CHECK (true);
+
 -- Política para permitir que usuários autenticados excluam administradores
 CREATE POLICY "Usuários autenticados podem excluir administradores"
 ON public.usuarios_admin
 FOR DELETE
 TO authenticated
+USING (true);
+
+-- Política para permitir que o service_role exclua administradores
+CREATE POLICY "Service role pode excluir administradores"
+ON public.usuarios_admin
+FOR DELETE
+TO service_role
 USING (true);
 
 -- Remover trigger existente se houver

@@ -154,11 +154,12 @@ export default function CategoriaPage() {
       // Fallback caso a view falhe
       let result = data as Produto[] | null;
       if (error) {
+        // Usar a própria view como fallback, evitando dependência da coluna removida em produtos
         let fallback = supabase
-          .from('produtos')
+          .from('products_with_ratings')
           .select(`*, categorias(nome), variantes_produto(cor, cor_hex, tamanho)`)
           .eq('ativo', true)
-          .gt('estoque', 0); // Filtrar apenas produtos com estoque maior que zero
+          .gt('estoque', 0); // Estoque calculado a partir das variantes
         
         if (isDestaque) {
           fallback = fallback.eq('destaque', true);

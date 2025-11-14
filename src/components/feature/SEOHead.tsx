@@ -27,9 +27,8 @@ export default function SEOHead({
 }: SEOHeadProps) {
   useEffect(() => {
     // Update title
-    if (title) {
-      document.title = title;
-    }
+    // Produção: título da aba com marca + nome da página
+    document.title = title ? `Sempre Bella Balsas – ${title}` : 'Sempre Bella Balsas';
 
     // Update meta tags
     const updateMetaTag = (name: string, content: string, property = false) => {
