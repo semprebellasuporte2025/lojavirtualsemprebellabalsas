@@ -4,10 +4,7 @@
   "framework": "vite",
   "installCommand": "npm ci",
   "devCommand": "npm run dev",
-  "routes": [
-    { "handle": "filesystem" },
-    { "src": "/(.*)", "dest": "/index.html" }
-  ],
+
   "headers": [
     {
       "source": "/(.*)",
