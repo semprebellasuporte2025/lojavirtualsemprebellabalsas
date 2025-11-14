@@ -462,7 +462,7 @@ export default function ListarProdutosPage() {
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-2">
                         <a
-                          href={`/produto/${produto.id}`}
+                          href={`/produto/${produto.slug || produto.id}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           onClick={(e) => e.stopPropagation()}
@@ -535,7 +535,7 @@ export default function ListarProdutosPage() {
                   <p className="text-lg font-bold text-pink-600 dark:text-pink-400">R$ {produto.preco.toFixed(2)}</p>
                   <div className="flex justify-end gap-2 mt-4">
                         <a
-                          href={`/produto/${produto.id}`}
+                          href={`/produto/${produto.slug || produto.id}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           onClick={(e) => e.stopPropagation()}

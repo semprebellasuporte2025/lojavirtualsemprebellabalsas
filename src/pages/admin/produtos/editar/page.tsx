@@ -1,12 +1,12 @@
 
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import AdminLayout from '../../../../components/feature/AdminLayout';
 import AdminFormButtons from '../../../../components/feature/AdminFormButtons/AdminFormButtons';
 import { useToast } from '../../../../hooks/useToast';
 import { supabase } from '../../../../lib/supabase';
 import RichTextEditor from '../../../../components/base/RichTextEditor';
-import { AVAILABLE_COLORS, AVAILABLE_SIZES, findClosestColorName } from '../../../../constants/colors';
+import { AVAILABLE_COLORS, AVAILABLE_SIZES } from '../../../../constants/colors';
 import type { ColorOption } from '../../../../constants/colors';
 
 interface ProductVariation {
@@ -21,10 +21,9 @@ interface ProductVariation {
 const EditarProduto = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { toast, showToast, hideToast } = useToast();
+  const { showToast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [loadingProduct, setLoadingProduct] = useState(true);
-  const [isUploading, setIsUploading] = useState(false);
   const [isDeletingImage, setIsDeletingImage] = useState(false);
   const [deletingIndex, setDeletingIndex] = useState<number | null>(null);
 
@@ -264,7 +263,6 @@ const EditarProduto = () => {
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
-    setIsUploading(true);
     try {
       const MAX_SIZE_BYTES = 10 * 1024 * 1024;
       const ALLOWED_TYPES = new Set([
@@ -310,7 +308,6 @@ const EditarProduto = () => {
       });
 
       if (validFiles.length === 0) {
-        setIsUploading(false);
         return;
       }
 
@@ -332,24 +329,22 @@ const EditarProduto = () => {
           });
         if (error) {
           console.error('Erro no upload da imagem:', error);
-          showToast('Erro ao enviar imagem.', 'error');
-          return null;
-        }
-        const { data: publicUrlData } = supabase.storage
-          .from('imagens-produtos')
-          .getPublicUrl(data.path);
-        return publicUrlData.publicUrl;
-      });
+        showToast('Erro ao enviar imagem.', 'error');
+        return null;
+      }
+      const { data: publicUrlData } = supabase.storage
+        .from('imagens-produtos')
+        .getPublicUrl(data.path);
+      return publicUrlData.publicUrl;
+    });
 
-      const results = await Promise.all(uploads);
-      const publicUrls = results.filter((u): u is string => !!u);
-      setImages((prev) => [...prev, ...publicUrls]);
-    } catch (err) {
-      console.error('Falha geral no upload de imagens:', err);
-      showToast('Falha geral no upload de imagens.', 'error');
-    } finally {
-      setIsUploading(false);
-    }
+    const results = await Promise.all(uploads);
+    const publicUrls = results.filter((u): u is string => !!u);
+    setImages((prev) => [...prev, ...publicUrls]);
+  } catch (err) {
+    console.error('Falha geral no upload de imagens:', err);
+    showToast('Falha geral no upload de imagens.', 'error');
+  }
   };
 
   const removeImage = (index: number) => {

@@ -47,7 +47,12 @@ const CadastrarProdutoCopy = () => {
   const [categorias, setCategorias] = useState<{ id: string; nome: string }[]>([]);
   const saveAttemptsRef = useRef<number>(0); // Contador de tentativas de salvamento
   const isSavingRef = useRef<boolean>(false); // Proteção contra dupla execução
+  const nomeRef = useRef<HTMLInputElement>(null);
+  const categoriaRef = useRef<HTMLSelectElement>(null);
+  const precoRef = useRef<HTMLInputElement>(null);
   const precoPromocionalRef = useRef<HTMLInputElement>(null);
+  const materialRef = useRef<HTMLInputElement>(null);
+  const referenciaRef = useRef<HTMLInputElement>(null);
   const pesoRef = useRef<HTMLInputElement>(null);
   const alturaRef = useRef<HTMLInputElement>(null);
   const larguraRef = useRef<HTMLInputElement>(null);
@@ -66,6 +71,11 @@ const CadastrarProdutoCopy = () => {
       }
     };
     fetchCategorias();
+    
+    // Focar automaticamente no primeiro campo ao carregar a página
+    setTimeout(() => {
+      nomeRef.current?.focus();
+    }, 100);
   }, []);
 
 
@@ -502,6 +512,9 @@ const CadastrarProdutoCopy = () => {
                   name="nome"
                   value={formData.nome}
                   onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
+                  ref={nomeRef}
+                  onBlur={() => categoriaRef.current?.focus()}
+                  onKeyDown={(e) => { if (e.key === 'Enter') categoriaRef.current?.focus(); }}
                   className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                   required
                 />
@@ -522,6 +535,9 @@ const CadastrarProdutoCopy = () => {
                       categoriaId: e.target.value 
                     });
                   }}
+                  ref={categoriaRef}
+                  onBlur={() => precoRef.current?.focus()}
+                  onKeyDown={(e) => { if (e.key === 'Enter') precoRef.current?.focus(); }}
                   className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                   required
                 >
@@ -542,6 +558,9 @@ const CadastrarProdutoCopy = () => {
                     name="preco"
                     value={formData.preco}
                     onChange={(e) => setFormData({ ...formData, preco: e.target.value })}
+                    ref={precoRef}
+                    onBlur={() => precoPromocionalRef.current?.focus()}
+                    onKeyDown={(e) => { if (e.key === 'Enter') precoPromocionalRef.current?.focus(); }}
                     className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                     required
                   />
@@ -555,8 +574,8 @@ const CadastrarProdutoCopy = () => {
                     value={formData.precoPromocional}
                     onChange={(e) => setFormData({ ...formData, precoPromocional: e.target.value })}
                     ref={precoPromocionalRef}
-                    onBlur={() => pesoRef.current?.focus()}
-                    onKeyDown={(e) => { if (e.key === 'Enter') pesoRef.current?.focus(); }}
+                    onBlur={() => materialRef.current?.focus()}
+                    onKeyDown={(e) => { if (e.key === 'Enter') materialRef.current?.focus(); }}
                     className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                   />
                 </div>
@@ -609,11 +628,11 @@ const CadastrarProdutoCopy = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label htmlFor="material" className="block text-sm font-medium text-gray-700">Material</label>
-                    <input type="text" id="material" name="material" value={formData.material} onChange={(e) => setFormData({ ...formData, material: e.target.value })} className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
+                    <input type="text" id="material" name="material" value={formData.material} onChange={(e) => setFormData({ ...formData, material: e.target.value })} ref={materialRef} onBlur={() => referenciaRef.current?.focus()} onKeyDown={(e) => { if (e.key === 'Enter') referenciaRef.current?.focus(); }} className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
                   </div>
                   <div>
                     <label htmlFor="referencia" className="block text-sm font-medium text-gray-700">Referência</label>
-                    <input type="text" id="referencia" name="referencia" value={formData.referencia} onChange={(e) => setFormData({ ...formData, referencia: e.target.value })} className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" required />
+                    <input type="text" id="referencia" name="referencia" value={formData.referencia} onChange={(e) => setFormData({ ...formData, referencia: e.target.value })} ref={referenciaRef} onBlur={() => pesoRef.current?.focus()} onKeyDown={(e) => { if (e.key === 'Enter') pesoRef.current?.focus(); }} className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" required />
                   </div>
                   <div>
                     <label htmlFor="peso" className="block text-sm font-medium text-gray-700">Peso (g)</label>
@@ -715,7 +734,7 @@ const CadastrarProdutoCopy = () => {
           {/* Botões de Ação */}
           <div className="flex justify-end mt-6">
             <button type="button" onClick={() => navigate('/paineladmin/produtos/listar')} className="mr-4 px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300">Cancelar</button>
-            <button type="submit" className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:bg-indigo-300" disabled={isLoading || isUploading}>
+            <button type="submit" className="px-4 py-2 bg-pink-600 text-white rounded-md hover:bg-pink-700 disabled:bg-pink-300" disabled={isLoading || isUploading}>
               {isUploading ? 'Enviando imagens...' : isLoading ? 'Salvando...' : 'Salvar Produto'}
             </button>
           </div>

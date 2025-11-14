@@ -95,8 +95,8 @@ export default function CategorySection({ title, categoryName }: CategorySection
   };
 
   const navigate = useNavigate();
-  const handleProductClick = (id: string) => {
-    navigate(`/produto/${id}`);
+  const handleProductClick = (produto: Produto) => {
+    navigate(`/produto/${produto.slug || produto.id}`);
   };
 
   const handleVerMais = () => {
@@ -150,10 +150,10 @@ export default function CategorySection({ title, categoryName }: CategorySection
             
             return (
               <div
-                key={produto.id}
-                onClick={() => handleProductClick(produto.id)}
-                className="bg-white rounded-lg overflow-hidden hover:shadow-xl transition-shadow group border border-gray-200 cursor-pointer"
-              >
+                  key={produto.id}
+                  onClick={() => handleProductClick(produto)}
+                  className="bg-white rounded-lg overflow-hidden hover:shadow-xl transition-shadow group border border-gray-200 cursor-pointer"
+                >
                 <div className="relative overflow-hidden bg-gray-50">
                   {produto.preco_promocional && (
                     <div className="absolute top-3 left-3 bg-red-500 text-white px-2 py-1 rounded text-xs font-bold z-10">
@@ -232,7 +232,7 @@ export default function CategorySection({ title, categoryName }: CategorySection
                   </div>
 
                   <Link
-                    to={`/produto/${produto.id}`}
+                    to={`/produto/${produto.slug || produto.id}`}
                     className="mt-3 w-full block text-center py-2.5 bg-pink-600 text-white text-sm font-semibold rounded hover:bg-pink-700 transition-colors whitespace-nowrap"
                   >
                     Ver Detalhes

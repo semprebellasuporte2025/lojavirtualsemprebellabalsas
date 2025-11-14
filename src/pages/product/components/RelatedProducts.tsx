@@ -143,7 +143,7 @@ export default function RelatedProducts({ categoriaId, produtoAtualId }: Related
                   </div>
 
                   <Link
-                    to={`/produto/${produto.id}`}
+                    to={`/produto/${produto.slug || produto.id}`}
                     onClick={(e) => { e.stopPropagation(); }}
                     className="mt-2 w-full block text-center py-2.5 bg-pink-600 text-white text-sm font-semibold rounded hover:bg-pink-700 transition-colors whitespace-nowrap"
                   >

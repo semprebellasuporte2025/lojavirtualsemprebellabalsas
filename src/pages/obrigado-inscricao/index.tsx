@@ -106,7 +106,7 @@ const ObrigadoInscricaoPage: React.FC = () => {
 
               return (
                 <Link
-                  to={`/produto/${produto.id}`}
+                  to={`/produto/${produto.slug || produto.id}`}
                   key={produto.id}
                   className="bg-white rounded-lg overflow-hidden hover:shadow-xl transition-shadow group border border-gray-200 cursor-pointer flex flex-col"
                 >
