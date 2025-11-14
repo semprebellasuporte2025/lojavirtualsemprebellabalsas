@@ -178,6 +178,7 @@ const CadastrarProdutoCopy = () => {
         tamanho: variation.size,
         cor: variation.color,
         cor_hex: variation.colorHex,
+        estoque: Number.isFinite(Math.floor(Number(variation.stock))) ? Math.max(0, Math.floor(Number(variation.stock))) : 0,
         sku: variation.sku // Usar apenas o SKU específico da variação, não gerar automaticamente
       }));
 
@@ -438,6 +439,9 @@ const CadastrarProdutoCopy = () => {
             const nearest = findClosestColorName(hex);
             updatedVariation.color = nearest ?? hex;
           }
+        } else if (field === 'stock') {
+          const n = Math.floor(Number(value));
+          updatedVariation.stock = Number.isFinite(n) && n > 0 ? n : 0;
         }
 
         return updatedVariation;
@@ -663,14 +667,14 @@ const CadastrarProdutoCopy = () => {
           <div className="bg-gray-50 p-4 rounded-lg mt-6">
             <h3 className="text-lg font-medium text-gray-900 mb-4">Variações do Produto</h3>
             {variations.map((variation) => (
-              <div key={variation.id} className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4 p-4 border rounded-md">
-                <div className="col-span-1 md:col-span-2">
+              <div key={variation.id} className="grid grid-cols-1 md:grid-cols-12 gap-4 mb-4 p-4 border rounded-md">
+                <div className="md:col-span-2">
                   <label htmlFor={`size-${variation.id}`} className="block text-sm font-medium text-gray-700">Tamanho</label>
                   <select id={`size-${variation.id}`} value={variation.size} onChange={(e) => updateVariation(variation.id, 'size', e.target.value)} className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
                     {availableSizes.map(size => <option key={size} value={size}>{size}</option>)}
                   </select>
                 </div>
-                <div className="col-span-1 md:col-span-2">
+                <div className="md:col-span-4">
                   <label htmlFor={`color-${variation.id}`} className="block text-sm font-medium text-gray-700">Cor</label>
                   <div className="flex items-center gap-2">
                     <input
@@ -684,12 +688,23 @@ const CadastrarProdutoCopy = () => {
                     <input type="color" value={variation.colorHex} onChange={(e) => updateVariation(variation.id, 'colorHex', e.target.value)} className="h-8 w-8 rounded-md border-gray-300" />
                   </div>
                 </div>
-                {/* Campo de estoque removido do cadastro; estoque é gerenciado por movimentações e disponibilidade das variantes */}
-                <div className="col-span-1 md:col-span-4">
+                <div className="md:col-span-2">
+                  <label htmlFor={`stock-${variation.id}`} className="block text-sm font-medium text-gray-700">Estoque</label>
+                  <input
+                    type="number"
+                    id={`stock-${variation.id}`}
+                    value={variation.stock}
+                    min={0}
+                    onChange={(e) => updateVariation(variation.id, 'stock', e.target.value)}
+                    className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                    placeholder="0"
+                  />
+                </div>
+                <div className="md:col-span-3">
                   <label htmlFor={`sku-${variation.id}`} className="block text-sm font-medium text-gray-700">SKU</label>
                   <input type="text" id={`sku-${variation.id}`} value={variation.sku} onChange={(e) => updateVariation(variation.id, 'sku', e.target.value)} className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="Opcional" />
                 </div>
-                <div className="col-span-1 flex items-end">
+                <div className="md:col-span-1 flex items-end">
                   <button type="button" onClick={() => removeVariation(variation.id)} className="text-red-500 hover:text-red-700 font-medium">Remover</button>
                 </div>
               </div>

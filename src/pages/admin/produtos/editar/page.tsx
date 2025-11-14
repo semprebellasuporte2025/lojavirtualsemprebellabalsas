@@ -14,6 +14,7 @@ interface ProductVariation {
   size: string;
   color: string;
   colorHex: string;
+  stock: number;
   sku: string;
 }
 
@@ -132,6 +133,7 @@ const EditarProduto = () => {
           size: variacao.tamanho || 'M',
           color: variacao.cor || 'Preto',
           colorHex: variacao.cor_hex || '#000000',
+          stock: typeof variacao.estoque === 'number' ? variacao.estoque : 0,
           sku: variacao.sku || ''
         }));
         setVariations(variationsFormatted);
@@ -236,6 +238,7 @@ const EditarProduto = () => {
         tamanho: variation.size,
         cor: variation.color,
         cor_hex: variation.colorHex,
+        estoque: Number.isFinite(Math.floor(Number(variation.stock))) ? Math.max(0, Math.floor(Number(variation.stock))) : 0,
         sku: variation.sku // Usar apenas o SKU específico da variação, não gerar automaticamente
       }));
 
@@ -413,6 +416,7 @@ const EditarProduto = () => {
       size: availableSizes[0],
       color: availableColors[0].name,
       colorHex: availableColors[0].hex,
+      stock: 0,
       sku: ''
     };
     setVariations([...variations, newVariation]);
@@ -436,6 +440,10 @@ const EditarProduto = () => {
             colorHex: value as string,
             color: selectedColor?.name || variation.color
           };
+        }
+        if (field === 'stock') {
+          const n = Math.floor(Number(value));
+          return { ...variation, stock: Number.isFinite(n) && n > 0 ? n : 0 };
         }
         return { ...variation, [field]: value };
       }
@@ -734,7 +742,19 @@ const EditarProduto = () => {
                               />
                             </div>
 
-                            {/* Campo de estoque removido; estoque é gerenciado por movimentações e disponibilidade das variantes */}
+                            <div className="col-span-2">
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Estoque
+                              </label>
+                              <input
+                                type="number"
+                                value={variation.stock}
+                                min={0}
+                                onChange={(e) => updateVariation(variation.id, 'stock', e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                                placeholder="0"
+                              />
+                            </div>
 
                             <div className="col-span-3">
                               <label className="block text-sm font-medium text-gray-700 mb-2">
