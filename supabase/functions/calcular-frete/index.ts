@@ -1,17 +1,17 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+// Migrado para Deno.serve para evitar import remoto do std/http
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-serve(async (req) => {
+Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
 
   try {
-    const { cepDestino, peso = 0.5, altura = 5, largura = 15, profundidade = 20, valorTotal = 0 } = await req.json()
+    const { cepDestino, peso = 0.5, altura = 5, largura = 10, profundidade = 5, valorTotal = 0 } = await req.json()
 
     // Log para debug
     console.log('Dados recebidos:', { cepDestino, peso, altura, largura, profundidade, valorTotal })
@@ -129,7 +129,7 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ 
           error: 'Erro ao calcular opções de frete',
-          details: error.message 
+          details: error instanceof Error ? error.message : String(error)
         }),
         { 
           status: 500, 
@@ -251,3 +251,5 @@ async function calcularFreteCorreios(cepOrigem: string, cepDestino: string, peso
 
   return opcoes.sort((a, b) => a.prazoEntrega - b.prazoEntrega)
 }
+// Marcar como módulo para evitar colisões globais no workspace TypeScript
+export {};

@@ -1,18 +1,29 @@
 -- Corrigir função get_business_summary para usar tabela pedidos corretamente
+
+-- Primeiro, dropar a função existente se houver
 DROP FUNCTION IF EXISTS get_business_summary();
 
 CREATE OR REPLACE FUNCTION get_business_summary()
 RETURNS TABLE (
-  produtos_ativos BIGINT,
-  taxa_entrega_percentual NUMERIC,
-  regiao_principal TEXT,
-  produtos_estoque_baixo BIGINT
+    produtos_ativos BIGINT,
+    taxa_entrega NUMERIC,
+    regiao_principal TEXT,
+    produtos_estoque_baixo BIGINT
 ) AS $$
 BEGIN
   RETURN QUERY
   SELECT 
-    -- Produtos ativos (com estoque > 0 e não nulo)
-    (SELECT COUNT(*) FROM produtos WHERE estoque IS NOT NULL AND estoque > 0) as produtos_ativos,
+    -- Produtos ativos (com estoque total > 0 considerando todas as variações)
+    (SELECT COUNT(DISTINCT p.id)
+     FROM produtos p
+     WHERE p.ativo = true
+     AND EXISTS (
+         SELECT 1 
+         FROM variantes_produto vp 
+         WHERE vp.produto_id = p.id 
+         AND vp.ativo = true
+         AND vp.estoque > 0
+     )) as produtos_ativos,
     
     -- Taxa de entrega baseada em pedidos (pedidos entregues / pedidos não cancelados * 100)
     CASE 
@@ -22,16 +33,15 @@ BEGIN
           (SELECT COUNT(*) FROM pedidos WHERE status NOT IN ('cancelado')), 1
         )
       ELSE 0
-    END as taxa_entrega_percentual,
+    END as taxa_entrega,
     
-    -- Região principal (cidade mais frequente nos pedidos)
+    -- Região principal (cidade mais frequente nos pedidos - usando clientes.cidade)
     (SELECT 
       COALESCE(
         (SELECT c.cidade 
          FROM pedidos p 
          JOIN clientes c ON c.id = p.cliente_id 
-         WHERE p.status NOT IN ('cancelado') 
-           AND c.cidade IS NOT NULL 
+         WHERE c.cidade IS NOT NULL 
            AND c.cidade != ''
          GROUP BY c.cidade 
          ORDER BY COUNT(*) DESC 
@@ -40,8 +50,22 @@ BEGIN
       )
     ) as regiao_principal,
     
-    -- Produtos com estoque baixo (estoque <= 5 e não nulo)
-    (SELECT COUNT(*) FROM produtos WHERE estoque IS NOT NULL AND estoque <= 5 AND estoque >= 0) as produtos_estoque_baixo;
+    -- Produtos com estoque baixo (estoque total <= 5 considerando todas as variações)
+    (SELECT COUNT(DISTINCT p.id)
+     FROM produtos p
+     WHERE p.ativo = true
+     AND (
+         SELECT COALESCE(SUM(vp.estoque), 0)
+         FROM variantes_produto vp 
+         WHERE vp.produto_id = p.id 
+         AND vp.ativo = true
+     ) <= 5
+     AND (
+         SELECT COALESCE(SUM(vp.estoque), 0)
+         FROM variantes_produto vp 
+         WHERE vp.produto_id = p.id 
+         AND vp.ativo = true
+     ) > 0) as produtos_estoque_baixo;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 

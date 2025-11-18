@@ -1,7 +1,10 @@
 
 import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/useToast';
+import { useAuth } from '@/hooks/useAuth';
+import { useCart } from '@/hooks/useCart';
 
 interface CartSummaryProps {
   subtotal: number;
@@ -11,12 +14,17 @@ interface CartSummaryProps {
 
 export default function CartSummary({ subtotal, shipping, onFinalizePurchase }: CartSummaryProps) {
   const { showToast } = useToast();
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const { items, clearCart } = useCart();
   const [couponCode, setCouponCode] = useState('');
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('pix');
   const [isCheckingCoupon, setIsCheckingCoupon] = useState(false);
   const [couponValid, setCouponValid] = useState(false);
   const [couponData, setCouponData] = useState<{ nome: string; desconto_percentual: number } | null>(null);
   const [appliedCoupon, setAppliedCoupon] = useState<{ nome: string; desconto_percentual: number } | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [, setErrorMsg] = useState<string | null>(null);
 
   const shippingCost = typeof shipping?.price === 'number' ? shipping.price : null;
   const shippingMethod = shipping?.name || '';
@@ -81,10 +89,196 @@ export default function CartSummary({ subtotal, shipping, onFinalizePurchase }: 
   }, [couponCode]);
 
   const handleFinalize = () => {
-    if (isShippingSelected) {
+    if (!isShippingSelected) return;
+    // Pagamentos não-MP seguem o fluxo anterior
+    if (!['pix', 'credit'].includes(selectedPaymentMethod)) {
       onFinalizePurchase(selectedPaymentMethod, appliedCoupon || undefined);
+      return;
     }
+    void handleCheckoutProDirect();
   };
+
+  async function handleCheckoutProDirect() {
+    try {
+      setErrorMsg(null);
+      setLoading(true);
+
+      if (!user) {
+        showToast('Faça login para pagar.', 'error');
+        navigate('/auth/login');
+        setLoading(false);
+        return;
+      }
+
+      const userEmail = (user.email || '').trim();
+      if (!userEmail) {
+        showToast('Sua conta não possui email. Atualize seu cadastro.', 'error');
+        setLoading(false);
+        return;
+      }
+
+      // Resolver cliente_id (por id ou email) e criar se necessário
+      let resolvedClienteId: string | null = null;
+      try {
+        const orConditions = [`id.eq.${user.id}`];
+        if (userEmail) orConditions.push(`email.eq.${userEmail.toLowerCase()}`);
+        const { data: clienteMatch, error: clienteSearchErr } = await supabase
+          .from('clientes')
+          .select('id, nome, email')
+          .or(orConditions.join(','))
+          .limit(1);
+        if (!clienteSearchErr && clienteMatch && clienteMatch.length > 0) {
+          resolvedClienteId = clienteMatch[0].id;
+        } else {
+          const meta: any = (user as any)?.user_metadata || {};
+          const rawNome = (meta.nome || meta.name || meta.full_name || '').toString().trim();
+          const fallbackNome = (userEmail.split('@')[0] || 'Cliente');
+          const nome = rawNome || fallbackNome;
+          const { data: novoCliente, error: novoClienteErr } = await supabase
+            .from('clientes')
+            .insert([{ id: user.id, nome, email: userEmail }])
+            .select('id')
+            .single();
+          if (novoClienteErr) {
+            const { data: novo2, error: novo2Err } = await supabase
+              .from('clientes')
+              .insert([{ nome, email: userEmail }])
+              .select('id')
+              .single();
+            if (novo2Err) {
+              console.error('Erro ao garantir cliente:', { novoClienteErr, novo2Err });
+              throw new Error('Erro ao identificar cliente');
+            }
+            resolvedClienteId = novo2.id;
+          } else {
+            resolvedClienteId = novoCliente.id;
+          }
+        }
+      } catch (e) {
+        console.error('Falha ao resolver cliente_id:', e);
+        showToast('Erro ao identificar cliente. Tente novamente.', 'error');
+        setLoading(false);
+        return;
+      }
+
+      let pedidoId: string | null = null;
+      let numeroPedido: string | null = null;
+
+      // Calcular descontos
+      const pixDiscountAmount = selectedPaymentMethod === 'pix' ? subtotal * 0.1 : 0;
+      const couponPct = appliedCoupon ? Number(appliedCoupon.desconto_percentual) || 0 : 0;
+      const couponDiscountAmount = appliedCoupon ? subtotal * (couponPct / 100) : 0;
+
+      // Criar pedido
+      try {
+        const { data: pedidoData, error: pedidoError } = await supabase
+          .from('pedidos')
+          .insert([
+            {
+              numero_pedido: `2025${Math.floor(1000 + Math.random() * 9000)}`,
+              cliente_id: resolvedClienteId,
+              endereco_entrega: {},
+              subtotal: subtotal,
+              desconto: pixDiscountAmount + couponDiscountAmount,
+              frete: shippingCost || 0,
+              total: total,
+              status: 'pendente',
+              forma_pagamento: selectedPaymentMethod || 'mercado_pago_checkout_pro',
+            },
+          ])
+          .select('id, numero_pedido')
+          .single();
+
+        if (pedidoError) {
+          console.error('Erro ao criar pedido:', pedidoError);
+          throw new Error('Erro ao criar pedido');
+        }
+
+        pedidoId = pedidoData.id;
+        numeroPedido = pedidoData.numero_pedido;
+        try { localStorage.setItem('last_order_numero_pedido', String(numeroPedido)); } catch (_) {}
+
+        const itensParaInserir = items.map((item: any) => ({
+          pedido_id: pedidoId,
+          produto_id: String(item.id || '').split('|')[0],
+          nome: item.name,
+          quantidade: item.quantity,
+          preco_unitario: item.price,
+          subtotal: item.price * item.quantity,
+          tamanho: item.size || null,
+          cor: item.color || null,
+          imagem: item.image || null,
+        }));
+
+        const { error: itensError } = await supabase.from('itens_pedido').insert(itensParaInserir);
+        if (itensError) {
+          console.error('Erro ao inserir itens do pedido:', itensError);
+          throw new Error('Erro ao salvar itens do pedido');
+        }
+      } catch (err) {
+        console.error('Erro no processo de pedido:', err);
+        showToast('Erro ao processar pedido. Tente novamente.', 'error');
+        setLoading(false);
+        return;
+      }
+
+      // Preferência MP (Checkout Pro)
+      const mpItems = [
+        { title: `Pedido ${numeroPedido}`, quantity: 1, unit_price: Number(total.toFixed(2)), currency_id: 'BRL' },
+      ];
+      const backUrls = {
+        success: `${window.location.origin}/checkout/sucesso`,
+        failure: `${window.location.origin}/checkout/erro`,
+        pending: `${window.location.origin}/checkout/pendente`,
+      };
+      const metadata = { pedido_id: pedidoId, numero_pedido: numeroPedido, source: 'checkout_pro' };
+      const origin = window.location.origin || '';
+      const originIsHttps = /^https:/i.test(origin);
+      const originIsLocal = /^http:\/\/(localhost|127\.0\.0\.1)/i.test(origin);
+
+      const payload: any = { items: mpItems, auto_return: 'approved', metadata };
+      if (originIsHttps && !originIsLocal) { payload.back_urls = backUrls; }
+      if (user.email) { payload.payer = { email: user.email }; }
+
+      const { data, error } = await supabase.functions.invoke('mercado-pago-checkout-pro', { body: payload });
+      if (error) {
+        const ctx = (error as any)?.context;
+        console.error('Erro criar preferência:', error?.message || error, ctx);
+        try { if (ctx?.body) console.error('Detalhes MP:', JSON.parse(ctx.body)); } catch (_) {}
+        showToast('Falha ao iniciar Checkout Pro. Verifique configuração.', 'error');
+        setLoading(false);
+        return;
+      }
+
+      const pref: any = data;
+      const isDev = (import.meta as any)?.env?.DEV ?? false;
+      const preferSandbox = !originIsHttps || originIsLocal || isDev;
+      console.log('Mercado Pago preferência criada (CartSummary):', {
+        id: pref?.id,
+        sandbox_init_point: pref?.sandbox_init_point,
+        init_point: pref?.init_point,
+        envDev: isDev,
+        originIsHttps,
+        originIsLocal,
+        preferSandbox,
+      });
+      const url = preferSandbox ? (pref?.sandbox_init_point || pref?.init_point) : (pref?.init_point || pref?.sandbox_init_point);
+      if (!url) {
+        showToast('URL de checkout não retornada.', 'error');
+        setLoading(false);
+        return;
+      }
+
+      try { localStorage.removeItem('cart'); } catch (_) {}
+      clearCart();
+      setLoading(false);
+      try { window.open(url, '_blank'); } catch (_) { window.location.href = url; }
+    } catch (e) {
+      console.error('Erro no Checkout Pro:', e);
+      setErrorMsg('Erro inesperado ao iniciar o pagamento.');
+      setLoading(false);
+    }
+  }
 
   const handleApplyCoupon = async () => {
     if (!couponValid || !couponData) return;
@@ -222,17 +416,18 @@ export default function CartSummary({ subtotal, shipping, onFinalizePurchase }: 
         )}
       </div>
 
-      {/* Botão Finalizar */}
+      {/* Botão Finalizar Compra: inicia Checkout Pro direto (PIX/Crédito) ou segue fluxo padrão */}
       <button
         onClick={handleFinalize}
-        disabled={!isShippingSelected}
-        className={`w-full py-3 rounded-lg font-medium transition-colors cursor-pointer whitespace-nowrap ${
-          isShippingSelected
+        disabled={!isShippingSelected || loading}
+        className={`w-full inline-flex items-center justify-center py-3 rounded-lg font-medium transition-colors cursor-pointer whitespace-nowrap ${
+          isShippingSelected && !loading
             ? 'bg-pink-600 text-white hover:bg-pink-700'
             : 'bg-gray-300 text-gray-500 cursor-not-allowed'
         }`}
       >
-        Finalizar Compra
+        <i className="ri-external-link-line mr-2"></i>
+        {loading ? 'Redirecionando...' : 'Finalizar Compra'}
       </button>
 
       {!isShippingSelected && (

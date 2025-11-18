@@ -48,14 +48,15 @@ export default function ProductInfo({ produto, onAddToCart }: ProductInfoProps) 
         if (vError) throw vError;
         setVariantesState(Array.isArray(variantsData) ? variantsData : []);
 
-        const { data: productData, error: pError } = await supabase
-          .from('produtos')
-          .select('estoque')
-          .eq('id', produto.id)
-          .maybeSingle();
-
-        if (pError) throw pError;
-        setProductStock(Number(productData?.estoque ?? 0));
+        // O estoque está armazenado nas variantes, não na tabela produtos
+        // Calcular o estoque total somando as variantes ativas
+        const totalStock = Array.isArray(variantsData) 
+          ? variantsData
+              .filter(v => v.ativo !== false)
+              .reduce((sum, v) => sum + Number(v?.estoque ?? 0), 0)
+          : 0;
+        
+        setProductStock(totalStock);
       } catch (err: any) {
         console.error('Erro ao consultar estoque no Supabase:', err);
         setStockError('Falha ao consultar estoque');
@@ -91,13 +92,6 @@ export default function ProductInfo({ produto, onAddToCart }: ProductInfoProps) 
           } catch (e) {
             console.error('Erro ao aplicar atualização de variante:', e);
           }
-        }
-      )
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'produtos', filter: `id=eq.${produto.id}` },
-        (payload: any) => {
-          setProductStock(Number(payload.new?.estoque ?? 0));
         }
       )
       .subscribe();

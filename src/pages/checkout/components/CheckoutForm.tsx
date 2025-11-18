@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { supabase } from '../../../lib/supabase';
+import { supabase, ensureSession } from '../../../lib/supabase';
 import { useAuth } from '../../../hooks/useAuth';
 import { useCart } from '../../../hooks/useCart';
 
@@ -396,8 +396,76 @@ export default function CheckoutForm({ cartItems, subtotal, shippingData, total,
       }
 
       setOrderId(pedido.numero_pedido);
-      setOrderComplete(true);
-      localStorage.removeItem('cart');
+      try { localStorage.setItem('last_order_numero_pedido', String(pedido.numero_pedido)); } catch (_) {}
+
+      // Invocar Mercado Pago Checkout Pro (sandbox) e redirecionar
+      try {
+        await ensureSession();
+
+        const origin = window.location.origin;
+        const back_urls = {
+          success: `${origin}/checkout/sucesso`,
+          failure: `${origin}/checkout/erro`,
+          pending: `${origin}/checkout/pendente`,
+        };
+
+        const originIsHttps = /^https:/i.test(origin);
+        const originIsLocal = /^http:\/\/(localhost|127\.0\.0\.1)/i.test(origin);
+        const payload: any = {
+          items: [
+            {
+              title: `Pedido ${pedido.numero_pedido}`,
+              quantity: 1,
+              unit_price: finalTotal,
+              currency_id: 'BRL',
+            },
+          ],
+          auto_return: 'approved',
+          metadata: { pedido_id: pedido.id, numero_pedido: pedido.numero_pedido },
+        };
+        if (originIsHttps && !originIsLocal) {
+          payload.back_urls = back_urls;
+        }
+        if (user?.email) {
+          payload.payer = { email: user.email };
+        }
+
+        const { data: mpData, error: mpErr } = await supabase.functions.invoke('mercado-pago-checkout-pro', {
+          body: payload,
+        });
+
+        if (mpErr) {
+          console.error('Erro ao criar preferência no Mercado Pago:', mpErr);
+          // Fallback: mostrar confirmação local para não bloquear compra
+          setOrderComplete(true);
+        } else {
+          const isDev = (import.meta as any)?.env?.DEV ?? false;
+          const preferSandbox = !originIsHttps || originIsLocal || isDev;
+          console.log('Mercado Pago preferência criada:', {
+            id: (mpData as any)?.id,
+            sandbox_init_point: (mpData as any)?.sandbox_init_point,
+            init_point: (mpData as any)?.init_point,
+            envDev: isDev,
+            originIsHttps,
+            originIsLocal,
+            preferSandbox,
+          });
+          const redirectUrl = preferSandbox
+            ? ((mpData as any)?.sandbox_init_point || (mpData as any)?.init_point)
+            : (((mpData as any)?.init_point) || (mpData as any)?.sandbox_init_point);
+          if (redirectUrl) {
+            // Limpar carrinho e redirecionar para o checkout externo
+            localStorage.removeItem('cart');
+            window.location.href = redirectUrl as string;
+            return; // interrompe fluxo após redirecionar
+          }
+          // Sem link válido, continuar com confirmação local
+          setOrderComplete(true);
+        }
+      } catch (mpCatchErr) {
+        console.error('Falha ao iniciar Checkout Pro:', mpCatchErr);
+        setOrderComplete(true);
+      }
       clearCart();
       
     } catch (error: any) {

@@ -134,6 +134,7 @@ export default function CarrinhoPage() {
                     onShippingCalculated={handleShippingCalculated} 
                     subtotal={subtotal}
                   />
+                  {/* Botão Mercado Pago removido aqui; agora aparece dentro do CartSummary no lugar de "Finalizar Compra" */}
                   <CartSummary
                     subtotal={subtotal}
                     shipping={{ price: shippingCost, name: shippingMethod }}
