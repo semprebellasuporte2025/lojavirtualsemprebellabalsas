@@ -19,7 +19,6 @@ const CategoriaPage = lazy(() => import('../pages/categoria/page'));
 const MinhaContaPage = lazy(() => import('../pages/minha-conta/page'));
 const NotFoundPage = lazy(() => import('../pages/NotFound'));
 const CarrinhoPage = lazy(() => import('../pages/carrinho/page'));
-const CheckoutPage = lazy(() => import('../pages/checkout/page'));
 const CheckoutPageV3 = lazy(() => import('../pages/checkout/pageV3'));
 const CheckoutSucessoPage = lazy(() => import('../pages/checkout/sucesso/page'));
 const CheckoutErroPage = lazy(() => import('../pages/checkout/erro/page'));
@@ -87,7 +86,7 @@ const routes: RouteObject[] = [
   },
   {
     path: '/checkout',
-    element: <Suspense fallback={<LoadingFallback />}><CheckoutPage /></Suspense>,
+    element: <Suspense fallback={<LoadingFallback />}><CheckoutPageV3 /></Suspense>,
   },
   {
     path: '/checkoutv3',
