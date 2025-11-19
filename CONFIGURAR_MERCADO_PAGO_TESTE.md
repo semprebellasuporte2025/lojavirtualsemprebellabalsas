@@ -2,11 +2,11 @@
 
 Este guia detalha como configurar a integração com o Mercado Pago em modo de teste (sandbox) para o projeto SempreBella.
 
-## 🔑 Credenciais de Teste Fornecidas
+## 🔑 Credenciais de Teste (NUNCA COMMITAR)
 
-- **Public Key**: APP_USR-5883158630627677-111712-da54f0c79431e17e0cb8d9ec79b304b8-2997053008
-- **Access Token**: APP_USR-5d7a496b-b8e2-4191-8599-1b7ae9d8fa0d
-- **Webhook Secret**: 26c1280021e1b8b9241b8675c8eb0864a96e907129175e6bfc5a7d57218092cb
+- **Public Key**: `APP_USR-...` ou `TEST-...` (exemplo genérico)
+- **Access Token**: `TEST-...` (NÃO publique valores reais)
+- **Webhook Secret**: `WEBHOOK_SECRET_EXEMPLO` (placeholder)
 
 ## 🚀 Passo a Passo para Configuração
 
@@ -42,17 +42,17 @@ docker run --rm -it supabase/cli:latest version
 Execute os comandos abaixo no terminal (substitua `YOUR_PROJECT_REF` pela referência do seu projeto):
 
 ```bash
-# Configurar Access Token do Mercado Pago
-supabase secrets set MERCADOPAGO_ACCESS_TOKEN=APP_USR-5d7a496b-b8e2-4191-8599-1b7ae9d8fa0d
+# Configurar Access Token do Mercado Pago (sandbox)
+supabase secrets set MERCADOPAGO_ACCESS_TOKEN="TEST-..."
 
-# Configurar Webhook Secret do Mercado Pago
-supabase secrets set MERCADOPAGO_WEBHOOK_SECRET=26c1280021e1b8b9241b8675c8eb0864a96e907129175e6bfc5a7d57218092cb
+# Configurar Webhook Secret do Mercado Pago (placeholder)
+supabase secrets set MERCADOPAGO_WEBHOOK_SECRET="<SEU_WEBHOOK_SECRET>"
 
 # Configurar URL do site (usar URL do Vercel em produção)
-supabase secrets set SITE_URL=https://semprebella.vercel.app
+supabase secrets set SITE_URL="https://<seu-site>.vercel.app"
 
 # Configurar URL de notificação (opcional)
-supabase secrets set MERCADOPAGO_NOTIFICATION_URL=https://YOUR_PROJECT_REF.supabase.co/functions/v1/mercado-pago-webhook
+supabase secrets set MERCADOPAGO_NOTIFICATION_URL="https://YOUR_PROJECT_REF.supabase.co/functions/v1/mercado-pago-webhook"
 ```
 
 ### 3. Deploy das Funções Edge
