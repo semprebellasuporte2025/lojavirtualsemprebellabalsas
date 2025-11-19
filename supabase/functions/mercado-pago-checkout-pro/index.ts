@@ -74,8 +74,11 @@ Deno.serve(async (req: Request) => {
   const originHdr = req.headers.get('Origin') || '';
   const isLocalOrigin = /^http:\/\/(localhost|127\.0\.0\.1)/.test(originHdr);
 
-  const siteUrlEnv = Deno.env.get("SITE_URL");
-  const fallbackWebhook = siteUrlEnv ? `${siteUrlEnv.replace(/^http:/, 'https:')}/functions/v1/mercado-pago-webhook` : undefined;
+  // Preferir URL de Functions do Supabase como fallback do webhook
+  const supabaseUrlEnv = Deno.env.get("SUPABASE_URL");
+  const fallbackWebhook = supabaseUrlEnv
+    ? `${supabaseUrlEnv.replace(/\/$/, "")}/functions/v1/mercado-pago-webhook`
+    : undefined;
   const notificationUrl = body?.notification_url || Deno.env.get("MERCADOPAGO_NOTIFICATION_URL") || fallbackWebhook;
   const autoReturn = body?.auto_return || "approved";
 
