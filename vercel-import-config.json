@@ -5,7 +5,7 @@
   "outputDirectory": "out",
   "installCommand": "npm ci",
   "devCommand": "npm run dev",
-  "nodeVersion": "18.x",
+  "nodeVersion": "20.x",
   "regions": ["gru1"],
   "environmentVariables": {
     "production": [
@@ -81,7 +81,7 @@
   },
   "domains": [
     {
-      "name": "semprebella.vercel.app",
+      "name": "lojavirtualsemprebellabalsas.vercel.app",
       "redirect": null
     }
   ],
