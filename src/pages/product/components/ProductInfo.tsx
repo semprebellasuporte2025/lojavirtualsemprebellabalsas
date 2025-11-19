@@ -219,6 +219,7 @@ export default function ProductInfo({ produto, onAddToCart }: ProductInfoProps) 
     sizes: sizesFromVariantes.length > 0 ? sizesFromVariantes : ['P', 'M', 'G', 'GG'],
     images: produto?.imagens || [produto?.imagem_url] || []
   };
+  const isProductInactive = produto?.ativo === false;
 
   const handleAddToCart = () => {
     const isMultiple = quantity > 1;
@@ -660,10 +661,17 @@ export default function ProductInfo({ produto, onAddToCart }: ProductInfoProps) 
 
       {/* Action Buttons */}
       <div className="space-y-3 pt-4">
-        <Button variant="primary" size="lg" className="w-full" onClick={handleAddToCart} disabled={Boolean(validationMsg)}>
+        <Button variant="primary" size="lg" className="w-full" onClick={handleAddToCart} disabled={Boolean(validationMsg) || isProductInactive}>
           <i className="ri-shopping-cart-line mr-2 text-xl"></i>
           Adicionar ao Carrinho
         </Button>
+
+        {isProductInactive && (
+          <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded text-sm text-red-700">
+            <i className="ri-prohibited-line mr-1"></i>
+            Produto indisponível para compra.
+          </div>
+        )}
 
         {validationMsg && (
           <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-800">

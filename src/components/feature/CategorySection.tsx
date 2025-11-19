@@ -46,14 +46,32 @@ export default function CategorySection({ title, categoryName }: CategorySection
       const { data: produtosBase, error: produtosError } = await supabase
         .from('produtos')
         .select('*')
-        .eq('ativo', true)
+        .eq('ativo', false)
+        .eq('nome_invisivel', false)
         .eq('categoria_id', categoria.id)
         .order('created_at', { ascending: false })
         .limit(12)
         .abortSignal(signal);
 
-      if (produtosError) throw produtosError;
-      const produtos = produtosBase || [];
+      let produtos = produtosBase || [];
+      if (produtosError) {
+        const msg = String((produtosError as any)?.message || '');
+        if (/nome_invisivel/i.test(msg) && /does not exist|column/i.test(msg)) {
+          const { data: p2, error: e2 } = await supabase
+            .from('produtos')
+            .select('*')
+            .eq('ativo', false)
+            .eq('categoria_id', categoria.id)
+            .order('created_at', { ascending: false })
+            .limit(12)
+            .abortSignal(signal);
+          if (!e2) {
+            produtos = (p2 || []).filter((p: any) => p?.ativo === false && p?.nome_invisivel !== true);
+          }
+        } else {
+          throw produtosError;
+        }
+      }
       const produtoIds = produtos.map((p) => p.id);
 
       const { data: variantesData, error: variantesError } = await supabase
@@ -179,7 +197,7 @@ export default function CategorySection({ title, categoryName }: CategorySection
                 />
                 </div>
                 <div className="p-3">
-                  <p className="text-sm text-gray-500 mb-1">{categoryName}</p>
+                  <p className="text-sm text-gray-500 mb-1">{categoriaNome}</p>
                   <h3 className="text-lg font-semibold text-gray-800 mb-1 line-clamp-2">{produto.nome}</h3>
 
                   <div className="flex items-center mb-1">

@@ -169,6 +169,8 @@ export interface Produto {
   // Flags de sessões especiais
   destaque?: boolean;
   recem_chegado?: boolean;
+  // Controle de visibilidade do nome
+  nome_invisivel?: boolean;
   // Campos opcionais utilizados na aplicação
   material?: string;
   imagens?: string[];

@@ -42,7 +42,8 @@ const EditarProduto = () => {
     profundidade: '',
     ativo: true,
     destaque: false,
-    recemChegado: false
+    recemChegado: false,
+    nomeInvisivel: false
   });
   const [images, setImages] = useState<string[]>([]);
   const [variations, setVariations] = useState<ProductVariation[]>([]);
@@ -120,7 +121,8 @@ const EditarProduto = () => {
         profundidade: produto.profundidade?.toString() || '',
         ativo: produto.ativo ?? true,
         destaque: produto.destaque ?? false,
-        recemChegado: produto.recem_chegado ?? false
+        recemChegado: produto.recem_chegado ?? false,
+        nomeInvisivel: produto.nome_invisivel ?? false
       });
 
       setImages(produto.imagens || []);
@@ -182,7 +184,7 @@ const EditarProduto = () => {
           descricao: formData.descricao,
           material: formData.material || null,
           referencia: formData.referencia,
-          peso: parseFloat(formData.peso),
+          peso: formData.peso ? parseFloat(formData.peso) : null,
           altura: formData.altura ? parseFloat(formData.altura) : null,
           largura: formData.largura ? parseFloat(formData.largura) : null,
           profundidade: formData.profundidade ? parseFloat(formData.profundidade) : null,
@@ -190,32 +192,45 @@ const EditarProduto = () => {
           ativo: formData.ativo,
           destaque: formData.destaque,
           recem_chegado: formData.recemChegado,
+          nome_invisivel: formData.nomeInvisivel,
           updated_at: new Date().toISOString()
         })
         .eq('id', id);
 
       if (produtoError) {
         const msg = String((produtoError as any)?.message || '');
-        if (/column\s+.*material.*does not exist|material.*column/i.test(msg)) {
+        const missingMaterial = /column\s+.*material.*does not exist|material.*column/i.test(msg);
+        const missingNomeInvisivel = /column\s+.*nome_invisivel.*does not exist|nome_invisivel.*column/i.test(msg);
+        const missingRecemChegado = /column\s+.*recem_chegado.*does not exist|recem_chegado.*column/i.test(msg);
+        if (missingMaterial || missingNomeInvisivel || missingRecemChegado) {
+          const payload: any = {
+            nome: formData.nome,
+            categoria_id: categoriaData.id,
+            preco: parseFloat(formData.preco),
+            preco_promocional: formData.precoPromocional ? parseFloat(formData.precoPromocional) : null,
+            descricao: formData.descricao,
+            referencia: formData.referencia,
+            peso: formData.peso ? parseFloat(formData.peso) : null,
+            altura: formData.altura ? parseFloat(formData.altura) : null,
+            largura: formData.largura ? parseFloat(formData.largura) : null,
+            profundidade: formData.profundidade ? parseFloat(formData.profundidade) : null,
+            imagens: images,
+            ativo: formData.ativo,
+            destaque: formData.destaque,
+            updated_at: new Date().toISOString()
+          };
+          if (!missingMaterial) {
+            payload.material = formData.material || null;
+          }
+          if (!missingRecemChegado) {
+            payload.recem_chegado = formData.recemChegado;
+          }
+          if (!missingNomeInvisivel) {
+            payload.nome_invisivel = formData.nomeInvisivel;
+          }
           const { error: produtoFallbackError } = await supabase
             .from('produtos')
-            .update({
-              nome: formData.nome,
-              categoria_id: categoriaData.id,
-              preco: parseFloat(formData.preco),
-              preco_promocional: formData.precoPromocional ? parseFloat(formData.precoPromocional) : null,
-              descricao: formData.descricao,
-              referencia: formData.referencia,
-              peso: parseFloat(formData.peso),
-              altura: formData.altura ? parseFloat(formData.altura) : null,
-              largura: formData.largura ? parseFloat(formData.largura) : null,
-              profundidade: formData.profundidade ? parseFloat(formData.profundidade) : null,
-              imagens: images,
-              ativo: formData.ativo,
-              destaque: formData.destaque,
-              recem_chegado: formData.recemChegado,
-              updated_at: new Date().toISOString()
-            })
+            .update(payload)
             .eq('id', id);
           if (produtoFallbackError) throw produtoFallbackError;
         } else {
@@ -823,6 +838,18 @@ const EditarProduto = () => {
                     />
                     <span className="ml-2 text-sm font-medium text-gray-700">
                       Recém Chegado
+                    </span>
+                  </label>
+
+                  <label className="flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={formData.nomeInvisivel}
+                      onChange={(e) => setFormData({ ...formData, nomeInvisivel: e.target.checked })}
+                      className="w-5 h-5 text-pink-600 border-gray-300 rounded focus:ring-pink-500 cursor-pointer"
+                    />
+                    <span className="ml-2 text-sm font-medium text-gray-700">
+                      Invisível
                     </span>
                   </label>
                 </div>

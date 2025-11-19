@@ -22,15 +22,32 @@ export default function BestSellers() {
       const { data: produtosBase, error: produtosError } = await supabase
         .from('produtos')
         .select('*')
-        .eq('ativo', true)
+        .eq('ativo', false)
+        .eq('nome_invisivel', false)
         .eq('destaque', true)
         .order('created_at', { ascending: false })
         .limit(12)
         .abortSignal(signal);
 
-      if (produtosError) throw produtosError;
-
-      const produtos = produtosBase || [];
+      let produtos = produtosBase || [];
+      if (produtosError) {
+        const msg = String((produtosError as any)?.message || '');
+        if (/nome_invisivel/i.test(msg) && /does not exist|column/i.test(msg)) {
+          const { data: p2, error: e2 } = await supabase
+            .from('produtos')
+            .select('*')
+            .eq('ativo', false)
+            .eq('destaque', true)
+            .order('created_at', { ascending: false })
+            .limit(12)
+            .abortSignal(signal);
+          if (!e2) {
+            produtos = (p2 || []).filter((p: any) => p?.ativo === false && p?.nome_invisivel !== true);
+          }
+        } else {
+          throw produtosError;
+        }
+      }
       if (produtos.length === 0) {
         if (!signal.aborted) setProdutos([]);
         return;

@@ -67,18 +67,33 @@ export default function HomePage() {
     try {
       // Usar a view que já soma estoque das variantes
       const { data, error } = await supabase
-        .from('products_with_ratings')
+        .from('produtos')
         .select('*, categorias(nome), variantes_produto(cor, cor_hex)')
         .eq('ativo', true)
-        .gt('estoque', 0) // Filtrar apenas produtos com estoque maior que zero (estoque calculado pelas variantes)
+        .eq('nome_invisivel', false)
         .order('created_at', { ascending: false })
         .limit(12)
         .abortSignal(signal);
 
       if (error) {
+        const msg = String((error as any)?.message || '');
         if ((error as any)?.name === 'AbortError') {
-          console.log('Fetch abortado: HomePage');
           return;
+        }
+        if (/nome_invisivel/i.test(msg) && /does not exist|column/i.test(msg)) {
+          const { data: data2, error: err2 } = await supabase
+            .from('produtos')
+            .select('*, categorias(nome), variantes_produto(cor, cor_hex)')
+            .eq('ativo', true)
+            .gt('estoque', 0)
+            .order('created_at', { ascending: false })
+            .limit(12)
+            .abortSignal(signal);
+          if (!err2 && !signal.aborted) {
+            const safe = (data2 || []).filter((p: any) => p?.ativo === true && p?.nome_invisivel !== true);
+            setRecentProducts(safe as Produto[]);
+            return;
+          }
         }
         throw error;
       }

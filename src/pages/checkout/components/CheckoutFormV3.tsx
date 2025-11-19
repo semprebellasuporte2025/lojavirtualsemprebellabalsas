@@ -32,6 +32,10 @@ export default function CheckoutFormV3({ cartItems, subtotal, shippingData, tota
   const [loading, setLoading] = useState<boolean>(false);
   // Checkout Pro não usa SDK v2 (Bricks) na página
   const startedRef = useRef(false);
+  // Estados de redirecionamento com pré-load e contagem regressiva
+  const [redirectUrl, setRedirectUrl] = useState<string | null>(null);
+  const [countdown, setCountdown] = useState<number>(10);
+  const [countdownActive, setCountdownActive] = useState<boolean>(false);
 
   // Preferência criada via função Edge Mercado Pago Checkout Pro
 
@@ -176,7 +180,7 @@ export default function CheckoutFormV3({ cartItems, subtotal, shippingData, tota
       ];
 
       const backUrls = {
-        success: `${window.location.origin}/checkout/sucesso`,
+        success: `${window.location.origin}/minha-conta`,
         failure: `${window.location.origin}/checkout/erro`,
         pending: `${window.location.origin}/checkout/pendente`,
       };
@@ -185,6 +189,7 @@ export default function CheckoutFormV3({ cartItems, subtotal, shippingData, tota
         pedido_id: pedidoId,
         numero_pedido: numeroPedido,
         source: 'checkout_pro',
+        payment_method: paymentMethod,
       };
 
       // Evitar enviar back_urls quando em origem http/localhost para não causar 400 no MP
@@ -209,37 +214,30 @@ export default function CheckoutFormV3({ cartItems, subtotal, shippingData, tota
       });
 
       if (error) {
-        // Melhorar logging para inspecionar causa (400) do MP
         const ctx = (error as any)?.context;
-        console.error('Erro criar preferência:', error?.message || error, ctx);
+        console.error('Erro criar preferência:', error?.message || error);
+        let friendly = 'Falha ao iniciar Checkout Pro. Verifique configuração de domínio (HTTPS) e token.';
         try {
-          if (ctx?.body) {
-            const parsed = JSON.parse(ctx.body);
-            console.error('Detalhes MP:', parsed);
+          let parsed: any = null;
+          if (ctx && typeof (ctx as any).json === 'function') {
+            parsed = await (ctx as any).json();
+          } else if (ctx && typeof (ctx as any).text === 'function') {
+            const t = await (ctx as any).text();
+            try { parsed = JSON.parse(t); } catch { parsed = t; }
           }
-        } catch (_) {
-          // ignore parse errors
-        }
-        setErrorMsg('Falha ao iniciar Checkout Pro. Verifique configuração de domínio (HTTPS) e token.');
-        setLoading(false);
-        return;
-      }
-
-      const pref = data as any;
-      const isDev = (import.meta as any)?.env?.DEV ?? false;
-      const preferSandbox = !originIsHttps || originIsLocal || isDev;
-      console.log('Mercado Pago preferência criada (V3):', {
-        id: pref?.id,
-        sandbox_init_point: pref?.sandbox_init_point,
-        init_point: pref?.init_point,
-        envDev: isDev,
-        originIsHttps,
-        originIsLocal,
-        preferSandbox,
-      });
-      const url = preferSandbox ? (pref?.sandbox_init_point || pref?.init_point) : (pref?.init_point || pref?.sandbox_init_point);
-      if (!url) {
-        setErrorMsg('URL de checkout não retornada.');
+          const detailsText = (parsed?.details && typeof parsed.details === 'string') ? parsed.details : '';
+          const errText = (parsed?.error && typeof parsed.error === 'string') ? parsed.error : '';
+          const raw = `${detailsText} ${errText}`.toLowerCase();
+          if (raw.includes('missing mercadopago_access_token')) {
+            friendly = 'Token do Mercado Pago ausente nas Functions. Configure MERCADOPAGO_ACCESS_TOKEN e faça deploy.';
+          } else if (raw.includes('invalid url') || raw.includes('must be https')) {
+            friendly = 'Back URLs inválidas. Garanta domínio HTTPS (SITE_URL) ou use domínio de produção.';
+          } else if (raw.includes('account_money cannot be excluded')) {
+            friendly = 'Configuração de métodos de pagamento inválida. Tente novamente.';
+          }
+          console.error('Detalhes MP:', parsed ?? ctx);
+        } catch (_) {}
+        setErrorMsg(friendly);
         setLoading(false);
         return;
       }
@@ -248,18 +246,58 @@ export default function CheckoutFormV3({ cartItems, subtotal, shippingData, tota
         localStorage.removeItem('cart');
       } catch (_) {}
       clearCart();
-      setLoading(false);
-      try {
-        window.open(url, '_blank');
-      } catch (_) {
-        window.location.href = url;
+
+      const pref = data as any;
+      const isDev = (import.meta as any)?.env?.DEV ?? false;
+      const useProdOverride = String(((import.meta as any)?.env?.VITE_MP_USE_PROD ?? '')).toLowerCase() === 'true';
+      const preferSandbox = useProdOverride ? false : (!originIsHttps || originIsLocal || isDev);
+      console.log('Mercado Pago preferência criada (V3):', {
+        id: pref?.id,
+        sandbox_init_point: pref?.sandbox_init_point,
+        init_point: pref?.init_point,
+        envDev: isDev,
+        originIsHttps,
+        originIsLocal,
+        useProdOverride,
+        preferSandbox,
+      });
+      const url = preferSandbox ? (pref?.sandbox_init_point || pref?.init_point) : (pref?.init_point || pref?.sandbox_init_point);
+      if (!url) {
+        setErrorMsg('URL de checkout não retornada.');
+        setLoading(false);
+        return;
       }
+      // Preparar redirecionamento com pré-load de 10s e contagem regressiva
+      setRedirectUrl(url);
+      setCountdown(10);
+      setCountdownActive(true);
+      setLoading(false);
     } catch (e) {
       console.error('Erro no Checkout Pro:', e);
       setErrorMsg('Erro inesperado ao iniciar o pagamento.');
       setLoading(false);
     }
   }
+
+  // Countdown e redirecionamento após 10s
+  useEffect(() => {
+    if (countdownActive && redirectUrl) {
+      const intervalId = setInterval(() => {
+        setCountdown((prev) => Math.max(prev - 1, 0));
+      }, 1000);
+      const timeoutId = setTimeout(() => {
+        try {
+          window.location.href = redirectUrl as string;
+        } catch (_) {
+          try { window.open(redirectUrl as string, '_blank'); } catch (_) {}
+        }
+      }, 10000);
+      return () => {
+        clearInterval(intervalId);
+        clearTimeout(timeoutId);
+      };
+    }
+  }, [countdownActive, redirectUrl]);
 
   // Iniciar automaticamente o fluxo de pagamento ao montar quando solicitado
   useEffect(() => {
@@ -274,8 +312,12 @@ export default function CheckoutFormV3({ cartItems, subtotal, shippingData, tota
   if (autoStart) {
     return (
       <div className="bg-white rounded-lg shadow-sm border p-6 text-center">
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">Redirecionando para o pagamento...</h3>
-        <p className="text-sm text-gray-600 mb-4">Você será direcionado ao Mercado Pago.</p>
+        <h3 className="text-lg font-semibold text-gray-900 mb-2">Preparando redirecionamento...</h3>
+        {countdownActive ? (
+          <p className="text-sm text-gray-600 mb-4">Carregando... Redirecionamento em {countdown}s para um ambiente super seguro do Mercado Pago.</p>
+        ) : (
+          <p className="text-sm text-gray-600 mb-4">Você será direcionado para um ambiente super seguro do Mercado Pago.</p>
+        )}
         {errorMsg && (
           <p className="text-sm text-red-600 mb-4">{errorMsg}</p>
         )}
@@ -283,10 +325,10 @@ export default function CheckoutFormV3({ cartItems, subtotal, shippingData, tota
           <button
             type="button"
             onClick={handleCheckoutPro}
-            disabled={loading}
+            disabled={loading || countdownActive}
             className="inline-flex items-center justify-center px-4 py-3 rounded-md bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60"
           >
-            {loading ? 'Redirecionando...' : 'Tentar novamente'}
+            {loading || countdownActive ? 'Processando...' : 'Tentar novamente'}
           </button>
         </div>
       </div>
@@ -372,12 +414,17 @@ export default function CheckoutFormV3({ cartItems, subtotal, shippingData, tota
             <button
               type="button"
               onClick={handleCheckoutPro}
-              disabled={loading}
+              disabled={loading || countdownActive}
               className="w-full inline-flex items-center justify-center px-4 py-3 rounded-md bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60"
             >
-              {loading ? 'Redirecionando...' : 'Pagar com Mercado Pago (Checkout Pro)'}
+              {loading || countdownActive ? 'Processando...' : 'Finalizar Compra'}
             </button>
-            <p className="text-xs text-gray-500 mt-2">Você será direcionado para o ambiente do Mercado Pago.</p>
+            <p className="text-xs text-gray-500 mt-2">Você será direcionado para um ambiente super seguro do Mercado Pago.</p>
+            {countdownActive && (
+              <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded">
+                <p className="text-sm text-blue-700">Carregando... Redirecionamento em {countdown}s para um ambiente super seguro do Mercado Pago.</p>
+              </div>
+            )}
           </div>
         </div>
       </div>

@@ -134,6 +134,23 @@ export default function CartSummary({ subtotal, shipping, onFinalizePurchase }: 
               <div className="text-sm text-gray-600">Parcelamento em até 6x</div>
             </div>
           </label>
+
+          {/* Dinheiro */}
+          <label className="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+            <input
+              type="radio"
+              name="payment"
+              value="dinheiro"
+              checked={selectedPaymentMethod === 'dinheiro'}
+              onChange={(e) => setSelectedPaymentMethod(e.target.value)}
+              className="mr-3"
+            />
+            <i className="ri-money-dollar-circle-line text-xl mr-3 text-gray-600"></i>
+            <div>
+              <div className="font-medium">Dinheiro</div>
+              <div className="text-sm text-gray-600">Pagamento na entrega</div>
+            </div>
+          </label>
         </div>
       </div>
 

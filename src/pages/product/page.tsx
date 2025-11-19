@@ -110,6 +110,38 @@ export default function ProductPage() {
     );
   }
 
+  // Bloquear visualização quando o produto estiver inativo
+  if (produto.ativo === false) {
+    return (
+      <>
+        <SEOHead
+          title={`Produto indisponível - Loja de Moda`}
+          description={`Este produto não está disponível no momento.`}
+          noIndex={true}
+        />
+        <Header />
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center max-w-md">
+            <i className="ri-prohibited-line text-5xl text-red-500 mb-4"></i>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Produto indisponível</h2>
+            <p className="text-gray-600 mb-6">Este produto foi desativado e não pode ser visualizado ou comprado.</p>
+            <div className="space-x-3">
+              <a href="/" className="inline-flex items-center px-6 py-3 bg-pink-600 text-white font-medium rounded-lg hover:bg-pink-700 transition-colors cursor-pointer">
+                <i className="ri-home-line mr-2"></i>
+                Voltar ao Início
+              </a>
+              <a href="/categoria" className="inline-flex items-center px-6 py-3 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors cursor-pointer">
+                <i className="ri-list-check mr-2"></i>
+                Ver categorias
+              </a>
+            </div>
+          </div>
+        </div>
+        <Footer />
+      </>
+    );
+  }
+
   return (
     <ErrorBoundary>
       <>

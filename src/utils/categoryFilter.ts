@@ -82,14 +82,26 @@ export async function hasProductsInCategory(categoryName: string): Promise<boole
       .from('produtos')
       .select('id', { count: 'exact', head: true })
       .eq('categoria_id', categoriaId)
-      .eq('ativo', true);
+      .eq('ativo', false)
+      .eq('nome_invisivel', false);
 
-    if (prodError) {
-      if (isNetworkAbort(prodError)) return false;
-      throw prodError;
+    if (!prodError) {
+      return (count ?? 0) > 0;
     }
 
-    return (count ?? 0) > 0;
+    if (isNetworkAbort(prodError)) return false;
+    const msg = String((prodError as any)?.message || '');
+    if (/nome_invisivel/i.test(msg) && /does not exist|column/i.test(msg)) {
+      const { data: produtos2, error: e2 } = await supabase
+        .from('produtos')
+        .select('id, nome_invisivel')
+        .eq('categoria_id', categoriaId)
+        .eq('ativo', false);
+      if (e2) return false;
+      const anyVisible = (produtos2 || []).some((p: any) => p?.ativo === false && p?.nome_invisivel !== true);
+      return anyVisible;
+    }
+    throw prodError;
   } catch (error) {
     if (isNetworkAbort(error)) {
       console.debug(`Requisição abortada na verificação da categoria ${categoryName}`);
@@ -127,16 +139,29 @@ export async function getCategoriesWithProductsByNames(names: string[]): Promise
     // 2) Buscar produtos ativos dessas categorias em uma única consulta
     const { data: produtos, error: prodError } = await supabase
       .from('produtos')
-      .select('categoria_id')
+      .select('categoria_id, nome_invisivel')
       .in('categoria_id', ids)
-      .eq('ativo', true);
+      .eq('ativo', false)
+      .eq('nome_invisivel', false);
 
-    if (prodError) {
+    let presentes = new Set<string>();
+    if (!prodError) {
+      presentes = new Set<string>((produtos || []).map((p: any) => p.categoria_id));
+    } else {
       if (isNetworkAbort(prodError)) return [];
-      throw prodError;
+      const msg = String((prodError as any)?.message || '');
+      if (/nome_invisivel/i.test(msg) && /does not exist|column/i.test(msg)) {
+        const { data: p2, error: e2 } = await supabase
+          .from('produtos')
+          .select('categoria_id, nome_invisivel')
+          .in('categoria_id', ids)
+          .eq('ativo', false);
+        if (e2) return [];
+        presentes = new Set<string>((p2 || []).filter((p: any) => p?.ativo === false && p?.nome_invisivel !== true).map((p: any) => p.categoria_id));
+      } else {
+        throw prodError;
+      }
     }
-
-    const presentes = new Set<string>((produtos || []).map((p: any) => p.categoria_id));
     const validos: string[] = [];
     idPorNome.forEach((id, nome) => { if (presentes.has(id)) validos.push(nome); });
     return validos;

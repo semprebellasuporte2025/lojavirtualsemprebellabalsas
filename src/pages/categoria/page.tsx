@@ -136,10 +136,10 @@ export default function CategoriaPage() {
 
       // Query principal
       let query = supabase
-        .from('products_with_ratings')
+        .from('produtos')
         .select(`*, categorias(nome), variantes_produto(cor, cor_hex, tamanho)`)
         .eq('ativo', true)
-        .gt('estoque', 0); // Filtrar apenas produtos com estoque maior que zero
+        .eq('nome_invisivel', false);
       
       if (isDestaque) {
         query = query.eq('destaque', true);
@@ -154,24 +154,28 @@ export default function CategoriaPage() {
       // Fallback caso a view falhe
       let result = data as Produto[] | null;
       if (error) {
-        // Usar a própria view como fallback, evitando dependência da coluna removida em produtos
+        const msg = String((error as any)?.message || '');
         let fallback = supabase
-          .from('products_with_ratings')
+          .from('produtos')
           .select(`*, categorias(nome), variantes_produto(cor, cor_hex, tamanho)`)
-          .eq('ativo', true)
-          .gt('estoque', 0); // Estoque calculado a partir das variantes
-        
+          .eq('ativo', true);
+        if (!/nome_invisivel/i.test(msg) || !/does not exist|column/i.test(msg)) {
+          fallback = fallback.eq('nome_invisivel', false);
+        }
         if (isDestaque) {
           fallback = fallback.eq('destaque', true);
         } else if (categoriaId) {
           fallback = fallback.eq('categoria_id', categoriaId);
         }
-        
         const { data: fallbackData, error: fallbackError } = await fallback
           .order('created_at', { ascending: false })
           .limit(24);
         if (fallbackError) throw fallbackError;
-        result = fallbackData as Produto[];
+        let temp = fallbackData as Produto[];
+        if (/nome_invisivel/i.test(msg) && /does not exist|column/i.test(msg)) {
+          temp = (temp || []).filter((p: any) => p?.ativo === false && p?.nome_invisivel !== true) as Produto[];
+        }
+        result = temp;
       }
 
       setProdutos(result || []);

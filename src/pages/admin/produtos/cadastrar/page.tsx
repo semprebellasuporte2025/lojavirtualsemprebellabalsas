@@ -37,7 +37,8 @@ const CadastrarProdutoCopy = () => {
     profundidade: '',
     ativo: true,
     destaque: false,
-    recemChegado: false
+    recemChegado: false,
+    nomeInvisivel: false
   });
   const [images, setImages] = useState<string[]>([]);
   const [variations, setVariations] = useState<ProductVariation[]>([]);
@@ -169,6 +170,7 @@ const CadastrarProdutoCopy = () => {
           ativo: formData.ativo,
           destaque: formData.destaque,
           recem_chegado: formData.recemChegado,
+          nome_invisivel: formData.nomeInvisivel,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         })
@@ -480,7 +482,8 @@ const CadastrarProdutoCopy = () => {
       profundidade: '',
       ativo: true,
       destaque: false,
-      recemChegado: false
+      recemChegado: false,
+      nomeInvisivel: false
     });
     setImages([]);
     setVariations([]);
@@ -675,6 +678,13 @@ const CadastrarProdutoCopy = () => {
                   <span className="text-sm font-medium text-gray-900">Recém Chegado</span>
                   <label htmlFor="recemChegado" className="inline-flex relative items-center cursor-pointer">
                     <input type="checkbox" id="recemChegado" name="recemChegado" checked={formData.recemChegado} onChange={(e) => setFormData({ ...formData, recemChegado: e.target.checked })} className="sr-only peer" />
+                    <div className="w-11 h-6 bg-gray-200 rounded-full peer peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                  </label>
+                </div>
+                <div className="flex items-center justify-between mt-4">
+                  <span className="text-sm font-medium text-gray-900">Invisível</span>
+                  <label htmlFor="nomeInvisivel" className="inline-flex relative items-center cursor-pointer">
+                    <input type="checkbox" id="nomeInvisivel" name="nomeInvisivel" checked={formData.nomeInvisivel} onChange={(e) => setFormData({ ...formData, nomeInvisivel: e.target.checked })} className="sr-only peer" />
                     <div className="w-11 h-6 bg-gray-200 rounded-full peer peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
                   </label>
                 </div>

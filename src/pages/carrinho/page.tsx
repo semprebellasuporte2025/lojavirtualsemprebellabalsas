@@ -67,7 +67,7 @@ export default function CarrinhoPage() {
 
   const handleFinalizePurchase = (paymentMethod: string, appliedCoupon?: { nome: string; desconto_percentual: number }) => {
     if (shippingMethod) {
-      navigate('/checkoutv3', { state: { shippingCost, shippingMethod, paymentMethod, coupon: appliedCoupon } });
+      navigate('/checkout', { state: { shippingCost, shippingMethod, paymentMethod, coupon: appliedCoupon } });
     }
   };
 

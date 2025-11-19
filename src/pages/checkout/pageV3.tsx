@@ -83,7 +83,7 @@ export default function CheckoutPageV3() {
               total={total}
               paymentMethod={navState?.paymentMethod}
               coupon={navState?.coupon}
-              autoStart={true}
+              autoStart={false}
             />
           ) : (
             <div className="text-center py-16">

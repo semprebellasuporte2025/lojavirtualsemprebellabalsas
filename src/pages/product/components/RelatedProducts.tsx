@@ -23,9 +23,10 @@ export default function RelatedProducts({ categoriaId, produtoAtualId }: Related
   const carregarProdutos = async () => {
     try {
       let query = supabase
-        .from('products_with_ratings')
+        .from('produtos')
         .select(`*, categorias(nome), variantes_produto(cor, cor_hex)`)
-        .eq('ativo', true)
+        .eq('ativo', false)
+        .eq('nome_invisivel', false)
         .neq('id', produtoAtualId)
         .limit(12);
 
@@ -39,7 +40,7 @@ export default function RelatedProducts({ categoriaId, produtoAtualId }: Related
         let fallbackQuery = supabase
           .from('produtos')
           .select(`*, categorias(nome), variantes_produto(cor, cor_hex)`)
-          .eq('ativo', true)
+          .eq('ativo', false)
           .neq('id', produtoAtualId)
           .limit(12);
 

@@ -48,13 +48,25 @@ Deno.serve(async (req: Request) => {
     // usa defaults abaixo
   }
 
-  const SITE_URL = Deno.env.get("SITE_URL") || "https://example.com";
+  // Descobrir domínio preferencial para back_urls
+  const originHdr = req.headers.get('Origin') || '';
+  const httpsOrigin = originHdr.replace(/^http:/, 'https:');
+  const siteUrlEnv = Deno.env.get("SITE_URL") || "";
+  const secureSiteUrlEnv = siteUrlEnv.replace(/^http:/, 'https:');
+  // Fallback padrão para produção caso nenhum env esteja definido
+  const defaultProdUrl = 'https://lojavirtualsemprebellabalsas.vercel.app';
+  // Se Origin vier por HTTPS, usar como base; senão usar SITE_URL; por último, domínio padrão
+  const baseUrl = (httpsOrigin && /^https:\/\//i.test(httpsOrigin))
+    ? httpsOrigin
+    : (secureSiteUrlEnv && /^https:\/\//i.test(secureSiteUrlEnv))
+      ? secureSiteUrlEnv
+      : defaultProdUrl;
+
   // Garantir que a URL base seja HTTPS (Mercado Pago exige HTTPS para back_urls)
-  const secureSiteUrl = SITE_URL.replace(/^http:/, 'https:');
   const DEFAULT_BACK_URLS = {
-    success: `${secureSiteUrl}/checkout/sucesso`,
-    failure: `${secureSiteUrl}/checkout/erro`,
-    pending: `${secureSiteUrl}/checkout/pendente`,
+    success: `${baseUrl.replace(/\/$/, '')}/checkout/sucesso`,
+    failure: `${baseUrl.replace(/\/$/, '')}/checkout/erro`,
+    pending: `${baseUrl.replace(/\/$/, '')}/checkout/pendente`,
   };
   // Sanitizadores de URL (garantir https e evitar localhost em produção)
   const sanitizeToHttps = (url?: string) => {
@@ -71,7 +83,6 @@ Deno.serve(async (req: Request) => {
     return (s.success && s.failure && s.pending) ? s : DEFAULT_BACK_URLS;
   };
 
-  const originHdr = req.headers.get('Origin') || '';
   const isLocalOrigin = /^http:\/\/(localhost|127\.0\.0\.1)/.test(originHdr);
 
   // Preferir URL de Functions do Supabase como fallback do webhook
@@ -98,6 +109,46 @@ Deno.serve(async (req: Request) => {
   const payer = (body?.payer && body?.payer?.email) ? body.payer : undefined;
   const statementDescriptor = (body?.statement_descriptor || "SEMPRE BELLA").toString().slice(0, 22);
 
+  // Determinar métodos de pagamento com base na forma escolhida
+  let paymentMethodsConfig: any = {};
+  
+  if (body?.metadata?.payment_method) {
+    const rawMethod = String(body.metadata.payment_method || '').toLowerCase();
+    const isPix = rawMethod.includes('pix');
+    const isCredit = rawMethod.includes('credit') || rawMethod.includes('card') || rawMethod.includes('cart');
+    
+    if (isPix) {
+      // Para PIX: excluir todos os outros métodos e priorizar PIX
+      paymentMethodsConfig = {
+        default_payment_method_id: 'pix',
+        excluded_payment_types: [
+          { id: 'credit_card' },
+          { id: 'debit_card' },
+          { id: 'ticket' },
+          { id: 'atm' },
+        ],
+      };
+    } else if (isCredit) {
+      paymentMethodsConfig = {
+        default_payment_method_id: 'visa',
+        excluded_payment_methods: [
+          { id: 'pix' },
+        ],
+        excluded_payment_types: [
+          { id: 'bank_transfer' },
+          { id: 'ticket' },
+          { id: 'atm' },
+        ],
+      };
+    }
+    // Se for outro método ou não especificado, deixar todas as opções disponíveis
+  } else {
+    paymentMethodsConfig = {
+      default_payment_method_id: null,
+      excluded_payment_types: [],
+    };
+  }
+
   const preferencePayload = {
     items,
     back_urls: backUrls,
@@ -105,19 +156,7 @@ Deno.serve(async (req: Request) => {
     notification_url: sanitizeToHttps(notificationUrl),
     payer,
     statement_descriptor: statementDescriptor,
-    // Configurar métodos de pagamento para priorizar PIX e ocultar cartões
-    payment_methods: {
-      default_payment_method_id: 'pix',
-      excluded_payment_types: [
-        { id: 'credit_card' },
-        { id: 'debit_card' },
-        { id: 'ticket' },
-        { id: 'atm' },
-        { id: 'account_money' },
-      ],
-      // Se necessário futuramente: excluded_payment_methods pode listar bandeiras específicas
-      // excluded_payment_methods: [ { id: 'visa' }, { id: 'master' } ]
-    },
+    payment_methods: paymentMethodsConfig,
     metadata: body?.metadata || {},
   };
 

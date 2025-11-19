@@ -89,10 +89,6 @@ const routes: RouteObject[] = [
     element: <Suspense fallback={<LoadingFallback />}><CheckoutPageV3 /></Suspense>,
   },
   {
-    path: '/checkoutv3',
-    element: <Suspense fallback={<LoadingFallback />}><CheckoutPageV3 /></Suspense>,
-  },
-  {
     path: '/checkout/sucesso',
     element: <Suspense fallback={<LoadingFallback />}><CheckoutSucessoPage /></Suspense>,
   },
