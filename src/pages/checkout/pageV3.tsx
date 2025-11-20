@@ -4,6 +4,7 @@ import Header from '../../components/feature/Header';
 import Footer from '../../components/feature/Footer';
 import LoginModal from './components/LoginModal';
 import CheckoutFormV3 from './components/CheckoutFormV3';
+import CheckoutDataForm, { CheckoutFormData } from './components/CheckoutDataForm';
 import SEOHead from '../../components/feature/SEOHead';
 import { useLocation } from 'react-router-dom';
 import { useCart } from '../../hooks/useCart';
@@ -25,6 +26,8 @@ export default function CheckoutPageV3() {
   const { user, loading } = useAuth();
   const { items } = useCart();
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [collectedData, setCollectedData] = useState<CheckoutFormData | null>(null);
+  const [step, setStep] = useState<'dados' | 'pagamento'>('dados');
 
   const cartItems: CartItemType[] = items as CartItemType[];
   const navState = location.state as { shippingCost?: number; shippingMethod?: string; paymentMethod?: string; coupon?: { nome: string; desconto_percentual: number } } | undefined;
@@ -76,15 +79,29 @@ export default function CheckoutPageV3() {
           </nav>
 
           {user ? (
-            <CheckoutFormV3
-              cartItems={cartItems}
-              subtotal={subtotal}
-              shippingData={shippingData}
-              total={total}
-              paymentMethod={navState?.paymentMethod}
-              coupon={navState?.coupon}
-              autoStart={false}
-            />
+            step === 'dados' ? (
+              <CheckoutDataForm
+                cartItems={cartItems}
+                subtotal={subtotal}
+                shippingData={shippingData}
+                total={total}
+                onDataSubmit={(data) => {
+                  setCollectedData(data);
+                  setStep('pagamento');
+                }}
+              />
+            ) : (
+              <CheckoutFormV3
+                cartItems={cartItems}
+                subtotal={subtotal}
+                shippingData={shippingData}
+                total={total}
+                paymentMethod={navState?.paymentMethod}
+                coupon={navState?.coupon}
+                autoStart={false}
+                customerData={collectedData || undefined}
+              />
+            )
           ) : (
             <div className="text-center py-16">
               <div className="w-24 h-24 mx-auto mb-6 flex items-center justify_center bg-pink-100 rounded-full">

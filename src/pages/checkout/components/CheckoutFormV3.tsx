@@ -15,6 +15,20 @@ interface CartItemType {
   quantity: number;
 }
 
+interface CustomerData {
+  nome: string;
+  cpf: string;
+  email: string;
+  telefone: string;
+  cep: string;
+  endereco: string;
+  numero: string;
+  complemento?: string;
+  bairro: string;
+  cidade: string;
+  estado: string;
+}
+
 interface CheckoutFormV3Props {
   cartItems: CartItemType[];
   subtotal: number;
@@ -23,9 +37,10 @@ interface CheckoutFormV3Props {
   paymentMethod?: string;
   coupon?: { nome: string; desconto_percentual: number };
   autoStart?: boolean;
+  customerData?: CustomerData;
 }
 
-export default function CheckoutFormV3({ cartItems, subtotal, shippingData, total, paymentMethod, coupon, autoStart }: CheckoutFormV3Props) {
+export default function CheckoutFormV3({ cartItems, subtotal, shippingData, total, paymentMethod, coupon, autoStart, customerData }: CheckoutFormV3Props) {
   const { user } = useAuth();
   const { clearCart } = useCart();
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -45,6 +60,12 @@ export default function CheckoutFormV3({ cartItems, subtotal, shippingData, tota
       setLoading(true);
       if (!user) {
         setErrorMsg('Faça login para pagar.');
+        setLoading(false);
+        return;
+      }
+
+      if (!customerData) {
+        setErrorMsg('Preencha seus dados de entrega antes de continuar.');
         setLoading(false);
         return;
       }
@@ -119,7 +140,19 @@ export default function CheckoutFormV3({ cartItems, subtotal, shippingData, tota
             {
               numero_pedido: `2025${Math.floor(1000 + Math.random() * 9000)}`,
               cliente_id: resolvedClienteId,
-              endereco_entrega: {},
+              endereco_entrega: {
+                nome: customerData.nome,
+                cpf: customerData.cpf,
+                email: customerData.email,
+                telefone: customerData.telefone,
+                cep: customerData.cep,
+                endereco: customerData.endereco,
+                numero: customerData.numero,
+                complemento: customerData.complemento || null,
+                bairro: customerData.bairro,
+                cidade: customerData.cidade,
+                estado: customerData.estado,
+              },
               subtotal: subtotal,
               desconto: pixDiscountAmount + couponDiscountAmount,
               frete: shippingData?.cost || 0,
