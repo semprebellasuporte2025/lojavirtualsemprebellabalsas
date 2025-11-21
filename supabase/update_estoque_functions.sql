@@ -68,6 +68,7 @@ $$ LANGUAGE plpgsql;
 
 -- 2. Atualizar o trigger para usar a nova função
 DROP TRIGGER IF EXISTS trigger_atualizar_estoque_produto ON public.movimentacoes_estoque;
+DROP TRIGGER IF EXISTS trigger_atualizar_estoque_variante ON public.movimentacoes_estoque;
 
 CREATE TRIGGER trigger_atualizar_estoque_variante
   AFTER INSERT ON public.movimentacoes_estoque
@@ -167,6 +168,7 @@ $$ LANGUAGE plpgsql;
 
 -- 6. Atualizar trigger de vendas para usar a nova função
 DROP TRIGGER IF EXISTS trigger_registrar_venda_estoque ON public.itens_pedido;
+DROP TRIGGER IF EXISTS trigger_registrar_venda_atualizar_estoque ON public.itens_pedido;
 
 CREATE TRIGGER trigger_registrar_venda_atualizar_estoque
   AFTER INSERT ON public.itens_pedido
@@ -247,6 +249,7 @@ $$ LANGUAGE plpgsql;
 
 -- 8. Atualizar trigger de cancelamento
 DROP TRIGGER IF EXISTS trigger_reverter_estoque_cancelamento ON public.pedidos;
+DROP TRIGGER IF EXISTS trigger_reverter_estoque_cancelamento_variante ON public.pedidos;
 
 CREATE TRIGGER trigger_reverter_estoque_cancelamento_variante
   AFTER UPDATE ON public.pedidos

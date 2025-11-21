@@ -4,14 +4,10 @@ import AdminLayout from '../../../../components/feature/AdminLayout';
 import { useToast } from '../../../../hooks/useToast';
 
 export default function ConfiguracoesIntegracaoPage() {
-  const { toast, showToast, hideToast } = useToast();
+  const { showToast } = useToast();
 
   const [formData, setFormData] = useState({
     // Pagamentos
-    mercadoPagoAtivo: true,
-    mercadoPagoToken: 'TEST-1234567890-123456-abcdef123456789-12345678',
-    mercadoPagoSandbox: true,
-    
     paypalAtivo: false,
     paypalClientId: '',
     paypalClientSecret: '',
@@ -122,68 +118,6 @@ export default function ConfiguracoesIntegracaoPage() {
             {/* Tab Pagamentos */}
             {activeTab === 'pagamentos' && (
               <div className="space-y-6">
-                {/* Mercado Pago */}
-                <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center">
-                      <img src="https://readdy.ai/api/search-image?query=mercado%20pago%20logo%20icon%20payment%20gateway&width=32&height=32&seq=mp1&orientation=squarish" alt="Mercado Pago" className="w-8 h-8 mr-2" />
-                      Mercado Pago
-                    </h2>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        name="mercadoPagoAtivo"
-                        checked={formData.mercadoPagoAtivo}
-                        onChange={handleInputChange}
-                        className="sr-only peer"
-                      />
-                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-pink-300 dark:peer-focus:ring-pink-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-pink-600"></div>
-                    </label>
-                  </div>
-                  {formData.mercadoPagoAtivo && (
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                          Access Token
-                        </label>
-                        <input
-                          type="text"
-                          name="mercadoPagoToken"
-                          value={formData.mercadoPagoToken}
-                          onChange={handleInputChange}
-                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-                        />
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                            Modo Sandbox (Teste)
-                          </label>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">
-                            Ative para testes, desative para produção
-                          </p>
-                        </div>
-                        <label className="relative inline-flex items-center cursor-pointer">
-                          <input
-                            type="checkbox"
-                            name="mercadoPagoSandbox"
-                            checked={formData.mercadoPagoSandbox}
-                            onChange={handleInputChange}
-                            className="sr-only peer"
-                          />
-                          <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-pink-300 dark:peer-focus:ring-pink-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-pink-600"></div>
-                        </label>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => testarIntegracao('Mercado Pago')}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                      >
-                        Testar Integração
-                      </button>
-                    </div>
-                  )}
-                </div>
 
                 {/* PayPal */}
                 <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">

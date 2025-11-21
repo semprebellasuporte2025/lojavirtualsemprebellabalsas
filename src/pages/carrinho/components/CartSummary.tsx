@@ -1,18 +1,22 @@
 
 import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/useToast';
+import { useCart } from '@/hooks/useCart';
 
 interface CartSummaryProps {
   subtotal: number;
   shipping: any;
-  onFinalizePurchase: (paymentMethod: string, appliedCoupon?: { nome: string; desconto_percentual: number }) => void;
 }
 
-export default function CartSummary({ subtotal, shipping, onFinalizePurchase }: CartSummaryProps) {
+export default function CartSummary({ subtotal, shipping }: CartSummaryProps) {
   const { showToast } = useToast();
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const { paymentMethod, setPaymentMethod } = useCart();
   const [couponCode, setCouponCode] = useState('');
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('pix');
   const [isCheckingCoupon, setIsCheckingCoupon] = useState(false);
   const [couponValid, setCouponValid] = useState(false);
   const [couponData, setCouponData] = useState<{ nome: string; desconto_percentual: number } | null>(null);
@@ -23,7 +27,7 @@ export default function CartSummary({ subtotal, shipping, onFinalizePurchase }: 
 
   const isShippingSelected = !!shippingMethod;
 
-  const pixDiscount = selectedPaymentMethod === 'pix' ? subtotal * 0.1 : 0;
+  const pixDiscount = paymentMethod === 'pix' ? subtotal * 0.10 : 0;
   const couponDiscount = useMemo(() => {
     if (!appliedCoupon) return 0;
     const pct = Number(appliedCoupon.desconto_percentual) || 0;
@@ -81,9 +85,13 @@ export default function CartSummary({ subtotal, shipping, onFinalizePurchase }: 
   }, [couponCode]);
 
   const handleFinalize = () => {
-    if (!isShippingSelected) return;
-    // Sempre usar o fluxo padrão que coleta dados do cliente primeiro
-    onFinalizePurchase(selectedPaymentMethod, appliedCoupon || undefined);
+    // Persistir forma de pagamento selecionada antes de ir ao checkout
+    try { localStorage.setItem('last-payment-method', paymentMethod); } catch {}
+    if (!user) {
+      navigate('/auth/login', { state: { from: '/checkout' } });
+      return;
+    }
+    navigate('/checkout');
   };
 
   const handleApplyCoupon = async () => {
@@ -99,41 +107,46 @@ export default function CartSummary({ subtotal, shipping, onFinalizePurchase }: 
       {/* Forma de Pagamento */}
       <div className="mb-6">
         <h4 className="text-md font-semibold mb-3">Forma de Pagamento</h4>
-        
-        <div className="space-y-3">
-          {/* PIX primeiro */}
-          <label className="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
-            <input
-              type="radio"
-              name="payment"
-              value="pix"
-              checked={selectedPaymentMethod === 'pix'}
-              onChange={(e) => setSelectedPaymentMethod(e.target.value)}
-              className="mr-3"
-            />
-            <i className="ri-qr-code-line text-xl mr-3 text-gray-600"></i>
-            <div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <button
+            type="button"
+            aria-pressed={paymentMethod === 'pix'}
+            onClick={() => setPaymentMethod('pix')}
+            className={`flex items-center gap-3 p-3 rounded-lg border transition-colors cursor-pointer whitespace-nowrap ${
+              paymentMethod === 'pix'
+                ? 'border-pink-600 bg-pink-50 text-pink-700'
+                : 'border-gray-300 bg-white text-gray-800 hover:border-pink-400'
+            }`}
+          >
+            <i className="ri-qr-code-line text-xl"></i>
+            <div className="text-left">
               <div className="font-medium">PIX</div>
-              <div className="text-sm text-gray-600">10% de desconto - Aprovação imediata</div>
+              <div className="text-xs text-gray-600">Desconto de 10%</div>
             </div>
-          </label>
+            {paymentMethod === 'pix' && (
+              <i className="ri-check-line ml-auto text-pink-600"></i>
+            )}
+          </button>
 
-          {/* Cartão de Crédito */}
-          <label className="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
-            <input
-              type="radio"
-              name="payment"
-              value="credit"
-              checked={selectedPaymentMethod === 'credit'}
-              onChange={(e) => setSelectedPaymentMethod(e.target.value)}
-              className="mr-3"
-            />
-            <i className="ri-bank-card-line text-xl mr-3 text-gray-600"></i>
-            <div>
+          <button
+            type="button"
+            aria-pressed={paymentMethod === 'cartao'}
+            onClick={() => setPaymentMethod('cartao')}
+            className={`flex items-center gap-3 p-3 rounded-lg border transition-colors cursor-pointer whitespace-nowrap ${
+              paymentMethod === 'cartao'
+                ? 'border-pink-600 bg-pink-50 text-pink-700'
+                : 'border-gray-300 bg-white text-gray-800 hover:border-pink-400'
+            }`}
+          >
+            <i className="ri-bank-card-line text-xl"></i>
+            <div className="text-left">
               <div className="font-medium">Cartão de Crédito</div>
-              <div className="text-sm text-gray-600">Parcelamento em até 6x</div>
+              <div className="text-xs text-gray-600">Parcelamento em até 6x</div>
             </div>
-          </label>
+            {paymentMethod === 'cartao' && (
+              <i className="ri-check-line ml-auto text-pink-600"></i>
+            )}
+          </button>
         </div>
       </div>
 
@@ -154,11 +167,21 @@ export default function CartSummary({ subtotal, shipping, onFinalizePurchase }: 
           </span>
         </div>
 
-        {/* Desconto (se houver) */}
-        <div className="flex justify-between text-green-600">
-          <span>Desconto</span>
-          <span>- R$ {discount.toFixed(2).replace('.', ',')}</span>
-        </div>
+        {/* Desconto PIX 10% (apenas produtos) */}
+        {pixDiscount > 0 && (
+          <div className="flex justify-between text-green-600">
+            <span>Desconto PIX (10%)</span>
+            <span>- R$ {pixDiscount.toFixed(2).replace('.', ',')}</span>
+          </div>
+        )}
+
+        {/* Desconto de Cupom (se houver) */}
+        {couponDiscount > 0 && (
+          <div className="flex justify-between text-green-600">
+            <span>Desconto Cupom</span>
+            <span>- R$ {couponDiscount.toFixed(2).replace('.', ',')}</span>
+          </div>
+        )}
 
         <hr className="border-gray-200" />
 
@@ -205,25 +228,16 @@ export default function CartSummary({ subtotal, shipping, onFinalizePurchase }: 
         )}
       </div>
 
-      {/* Botão Finalizar Compra: inicia Checkout Pro direto (PIX/Crédito) ou segue fluxo padrão */}
+      {/* Botão Finalizar Compra */}
       <button
         onClick={handleFinalize}
-        disabled={!isShippingSelected}
-        className={`w-full inline-flex items-center justify-center py-3 rounded-lg font-medium transition-colors cursor-pointer whitespace-nowrap ${
-          isShippingSelected
-            ? 'bg-pink-600 text-white hover:bg-pink-700'
-            : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-        }`}
+        className={
+          'w-full inline-flex items-center justify-center py-3 rounded-lg font-medium transition-colors cursor-pointer whitespace-nowrap bg-pink-600 text-white hover:bg-pink-700'
+        }
       >
         <i className="ri-external-link-line mr-2"></i>
         Finalizar Compra
       </button>
-
-      {!isShippingSelected && (
-        <p className="text-sm text-gray-500 text-center mt-2">
-          Calcule o frete para continuar
-        </p>
-      )}
 
       {/* Informações de Segurança */}
       <div className="mt-6 pt-4 border-t border-gray-200">

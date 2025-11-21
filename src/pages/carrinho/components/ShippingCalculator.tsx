@@ -44,6 +44,11 @@ export default function ShippingCalculator({ onShippingCalculated, subtotal }: S
   const handleCepChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const formatted = formatCep(e.target.value);
     setCep(formatted);
+    if (formatted.length === 9) {
+      localStorage.setItem('last-cart-cep', formatted);
+    } else {
+      localStorage.removeItem('last-cart-cep');
+    }
     if (formatted.length < 9) {
       setShippingOptions([]);
       setSelectedOption(null);
@@ -69,10 +74,10 @@ export default function ShippingCalculator({ onShippingCalculated, subtotal }: S
       
       const requestBody = {
         cepDestino: cep.replace('-', ''),
-        peso: 0.5, // 500g
-        comprimento: 20,
-        largura: 15,
-        altura: 5,
+        peso: 0.3, // 500g
+        comprimento: 10,
+        largura: 5,
+        altura: 3,
         valorTotal: Number(subtotal) // Garantir que é um número
       };
       
@@ -144,12 +149,12 @@ export default function ShippingCalculator({ onShippingCalculated, subtotal }: S
               onChange={handleCepChange}
               placeholder="00000-000"
               maxLength={9}
-              className="flex-1 h-14 px-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent text-sm"
+              className="flex-1 h-16 sm:h-14 px-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent text-sm"
             />
             <button
               onClick={calculateShipping}
               disabled={loading || cep.length !== 9}
-              className="sm:w-auto w-full h-14 px-4 bg-pink-600 text-white rounded-lg hover:bg-pink-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors whitespace-nowrap cursor-pointer text-sm"
+              className="w-full sm:w-auto h-16 sm:h-14 px-4 bg-pink-600 text-white rounded-lg hover:bg-pink-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors whitespace-nowrap cursor-pointer text-sm"
             >
               {loading ? (
                 <i className="ri-loader-4-line animate-spin"></i>

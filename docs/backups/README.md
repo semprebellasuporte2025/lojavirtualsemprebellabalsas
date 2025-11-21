@@ -16,7 +16,7 @@ Checklist mínimo de validação funcional:
 - Botão “Ver Detalhes” navega para a página de produto corretamente.
 - Página de Produto carrega galeria, informações e produtos relacionados.
 - Minha Conta > Meus Pedidos: modal “Ver Detalhes” abre e exibe os itens.
-- Carrinho e fluxo de checkout básicos (adicionar item e navegar até checkout) iniciam sem erros.
+- Carrinho funciona sem erros e navegação principal operante.
 - Servidor de desenvolvimento sobe sem erros aparentes.
 
 Comandos úteis (PowerShell):
@@ -37,16 +37,4 @@ Estrutura sugerida:
 
 ## Índice dos Pontos de Restauração
 
-- `backup-01.md` — Ajustes iniciais do Checkout Pro e CORS
-  - Dev em `http://localhost:3002/`
-  - Função edge `mercado-pago-checkout-pro` com CORS/preflight
-  - Correção TS no ambiente Deno
-  - Checkout criando preferência e redirecionando para sandbox
-  - Páginas de retorno atualizam status do pedido
-
-- `backup-02.md` — Cadastro e melhorias no fluxo de pagamento
-  - Dev em `http://localhost:5174/`
-  - Página `/auth/register` com validações e máscaras (Telefone/CPF)
-  - Rota `/auth/register` adicionada no router
-  - Checkout Pro força sandbox em dev e logs detalhados
-  - Remoção de avisos TS6133 em cadastro e carrinho
+Nenhum ponto de restauração vigente relacionado a fluxo de compra.

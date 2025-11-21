@@ -41,7 +41,6 @@ Write-Host "4. Use supabase functions secrets set para chaves privadas"
 Write-Host ""
 Write-Host "🔒 CHAVES QUE NUNCA DEVEM SER COMMITADAS:" -ForegroundColor Red
 Write-Host "- SUPABASE_SERVICE_ROLE_KEY"
-Write-Host "- MERCADOPAGO_ACCESS_TOKEN"  
 Write-Host "- Qualquer chave que comece com 'eyJ' (JWT)"
 Write-Host "- Tokens de API privados"
 

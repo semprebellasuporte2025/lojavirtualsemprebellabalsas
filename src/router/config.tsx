@@ -19,10 +19,7 @@ const CategoriaPage = lazy(() => import('../pages/categoria/page'));
 const MinhaContaPage = lazy(() => import('../pages/minha-conta/page'));
 const NotFoundPage = lazy(() => import('../pages/NotFound'));
 const CarrinhoPage = lazy(() => import('../pages/carrinho/page'));
-const CheckoutPageV3 = lazy(() => import('../pages/checkout/pageV3'));
-const CheckoutSucessoPage = lazy(() => import('../pages/checkout/sucesso/page'));
-const CheckoutErroPage = lazy(() => import('../pages/checkout/erro/page'));
-const CheckoutPendentePage = lazy(() => import('../pages/checkout/pendente/page'));
+const CheckoutPage = lazy(() => import('../pages/checkout/page'));
 const AuthLoginPage = lazy(() => import('../pages/auth/login/page'));
 const AuthRegisterPage = lazy(() => import('../pages/auth/register/page'));
 const WebhookTesterPage = lazy(() => import('../pages/webhook-tester/page'));
@@ -86,23 +83,7 @@ const routes: RouteObject[] = [
   },
   {
     path: '/checkout',
-    element: <Suspense fallback={<LoadingFallback />}><CheckoutPageV3 /></Suspense>,
-  },
-  {
-    path: '/checkoutv3',
-    element: <Suspense fallback={<LoadingFallback />}><CheckoutPageV3 /></Suspense>,
-  },
-  {
-    path: '/checkout/sucesso',
-    element: <Suspense fallback={<LoadingFallback />}><CheckoutSucessoPage /></Suspense>,
-  },
-  {
-    path: '/checkout/erro',
-    element: <Suspense fallback={<LoadingFallback />}><CheckoutErroPage /></Suspense>,
-  },
-  {
-    path: '/checkout/pendente',
-    element: <Suspense fallback={<LoadingFallback />}><CheckoutPendentePage /></Suspense>,
+    element: <Suspense fallback={<LoadingFallback />}><CheckoutPage /></Suspense>,
   },
   {
     path: '/categoria/:categoria',

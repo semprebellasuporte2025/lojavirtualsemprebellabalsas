@@ -401,7 +401,7 @@ export default function DashboardPage() {
                   <p className="font-medium text-gray-900">{pedido.numero_pedido}</p>
                   <p className="text-sm text-gray-600">{pedido.nome}</p>
                   <p className="text-xs text-gray-500">
-                    {new Date(pedido.created_at).toLocaleDateString('pt-BR')}
+                    {new Date(pedido.created_at).toLocaleDateString('pt-BR')} às {new Date(pedido.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                   </p>
                 </div>
                 <div className="text-right">

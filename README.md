@@ -7,7 +7,7 @@ Sistema completo de e-commerce desenvolvido com React, TypeScript, Vite e Supaba
 ### 🛒 Loja Virtual
 - Catálogo de produtos com categorias
 - Sistema de carrinho de compras
-- Checkout completo com integração de pagamento
+- Fluxo de pagamento integrado (sem etapa dedicada de finalização)
 - Cálculo de frete automático
 - Sistema de favoritos
 - Avaliações e comentários de produtos
@@ -91,7 +91,6 @@ src/
 ├── pages/              # Páginas da aplicação
 │   ├── admin/          # Painel administrativo
 │   ├── auth/           # Autenticação
-│   ├── checkout/       # Processo de compra
 │   └── ...
 ├── hooks/              # Custom hooks
 ├── lib/                # Configurações e utilitários
@@ -127,7 +126,7 @@ O projeto é compatível com qualquer plataforma que suporte aplicações React/
 ## 🤝 Contribuição
 
 1. Fork o projeto
-2. Crie uma branch para sua feature (`git checkout -b feature/AmazingFeature`)
+2. Crie uma branch para sua feature (`git switch -c feature/AmazingFeature`)
 3. Commit suas mudanças (`git commit -m 'Add some AmazingFeature'`)
 4. Push para a branch (`git push origin feature/AmazingFeature`)
 5. Abra um Pull Request

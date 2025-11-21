@@ -7,18 +7,18 @@ if (!supabaseAnonKey) {
 }
 
 // Função para obter headers de autenticação
-export const getAuthHeaders = async () => {
+export const getAuthHeaders = async (): Promise<Record<string, string>> => {
   const { data: { session } } = await supabase.auth.getSession();
   
   if (session?.access_token) {
     return {
       'Authorization': `Bearer ${session.access_token}`,
-      'apikey': supabaseAnonKey
+      'apikey': String(supabaseAnonKey)
     };
   }
   
   return {
-    'apikey': supabaseAnonKey
+    'apikey': String(supabaseAnonKey)
   };
 };
 

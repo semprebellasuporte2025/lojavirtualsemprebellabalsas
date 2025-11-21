@@ -65,11 +65,7 @@ export default function CarrinhoPage() {
     setShippingMethod(method);
   };
 
-  const handleFinalizePurchase = (paymentMethod: string, appliedCoupon?: { nome: string; desconto_percentual: number }) => {
-    if (shippingMethod) {
-      navigate('/checkout', { state: { shippingCost, shippingMethod, paymentMethod, coupon: appliedCoupon } });
-    }
-  };
+  // Fluxo de finalização de compra desativado temporariamente
 
   const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
@@ -134,11 +130,9 @@ export default function CarrinhoPage() {
                     onShippingCalculated={handleShippingCalculated} 
                     subtotal={subtotal}
                   />
-                  {/* Botão Mercado Pago removido aqui; agora aparece dentro do CartSummary no lugar de "Finalizar Compra" */}
                   <CartSummary
                     subtotal={subtotal}
                     shipping={{ price: shippingCost, name: shippingMethod }}
-                    onFinalizePurchase={handleFinalizePurchase}
                   />
                 </div>
               </div>

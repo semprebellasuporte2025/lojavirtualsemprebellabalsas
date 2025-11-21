@@ -1,6 +1,5 @@
 User-agent: *
 Disallow: /paineladmin
-Disallow: /checkout
 Disallow: /minha-conta
 Disallow: /carrinho
 Allow: /

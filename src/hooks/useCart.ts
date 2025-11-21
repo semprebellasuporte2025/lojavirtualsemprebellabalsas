@@ -15,17 +15,23 @@ interface CartItem {
 
 interface CartStore {
   items: CartItem[];
+  paymentMethod: 'pix' | 'cartao';
   addItem: (item: CartItem) => void;
   removeItem: (id: string) => void;
   updateQuantity: (id: string, quantity: number) => void;
   clearCart: () => void;
   getTotalItems: () => number;
+  setPaymentMethod: (metodo: 'pix' | 'cartao') => void;
 }
 
 export const useCart = create<CartStore>()(
   persist(
     (set, get) => ({
       items: [],
+      paymentMethod:
+        typeof window !== 'undefined'
+          ? (localStorage.getItem('last-payment-method') === 'cartao' ? 'cartao' : 'pix')
+          : 'pix',
       addItem: (item) => set((state) => {
         const existingItem = state.items.find(i => i.id === item.id);
         if (existingItem) {
@@ -54,7 +60,13 @@ export const useCart = create<CartStore>()(
       getTotalItems: () => {
         const state = get();
         return state.items.reduce((total, item) => total + item.quantity, 0);
-      }
+      },
+      setPaymentMethod: (metodo) => set(() => {
+        try {
+          localStorage.setItem('last-payment-method', metodo);
+        } catch {}
+        return { paymentMethod: metodo };
+      })
     }),
     {
       name: 'cart-storage'

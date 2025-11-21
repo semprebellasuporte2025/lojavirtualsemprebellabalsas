@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-    - name: Checkout code
+    - name: Fetch repository
       uses: actions/checkout@v4
       
     - name: Setup Node.js

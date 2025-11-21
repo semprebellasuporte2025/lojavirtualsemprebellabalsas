@@ -668,13 +668,14 @@ export default function MinhaContaPage() {
                                     const totalCalc = typeof selectedOrder.total === 'number' && selectedOrder.total > 0
                                         ? selectedOrder.total
                                         : subtotalCalc + freteCalc - descontoCalc;
+                                    const discountLabel = (selectedOrder.forma_pagamento === 'pix') ? 'Desconto (PIX 10%)' : 'Desconto';
                                     return (
                                         <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
                                             <div className="text-gray-600">Subtotal</div>
                                             <div className="text-right">{formatCurrency(subtotalCalc)}</div>
                                             <div className="text-gray-600">Frete</div>
                                             <div className="text-right">{formatCurrency(freteCalc)}</div>
-                                            <div className="text-gray-600">Desconto</div>
+                                            <div className="text-gray-600">{discountLabel}</div>
                                             <div className="text-right">{formatCurrency(descontoCalc)}</div>
                                             <div className="font-medium">Total</div>
                                             <div className="text-right font-semibold text-pink-600">{formatCurrency(totalCalc)}</div>

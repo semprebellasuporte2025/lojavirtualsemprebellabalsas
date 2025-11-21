@@ -1,12 +1,16 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import Footer from '../../../components/feature/Footer';
 import SEOHead from '../../../components/feature/SEOHead';
 import { useAuth } from '../../../hooks/useAuth';
+import { useCart } from '../../../hooks/useCart';
+import { determinePostLoginRedirect, shouldRedirect } from '../../../utils/redirect';
 
 export default function LoginPage() {
   const navigate = useNavigate();
   const { user, loading, isAdmin, isAtendente, isUsuario, signIn, signOut, clearAdminCache, refreshAdminStatus } = useAuth();
+  const location = useLocation();
+  const { items } = useCart();
 
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [rememberMe, setRememberMe] = useState(false);
@@ -68,7 +72,7 @@ export default function LoginPage() {
       }
       
       console.log('[Login] Login realizado com sucesso');
-      
+
       if (rememberMe) {
         localStorage.setItem('rememberMe', 'true');
         localStorage.setItem('rememberEmail', formData.email);
@@ -76,6 +80,14 @@ export default function LoginPage() {
         localStorage.removeItem('rememberMe');
         localStorage.removeItem('rememberEmail');
       }
+
+      // Persistir intenção de retorno (from) para casos de refresh
+      try {
+        const fromState = (location.state as any)?.from as string | undefined;
+        const searchFrom = new URLSearchParams(location.search).get('from') || undefined;
+        const fromPath = fromState || searchFrom || undefined;
+        if (fromPath) localStorage.setItem('postLoginFrom', fromPath);
+      } catch {}
     } catch (err: any) {
       console.error('[Login] Erro inesperado:', err);
       setError(err?.message || 'Erro inesperado ao fazer login');
@@ -84,33 +96,40 @@ export default function LoginPage() {
     }
   };
 
-  // Se já estiver logado, direciona conforme perfil (admin vs cliente)
+  // Se já estiver logado, decidir destino considerando origem e carrinho
   useEffect(() => {
     if (!loading && user) {
-      console.log('[Login] Usuário logado detectado, verificando redirecionamento:', {
+      const currentPath = window.location.pathname;
+      const fromState = (location.state as any)?.from as string | undefined;
+      const searchFrom = new URLSearchParams(location.search).get('from') || undefined;
+      const storedFrom = localStorage.getItem('postLoginFrom') || undefined;
+      const fromPath = fromState || searchFrom || storedFrom;
+
+      const target = determinePostLoginRedirect({
+        isAdmin,
+        isAtendente,
+        isUsuario,
+        fromPath,
+        cartHasItems: items.length > 0,
+        currentPath,
+      });
+
+      console.log('[Login] Redirecionamento decidido:', {
         email: user.email,
         isAdmin,
         isAtendente,
         isUsuario,
-        currentPath: window.location.pathname
+        fromPath,
+        cartItems: items.length,
+        currentPath,
+        target,
       });
 
-      // Evitar redirecionamento se já estiver na página correta
-      const currentPath = window.location.pathname;
-
-      if (isAdmin || isAtendente || isUsuario) {
-        console.log('[Login] Usuário é admin, redirecionando para painel admin');
-        if (!currentPath.startsWith('/paineladmin')) {
-          forceRedirect('/paineladmin');
-        }
-      } else {
-        console.log('[Login] Usuário não é admin, redirecionando para minha conta');
-        if (currentPath !== '/minha-conta') {
-          forceRedirect('/minha-conta');
-        }
+      if (shouldRedirect(currentPath, target)) {
+        forceRedirect(target!);
       }
     }
-  }, [user, loading, isAdmin, isAtendente, isUsuario, navigate]);
+  }, [user, loading, isAdmin, isAtendente, isUsuario, navigate, location, items]);
 
   if (loading) {
     return (
@@ -148,7 +167,7 @@ export default function LoginPage() {
                   <li className="flex items-start gap-3">
                     <i className="ri-check-line text-pink-600 mt-0.5"></i>
                     <div>
-                      <p className="text-sm font-medium text-gray-900">Checkout ágil</p>
+                      <p className="text-sm font-medium text-gray-900">Compra ágil</p>
                       <p className="text-sm text-gray-600">Suas informações ficam salvas para compras futuras.</p>
                     </div>
                   </li>

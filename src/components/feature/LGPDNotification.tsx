@@ -15,8 +15,7 @@ export default function LGPDNotification() {
     const excludedPaths = [
       '/admin',
       '/minha-conta', 
-      '/carrinho',
-      '/checkout'
+      '/carrinho'
     ];
     
     const isExcludedPath = excludedPaths.some(excludedPath => 

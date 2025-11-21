@@ -1,6 +1,6 @@
 
 import { useState, useEffect, useRef } from 'react';
-import type { User, Session } from '@supabase/supabase-js';
+import type { User, Session, AuthError } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 
 export interface AuthState {
@@ -381,25 +381,34 @@ export const useAuth = () => {
     };
   }, []);
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = async (
+    email: string,
+    password: string
+  ): Promise<{ data: { user: User; session: Session } | null; error: AuthError | null }> => {
     try {
       console.log('[Auth] Iniciando login para:', email);
-      
+
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
-      
+
       if (error) {
         console.error('[Auth] Erro no login:', error);
         return { data: null, error };
       }
-      
+
       console.log('[Auth] Login bem-sucedido');
       return { data, error: null };
-    } catch (error) {
-      console.error('[Auth] Erro no signIn:', error);
-      return { data: null, error };
+    } catch (err) {
+      console.error('[Auth] Erro no signIn:', err);
+      // Normaliza para AuthError para manter tipagem consistente
+      const fallback: AuthError = {
+        name: 'AuthError',
+        message: (err as any)?.message ?? 'Erro inesperado ao fazer login',
+        status: (err as any)?.status ?? 0,
+      } as AuthError;
+      return { data: null, error: fallback };
     }
   };
 
@@ -424,8 +433,44 @@ export const useAuth = () => {
   };
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    return { error };
+    try {
+      const { error } = await supabase.auth.signOut();
+      // Estado imediato para evitar depender exclusivamente do listener
+      setAuthState({
+        user: null,
+        session: null,
+        loading: false,
+        isAdmin: false,
+        isAtendente: false,
+        isUsuario: false,
+        adminName: undefined,
+      });
+      // Limpa caches e marcadores locais
+      try {
+        clearAdminCache();
+      } catch {}
+      try {
+        localStorage.removeItem('semprebella-auth-token');
+        localStorage.removeItem('lastActivity');
+        localStorage.removeItem('postLoginFrom');
+      } catch {}
+      return { error };
+    } catch (err) {
+      // Mesmo em erro, força estado de logout local
+      setAuthState({
+        user: null,
+        session: null,
+        loading: false,
+        isAdmin: false,
+        isAtendente: false,
+        isUsuario: false,
+        adminName: undefined,
+      });
+      try {
+        clearAdminCache();
+      } catch {}
+      return { error: (err as any) ?? null };
+    }
   };
 
   // Função para limpar o cache de verificação de administrador
