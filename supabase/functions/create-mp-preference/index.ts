@@ -123,6 +123,19 @@ Deno.serve(async (req)=>{
       }
     };
 
+    if (preferred === 'pix') {
+      payload.payment_methods = {
+        ...payload.payment_methods,
+        default_payment_method_id: 'pix',
+        excluded_payment_types: [
+          { id: 'credit_card' },
+          { id: 'debit_card' },
+          { id: 'ticket' } // Boleto
+          // Adicione outros tipos a excluir se necessário
+        ]
+      };
+    }
+
     // Chama API do Mercado Pago
     const controller = new AbortController();
     const timeout = setTimeout(()=>controller.abort(), 15000);

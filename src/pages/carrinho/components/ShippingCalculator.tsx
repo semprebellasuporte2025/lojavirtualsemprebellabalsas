@@ -42,9 +42,20 @@ export default function ShippingCalculator({ onShippingCalculated, subtotal }: S
   };
 
   const handleCepChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formatted = formatCep(e.target.value);
-    setCep(formatted);
-    if (formatted.length === 9) {
+    let value = e.target.value.replace(/\D/g, '');
+    
+    if (value.length > 8) {
+      value = value.slice(0, 8);
+    }
+    
+    if (value.length > 5) {
+      value = value.replace(/^(\d{5})(\d)/, '$1-$2');
+    }
+    
+    setCep(value);
+    
+    const formatted = value.replace('-', '');
+    if (formatted.length === 8) {
       localStorage.setItem('last-cart-cep', formatted);
     } else {
       localStorage.removeItem('last-cart-cep');
@@ -56,6 +67,16 @@ export default function ShippingCalculator({ onShippingCalculated, subtotal }: S
       setError('');
       setFreteGratis(false);
       onShippingCalculated(0, '');
+    }
+  };
+
+  // Função para lidar com a tecla Enter no input do CEP
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      const formattedCep = cep.replace('-', '');
+      if (formattedCep.length === 8) {
+        calculateShipping();
+      }
     }
   };
 
@@ -147,6 +168,7 @@ export default function ShippingCalculator({ onShippingCalculated, subtotal }: S
               type="text"
               value={cep}
               onChange={handleCepChange}
+              onKeyPress={handleKeyPress}
               placeholder="00000-000"
               maxLength={9}
               className="flex-1 h-16 sm:h-14 px-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent text-sm"

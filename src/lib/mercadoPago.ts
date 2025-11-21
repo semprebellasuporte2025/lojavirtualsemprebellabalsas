@@ -36,7 +36,7 @@ export async function createPreference(params: {
   cliente: ClienteInfo;
   backUrls: BackUrls;
   notificationUrl?: string;
-  // Removido preferredPaymentMethodId pois a API do Mercado Pago não suporta default_payment_method_id para PIX
+  preferredPaymentMethodId?: string; // Adicionado para suportar preferência de método
 }): Promise<PreferenceResponse> {
   const { data, error } = await supabase.functions.invoke('create-mp-preference', {
     body: {
@@ -45,7 +45,7 @@ export async function createPreference(params: {
       cliente: params.cliente,
       backUrls: params.backUrls,
       notificationUrl: params.notificationUrl,
-      // Removido preferredPaymentMethodId da chamada
+      preferredPaymentMethodId: params.preferredPaymentMethodId, // Passando para a Edge Function
     },
   });
 
