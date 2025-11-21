@@ -7,7 +7,7 @@ import { config } from 'dotenv';
 // Carregar variáveis de ambiente
 config({ path: '.env' });
 
-const MP_ACCESS_TOKEN = process.env.MERCADOPAGO_ACCESS_TOKEN || 'APP_USR-1813088681194040-112016-32e4a17681babbbc73d4072ad0506bc3-2987679653';
+const MP_ACCESS_TOKEN = process.env.MERCADOPAGO_ACCESS_TOKEN || process.env.MP_ACCESS_TOKEN;
 const SUPABASE_URL = process.env.VITE_PUBLIC_SUPABASE_URL || 'https://cproxdqrraiujnewbsvp.supabase.co';
 const MP_NOTIFICATION_URL = `${SUPABASE_URL}/functions/v1/mp-payment-webhook`;
 
