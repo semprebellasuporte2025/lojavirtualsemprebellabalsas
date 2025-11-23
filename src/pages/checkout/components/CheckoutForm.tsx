@@ -380,6 +380,9 @@ export default function CheckoutForm({
             : undefined,
         };
 
+        const isHttps = typeof window !== 'undefined' && window.location.protocol === 'https:';
+        const safeRedirect = isHttps ? `${window.location.origin}/minha-conta/pedidos` : undefined;
+
         if (formaPagamento === 'pix') {
           try {
             console.log('Chamando payPix (Checkout Pro só PIX) com:', {
@@ -387,14 +390,14 @@ export default function CheckoutForm({
               description: `Pedido ${numeroPedido}`,
               orderNumber: numeroPedido,
               payer,
-              redirectUrl: `${window.location.origin}/minha-conta/pedidos`,
+              redirectUrl: safeRedirect,
             });
             const pixResult = await payPix({
               amount: Number(total.toFixed(2)),
               description: `Pedido ${numeroPedido}`,
               orderNumber: numeroPedido,
               payer,
-              redirectUrl: `${window.location.origin}/minha-conta/pedidos`,
+              redirectUrl: safeRedirect,
             });
             console.log('Resultado do payPix:', pixResult);
             // Se veio link de Checkout Pro, redirecionar. Caso contrário, exibir QR local.
@@ -416,7 +419,7 @@ export default function CheckoutForm({
               email: checkoutData.customer.email,
               first_name: checkoutData.customer.nome.split(' ')[0],
             },
-            redirectUrl: `${window.location.origin}/minha-conta/pedidos`,
+            redirectUrl: safeRedirect,
           });
           if (cardResult.init_point) {
             window.location.href = cardResult.init_point;
