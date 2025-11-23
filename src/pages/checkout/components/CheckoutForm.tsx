@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import type { User } from '@supabase/supabase-js';
 import CustomerDataForm from './CustomerDataForm';
 import ShippingForm from './ShippingForm';
@@ -9,7 +9,7 @@ import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/useToast';
 import { maskCEP, maskCPF, maskPhone, validateCEP, validateCPF, validateEmail, validatePhone } from '@/utils/validation';
 import { useCart } from '@/hooks/useCart';
-import { createPreference } from '@/lib/mercadoPago';
+import { createOrder } from '@/lib/orders';
 
 interface CheckoutFormProps {
   user: User;
@@ -84,12 +84,30 @@ export default function CheckoutForm({
   }, [lastCartCep]);
   const [prefillInfo, setPrefillInfo] = useState<{ customer: boolean; shipping: boolean }>({ customer: false, shipping: false });
   const [clienteId, setClienteId] = useState<string | null>(null);
+  const [pixPaymentData, setPixPaymentData] = useState<any | null>(null);
+  const pixDisplayRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    console.log('PIX Payment Data mudou:', pixPaymentData);
+    if (pixPaymentData && pixDisplayRef.current) {
+      setTimeout(() => {
+        pixDisplayRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 100); // Pequeno delay para garantir a renderização
+    }
+  }, [pixPaymentData]);
+
   // Reidratar estado do checkout salvo
   useEffect(() => {
     try {
-      const raw = localStorage.getItem('checkout-state');
-      if (raw) {
-        const parsed = JSON.parse(raw);
+      const savedState = localStorage.getItem('checkout-state');
+      const savedPaymentMethod = localStorage.getItem('last-payment-method');
+
+      if (savedPaymentMethod) {
+        // setFormaPagamento(savedPaymentMethod); // Removido
+      }
+
+      if (savedState) {
+        const parsed = JSON.parse(savedState);
         if (parsed?.data) setCheckoutData(parsed.data as CheckoutData);
         if (parsed?.step) setCurrentStep(parsed.step as CheckoutStep);
       }
@@ -279,17 +297,17 @@ export default function CheckoutForm({
       const frete = 0; // Frete a calcular em fluxo futuro (sem desconto)
       const total = subtotal + frete - desconto;
 
-      // Endereço de entrega
-      const enderecoEntrega = {
-        nome: checkoutData.customer.nome,
-        endereco: checkoutData.shipping.logradouro,
-        numero: checkoutData.shipping.numero,
-        complemento: checkoutData.shipping.complemento,
-        bairro: checkoutData.shipping.bairro,
-        cidade: checkoutData.shipping.cidade,
-        estado: checkoutData.shipping.estado,
-        cep: checkoutData.shipping.cep,
-      };
+      // String para salvar em pedidos.endereco_entrega (DB espera string)
+      const enderecoEntregaStr = [
+        checkoutData.shipping.logradouro,
+        checkoutData.shipping.numero,
+        checkoutData.shipping.complemento || ''
+      ]
+        .filter(Boolean)
+        .join(', ')
+        .concat(
+          checkoutData.shipping.bairro ? ` - ${checkoutData.shipping.bairro}` : ''
+        );
 
       // Cliente
       const clienteIdToUse = clienteId || user.id;
@@ -310,102 +328,118 @@ export default function CheckoutForm({
         };
       });
 
-      // Persistir dados essenciais do pedido para continuidade do fluxo (caso precise)
+      // Criar pedido no banco de dados
       try {
-        localStorage.setItem('last-order-number', String(numeroPedido));
-      } catch {}
-
-      // Se método for cartão OU PIX, iniciar fluxo do Mercado Pago Checkout Pro
-      if (formaPagamento === 'cartao' || formaPagamento === 'pix') {
+        const pedidoId = await createOrder({
+          cliente_id: clienteIdToUse,
+          numero_pedido: numeroPedido,
+          subtotal: subtotal,
+          desconto: desconto,
+          frete: frete,
+          total: total,
+          forma_pagamento: formaPagamento,
+          status: 'pendente', // Status inicial será atualizado pelo webhook
+          endereco_entrega: enderecoEntregaStr,
+          cidade_entrega: checkoutData.shipping.cidade,
+          estado_entrega: checkoutData.shipping.estado,
+          cep_entrega: checkoutData.shipping.cep,
+          itens: itensPayload.map(item => ({
+            produto_id: item.produto_id,
+            nome: item.nome,
+            quantidade: item.quantidade,
+            preco_unitario: item.preco_unitario,
+            subtotal: item.subtotal,
+            tamanho: item.tamanho,
+            cor: item.cor,
+            imagem: item.imagem
+          }))
+        });
+        
+        console.log('✅ Pedido criado com sucesso:', pedidoId);
+        
+        // Persistir dados essenciais do pedido para continuidade do fluxo
         try {
-          // TEMPORÁRIO: Usar URL de produção para backUrls durante testes locais, pois MP rejeita localhost
-          const backBase = 'https://semprebellabalsas.com.br';
-          
-          // DEBUG: Log dos dados que serão enviados
-          console.log('🔍 [DEBUG] Dados sendo enviados para createPreference:');
-          console.log('checkoutData.customer:', checkoutData.customer);
-          console.log('items:', items);
-          console.log('numeroPedido:', numeroPedido);
-          
-          const preferenceData = {
-            items: items.map(i => ({ id: i.id, name: i.name, price: i.price, quantity: i.quantity, image: i.image, size: i.size, color: i.color })),
-            externalReference: numeroPedido,
-            cliente: { nome: checkoutData.customer.nome, email: checkoutData.customer.email },
-            backUrls: {
-              success: `${backBase}/minha-conta?pedido=${numeroPedido}`,
-              pending: `${backBase}/minha-conta?pedido=${numeroPedido}`,
-              failure: `https://semprebellabalsas.com.br`,
-            },
-            notificationUrl: 'https://portaln8n.semprebellabalsas.com.br/webhook/notifica_pedido_cliente_e_proprietario',
-            // Removido preferredPaymentMethodId pois a API do Mercado Pago não suporta default_payment_method_id para PIX
-            metadata: {
-              numero_pedido: numeroPedido,
-              cliente_id: clienteIdToUse,
-              subtotal: subtotal,
-              desconto: desconto,
-              frete: frete,
-              total: total,
-              status: 'confirmado', // Inicial, será atualizado no webhook
-              forma_pagamento: formaPagamento,
-              endereco_entrega: enderecoEntrega,
-              cliente_details: {
-                id: clienteIdToUse,
-                nome: checkoutData.customer.nome,
-                cpf: checkoutData.customer.cpf,
-                email: checkoutData.customer.email,
-                telefone: checkoutData.customer.telefone,
-              },
-              itens: itensPayload,
-              origem: 'checkout-web',
-              timestamp: new Date().toISOString(),
-            }
-          };
-          
-          console.log('📦 [DEBUG] Request body completo:');
-          console.log(JSON.stringify(preferenceData, null, 2));
-          
-          const pref = await createPreference(preferenceData);
-          // Redirecionar para o checkout na mesma aba
-          window.location.href = pref.init_point ?? '';
-          setIsProcessing(false);
-          return; // não chamar onSuccess aqui; retorno será via back_urls
-        } catch (mpErr: any) {
-          console.error('Erro ao iniciar Checkout Pro:', mpErr);
-      
-          // Tenta extrair a mensagem de erro detalhada da Edge Function
-          if (mpErr && mpErr.message) {
-            try {
-              // A Edge Function retorna erro como string JSON, então tentamos parsear diretamente
-              const errorData = JSON.parse(mpErr.message);
-              console.error('Detalhes do erro do Mercado Pago:', errorData);
-            } catch (e) {
-              // Se não for JSON válido, pode ser que a mensagem contenha JSON dentro
-              try {
-                const jsonMatch = mpErr.message.match(/\{[^}]*\}/);
-                if (jsonMatch) {
-                  const errorData = JSON.parse(jsonMatch[0]);
-                  console.error('Detalhes do erro do Mercado Pago:', errorData);
-                } else {
-                  console.error('Mensagem de erro:', mpErr.message);
-                }
-              } catch (parseError) {
-                // A mensagem de erro não contém JSON válido
-                console.error('Mensagem de erro original:', mpErr.message);
-              }
-            }
-          }
-      
-          throw new Error('Falha ao iniciar pagamento. Verifique o console para mais detalhes.');
-        }
+          localStorage.setItem('last-order-number', String(numeroPedido));
+          localStorage.setItem('last-order-id', pedidoId);
+        } catch {}
+        
+      } catch (orderError) {
+        console.error('❌ Erro ao criar pedido:', orderError);
+        throw new Error('Falha ao criar pedido. Tente novamente.');
       }
-      
-      // Qualquer outro método (não esperado): concluir fluxo local e navegar
+
+      // Processar pagamento via Mercado Pago
       try {
-        localStorage.removeItem('checkout-state');
-      } catch {}
-      onSuccess();
+        const { payPix, payCard } = await import('@/lib/paymentsMp');
+        const payer = {
+          email: checkoutData.customer.email,
+          first_name: (checkoutData.customer.nome || '').split(' ')[0] || undefined,
+          last_name: (checkoutData.customer.nome || '').split(' ').slice(1).join(' ') || undefined,
+          identification: checkoutData.customer.cpf
+            ? { type: 'CPF', number: String(checkoutData.customer.cpf).replace(/\D/g, '') }
+            : undefined,
+        };
+
+        if (formaPagamento === 'pix') {
+          try {
+            console.log('Chamando payPix (Checkout Pro só PIX) com:', {
+              amount: Number(total.toFixed(2)),
+              description: `Pedido ${numeroPedido}`,
+              orderNumber: numeroPedido,
+              payer,
+              redirectUrl: `${window.location.origin}/minha-conta/pedidos`,
+            });
+            const pixResult = await payPix({
+              amount: Number(total.toFixed(2)),
+              description: `Pedido ${numeroPedido}`,
+              orderNumber: numeroPedido,
+              payer,
+              redirectUrl: `${window.location.origin}/minha-conta/pedidos`,
+            });
+            console.log('Resultado do payPix:', pixResult);
+            // Se veio link de Checkout Pro, redirecionar. Caso contrário, exibir QR local.
+            if (pixResult.init_point) {
+              window.location.href = pixResult.init_point;
+            } else {
+              setPixPaymentData(pixResult);
+            }
+          } catch (pixError) {
+            console.error('Erro ao chamar payPix:', pixError);
+            onError(pixError instanceof Error ? pixError.message : 'Erro no pagamento PIX');
+          }
+        } else if (formaPagamento === 'cartao') {
+          const cardResult = await payCard({
+            amount: total,
+            description: `Pedido #${numeroPedido}`,
+            orderNumber: numeroPedido, // Corrigido de orderId para numeroPedido
+            payer: {
+              email: checkoutData.customer.email,
+              first_name: checkoutData.customer.nome.split(' ')[0],
+            },
+            redirectUrl: `${window.location.origin}/minha-conta/pedidos`,
+          });
+          if (cardResult.init_point) {
+            window.location.href = cardResult.init_point;
+          } else {
+            throw new Error('Não foi possível obter o link de pagamento.');
+          }
+        }
+      } catch (payError) {
+        console.error('❌ Erro ao processar pagamento:', payError);
+        throw new Error(payError instanceof Error ? payError.message : 'Falha ao processar pagamento');
+      }
+
+      // Concluir fluxo local e navegar - REMOVIDO PARA PIX
+      if (checkoutData.payment.metodo !== 'pix') {
+        try {
+          localStorage.removeItem('checkout-state');
+        } catch {}
+        onSuccess();
+      }
     } catch (error) {
       onError(error instanceof Error ? error.message : 'Erro ao processar pedido');
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -445,6 +479,7 @@ export default function CheckoutForm({
             onBack={goToPreviousStep}
             isProcessing={isProcessing}
             onEditStep={(step) => setCurrentStep(step)}
+            // Sem estado de PIX
           />
         );
       default:
@@ -464,11 +499,11 @@ export default function CheckoutForm({
 
       {/* Progress Steps */}
       <div className="mb-8">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-4 gap-1 sm:gap-0">
           {steps.map((step, index) => (
             <div key={step} className="flex items-center">
               <div
-                className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-xs sm:text-sm font-medium ${
                   index < currentStepIndex
                     ? 'bg-green-600 text-white'
                     : index === currentStepIndex
@@ -480,7 +515,7 @@ export default function CheckoutForm({
               </div>
               {index < steps.length - 1 && (
                 <div
-                  className={`w-16 h-1 mx-2 ${
+                  className={`w-10 sm:w-16 h-1 mx-1 sm:mx-2 ${
                     index < currentStepIndex ? 'bg-green-600' : 'bg-gray-200'
                   }`}
                 />
@@ -490,15 +525,51 @@ export default function CheckoutForm({
         </div>
         
         <div className="flex justify-between text-xs text-gray-600">
-          <span className="text-center w-20">Dados</span>
-          <span className="text-center w-20">Entrega</span>
-          <span className="text-center w-20">Pagamento</span>
-          <span className="text-center w-20">Revisão</span>
+          <span className="text-center w-16 sm:w-20">Dados</span>
+          <span className="text-center w-16 sm:w-20">Entrega</span>
+          <span className="text-center w-16 sm:w-20">Pagamento</span>
+          <span className="text-center w-16 sm:w-20">Revisão</span>
         </div>
       </div>
 
       {/* Step Content */}
       {renderStep()}
+
+      {/* Exibição do PIX após geração */}
+      {pixPaymentData && (
+        <div ref={pixDisplayRef} className="mt-8 p-6 bg-gray-100 rounded-lg text-center">
+          <h2 className="text-2xl font-bold text-gray-800 mb-4">Pague com PIX para confirmar seu pedido</h2>
+          <p className="text-gray-600 mb-4">Escaneie o QR Code abaixo com o app do seu banco:</p>
+          <div className="flex justify-center mb-4">
+            {pixPaymentData.pix?.qr_code_base64 && (
+              <img
+                src={`data:image/png;base64,${pixPaymentData.pix.qr_code_base64}`}
+                alt="PIX QR Code"
+                className="w-64 h-64 border-4 border-gray-300 rounded-lg"
+              />
+            )}
+          </div>
+          <p className="text-gray-600 mb-2">Ou use o código PIX Copia e Cola:</p>
+          <div className="relative bg-white p-3 rounded-lg border">
+            <input
+              readOnly
+              value={pixPaymentData.pix?.qr_code || ''}
+              className="w-full bg-transparent text-gray-700 text-sm break-all pr-10"
+            />
+            <button
+              onClick={() => {
+                navigator.clipboard.writeText(pixPaymentData.pix?.qr_code || '');
+                showToast('Código PIX copiado!', 'success');
+              }}
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-gray-500 hover:text-pink-600"
+              aria-label="Copiar código PIX"
+            >
+              <i className="ri-file-copy-line text-xl"></i>
+            </button>
+          </div>
+          <p className="text-xs text-gray-500 mt-4">O QR Code expira em alguns minutos. Após o pagamento, seu pedido será confirmado.</p>
+        </div>
+      )}
     </div>
   );
 }
