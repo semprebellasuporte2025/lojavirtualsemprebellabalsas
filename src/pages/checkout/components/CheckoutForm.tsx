@@ -390,14 +390,14 @@ export default function CheckoutForm({
               description: `Pedido ${numeroPedido}`,
               orderNumber: numeroPedido,
               payer,
-              redirectUrl: safeRedirect,
+              // Não enviar redirectUrl para garantir Checkout Transparente (QR Code) mesmo em produção
             });
             const pixResult = await payPix({
               amount: Number(total.toFixed(2)),
               description: `Pedido ${numeroPedido}`,
               orderNumber: numeroPedido,
               payer,
-              redirectUrl: safeRedirect,
+              // Sem redirectUrl: força uso da API de pagamentos (PIX transparente)
             });
             console.log('Resultado do payPix:', pixResult);
             // Se veio link de Checkout Pro, redirecionar. Caso contrário, exibir QR local.
