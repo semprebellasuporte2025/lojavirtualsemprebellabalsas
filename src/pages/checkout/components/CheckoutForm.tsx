@@ -9,7 +9,7 @@ import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/useToast';
 import { maskCEP, maskCPF, maskPhone, validateCEP, validateCPF, validateEmail, validatePhone } from '@/utils/validation';
 import { useCart } from '@/hooks/useCart';
-import { createOrder } from '@/lib/orders';
+import { createOrder } from '@/lib/orders.ts';
 
 interface CheckoutFormProps {
   user: User;
