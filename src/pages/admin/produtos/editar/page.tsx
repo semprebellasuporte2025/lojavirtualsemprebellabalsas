@@ -5,6 +5,7 @@ import AdminLayout from '../../../../components/feature/AdminLayout';
 import AdminFormButtons from '../../../../components/feature/AdminFormButtons/AdminFormButtons';
 import { useToast } from '../../../../hooks/useToast';
 import { supabase } from '../../../../lib/supabase';
+import { isValidProductSlug, slugify, ensureUniqueProductSlug } from '../../../../utils/productSlug';
 import RichTextEditor from '../../../../components/base/RichTextEditor';
 import { AVAILABLE_COLORS, AVAILABLE_SIZES } from '../../../../constants/colors';
 import type { ColorOption } from '../../../../constants/colors';
@@ -50,6 +51,7 @@ const EditarProduto = () => {
   const [availableSizes] = useState(AVAILABLE_SIZES);
   const [availableColors] = useState<ColorOption[]>(AVAILABLE_COLORS);
   const [categorias, setCategorias] = useState<any[]>([]);
+  const [existingSlug, setExistingSlug] = useState<string | null>(null);
 
   // Carregar categorias
   useEffect(() => {
@@ -124,6 +126,7 @@ const EditarProduto = () => {
         recemChegado: produto.recem_chegado ?? false,
         nomeInvisivel: produto.nome_invisivel ?? false
       });
+      setExistingSlug(produto.slug ?? null);
 
       setImages(produto.imagens || []);
 
@@ -173,6 +176,13 @@ const EditarProduto = () => {
         return;
       }
 
+      // Preparar slug: definir apenas se estiver ausente ou inválido
+      let slugToApply: string | undefined = undefined;
+      if (!existingSlug || !isValidProductSlug(existingSlug)) {
+        const base = slugify(formData.nome);
+        slugToApply = await ensureUniqueProductSlug(base, id);
+      }
+
       // Atualizar produto principal, com fallback se coluna 'material' não existir
       const { error: produtoError } = await supabase
         .from('produtos')
@@ -193,6 +203,7 @@ const EditarProduto = () => {
           destaque: formData.destaque,
           recem_chegado: formData.recemChegado,
           nome_invisivel: formData.nomeInvisivel,
+          ...(slugToApply ? { slug: slugToApply } : {}),
           updated_at: new Date().toISOString()
         })
         .eq('id', id);
@@ -217,6 +228,7 @@ const EditarProduto = () => {
             imagens: images,
             ativo: formData.ativo,
             destaque: formData.destaque,
+            ...(slugToApply ? { slug: slugToApply } : {}),
             updated_at: new Date().toISOString()
           };
           if (!missingMaterial) {

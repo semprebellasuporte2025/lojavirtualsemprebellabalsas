@@ -4,6 +4,7 @@ import type { Produto } from '../../../lib/supabase';
 import { Link } from 'react-router-dom'
 import useEmblaCarousel from 'embla-carousel-react'
 import Autoplay from 'embla-carousel-autoplay'
+import { buildProductUrl } from '../../../utils/productUrl';
 
 interface RelatedProductsProps {
   categoriaId?: string;
@@ -24,8 +25,8 @@ export default function RelatedProducts({ categoriaId, produtoAtualId }: Related
     try {
       let query = supabase
         .from('produtos')
-        .select(`*, categorias(nome), variantes_produto(cor, cor_hex)`)
-        .eq('ativo', false)
+        .select(`*, categorias(nome), variantes_produto(cor, cor_hex)`) 
+        .eq('ativo', true)
         .eq('nome_invisivel', false)
         .neq('id', produtoAtualId)
         .limit(12);
@@ -39,8 +40,8 @@ export default function RelatedProducts({ categoriaId, produtoAtualId }: Related
       if (error) {
         let fallbackQuery = supabase
           .from('produtos')
-          .select(`*, categorias(nome), variantes_produto(cor, cor_hex)`)
-          .eq('ativo', false)
+          .select(`*, categorias(nome), variantes_produto(cor, cor_hex)`) 
+          .eq('ativo', true)
           .neq('id', produtoAtualId)
           .limit(12);
 
@@ -78,10 +79,10 @@ export default function RelatedProducts({ categoriaId, produtoAtualId }: Related
         <h2 className="text-2xl font-bold text-gray-800">Produtos Relacionados</h2>
         <div className="flex gap-2">
           <button onClick={() => emblaApi?.scrollPrev()} className="btn-embla">
-            <i className="ri-arrow-left-s-line"></i>
+            <i className="ri-arrow-left-s-line text-pink-600"></i>
           </button>
           <button onClick={() => emblaApi?.scrollNext()} className="btn-embla">
-            <i className="ri-arrow-right-s-line"></i>
+            <i className="ri-arrow-right-s-line text-pink-600"></i>
           </button>
         </div>
       </div>
@@ -144,7 +145,7 @@ export default function RelatedProducts({ categoriaId, produtoAtualId }: Related
                   </div>
 
                   <Link
-                    to={`/produto/${produto.slug || produto.id}`}
+                    to={buildProductUrl({ id: produto.id, nome: produto.nome, slug: (produto as any).slug })}
                     onClick={(e) => { e.stopPropagation(); }}
                     className="mt-2 w-full block text-center py-2.5 bg-pink-600 text-white text-sm font-semibold rounded hover:bg-pink-700 transition-colors whitespace-nowrap"
                   >

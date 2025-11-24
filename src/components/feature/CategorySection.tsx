@@ -3,6 +3,7 @@ import { supabase } from '../../lib/supabase';
 import type { Produto } from '../../lib/supabase';
 import { useNavigate, Link } from 'react-router-dom';
 import { generateSlug } from '../../utils/formatters';
+import { buildProductUrl } from '../../utils/productUrl';
 
 interface CategorySectionProps {
   title: string;
@@ -46,7 +47,7 @@ export default function CategorySection({ title, categoryName }: CategorySection
       const { data: produtosBase, error: produtosError } = await supabase
         .from('produtos')
         .select('*')
-        .eq('ativo', false)
+        .eq('ativo', true)
         .eq('nome_invisivel', false)
         .eq('categoria_id', categoria.id)
         .order('created_at', { ascending: false })
@@ -60,13 +61,13 @@ export default function CategorySection({ title, categoryName }: CategorySection
           const { data: p2, error: e2 } = await supabase
             .from('produtos')
             .select('*')
-            .eq('ativo', false)
+            .eq('ativo', true)
             .eq('categoria_id', categoria.id)
             .order('created_at', { ascending: false })
             .limit(12)
             .abortSignal(signal);
           if (!e2) {
-            produtos = (p2 || []).filter((p: any) => p?.ativo === false && p?.nome_invisivel !== true);
+            produtos = (p2 || []).filter((p: any) => p?.ativo === true && p?.nome_invisivel !== true);
           }
         } else {
           throw produtosError;
@@ -114,7 +115,7 @@ export default function CategorySection({ title, categoryName }: CategorySection
 
   const navigate = useNavigate();
   const handleProductClick = (produto: Produto) => {
-    navigate(`/produto/${produto.slug || produto.id}`);
+    navigate(buildProductUrl({ id: produto.id, nome: produto.nome, slug: (produto as any).slug }));
   };
 
   const handleVerMais = () => {
@@ -250,7 +251,7 @@ export default function CategorySection({ title, categoryName }: CategorySection
                   </div>
 
                   <Link
-                    to={`/produto/${produto.slug || produto.id}`}
+                    to={buildProductUrl({ id: produto.id, nome: produto.nome, slug: (produto as any).slug })}
                     className="mt-3 w-full block text-center py-2.5 bg-pink-600 text-white text-sm font-semibold rounded hover:bg-pink-700 transition-colors whitespace-nowrap"
                   >
                     Ver Detalhes

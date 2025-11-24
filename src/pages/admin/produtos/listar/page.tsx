@@ -5,6 +5,7 @@ import { useToast } from '../../../../hooks/useToast';
 import { supabase } from '../../../../lib/supabase';
 import type { Produto } from '../../../../lib/supabase';
 import AdminLayout from '../../../../components/feature/AdminLayout';
+import { buildProductUrl } from '../../../../utils/productUrl';
 import ConfirmationModal from '../../../../components/feature/modal/ConfirmationModal';
 
 export default function ListarProdutosPage() {
@@ -256,8 +257,9 @@ export default function ListarProdutosPage() {
     }
   };
 
-  const handleRowClick = (id: string) => {
-    navigate(`/produto/${id}`);
+  const handleRowClick = (produto: any) => {
+    const url = buildProductUrl({ id: produto?.id, slug: produto?.slug, nome: produto?.nome });
+    navigate(url);
   };
 
   if (loading) {
@@ -388,7 +390,7 @@ export default function ListarProdutosPage() {
                 {paginatedProdutos.map((produto) => (
                   <tr 
                     key={produto.id} 
-                    onClick={() => handleRowClick(produto.id)}
+                    onClick={() => handleRowClick(produto)}
                     className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
                   >
                     <td className="py-3 px-4">
@@ -462,7 +464,7 @@ export default function ListarProdutosPage() {
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-2">
                         <a
-                          href={`/produto/${produto.slug || produto.id}`}
+                          href={buildProductUrl({ id: produto.id, nome: produto.nome, slug: (produto as any).slug })}
                           target="_blank"
                           rel="noopener noreferrer"
                           onClick={(e) => e.stopPropagation()}
@@ -535,7 +537,7 @@ export default function ListarProdutosPage() {
                   <p className="text-lg font-bold text-pink-600 dark:text-pink-400">R$ {produto.preco.toFixed(2)}</p>
                   <div className="flex justify-end gap-2 mt-4">
                         <a
-                          href={`/produto/${produto.slug || produto.id}`}
+                          href={buildProductUrl({ id: produto.id, nome: produto.nome, slug: (produto as any).slug })}
                           target="_blank"
                           rel="noopener noreferrer"
                           onClick={(e) => e.stopPropagation()}

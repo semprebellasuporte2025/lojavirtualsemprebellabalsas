@@ -62,7 +62,8 @@
     "dev": "vite --strictPort",
     "preview": "vite preview",
     "test": "vitest",
-    "test:run": "vitest run"
+    "test:run": "vitest run",
+    "migrate:slugs": "node scripts/migrar-uuids-para-slugs.js"
   },
   "type": "module",
   "version": "0.0.0",

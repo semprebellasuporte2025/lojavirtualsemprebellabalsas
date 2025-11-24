@@ -35,7 +35,7 @@ export interface CheckoutData {
   payment: PaymentData;
 }
 
-export type CheckoutStep = 'customer' | 'shipping' | 'payment' | 'review';
+export type CheckoutStep = 'customer' | 'shipping' | 'review';
 
 export interface ViaCEPResponse {
   cep: string;

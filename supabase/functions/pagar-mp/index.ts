@@ -211,6 +211,21 @@ Deno.serve(async (req: Request) => {
           },
           auto_return: 'approved',
           external_reference: body.orderNumber,
+          // Excluir PIX no fluxo de cartão conforme docs de Checkout Pro
+          // Referência: payment_methods.excluded_payment_methods / excluded_payment_types
+          payment_methods: {
+            // Definir crédito como tipo padrão
+            default_payment_type_id: 'credit_card',
+            // Exclui explicitamente o método PIX
+            excluded_payment_methods: [{ id: 'pix' }],
+            // Exclui tipos que não são cartão no fluxo de cartão
+            excluded_payment_types: [
+              { id: 'bank_transfer' }, // cobre PIX
+              { id: 'ticket' },        // boleto
+              { id: 'atm' },           // pagamento em lotérica/caixa eletrônico
+              { id: 'debit_card' },    // remove Cartão de Débito (inclui Virtual CAIXA)
+            ],
+          },
         };
       } else {
         return new Response(

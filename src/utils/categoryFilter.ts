@@ -82,7 +82,7 @@ export async function hasProductsInCategory(categoryName: string): Promise<boole
       .from('produtos')
       .select('id', { count: 'exact', head: true })
       .eq('categoria_id', categoriaId)
-      .eq('ativo', false)
+      .eq('ativo', true)
       .eq('nome_invisivel', false);
 
     if (!prodError) {
@@ -96,9 +96,9 @@ export async function hasProductsInCategory(categoryName: string): Promise<boole
         .from('produtos')
         .select('id, nome_invisivel')
         .eq('categoria_id', categoriaId)
-        .eq('ativo', false);
+        .eq('ativo', true);
       if (e2) return false;
-      const anyVisible = (produtos2 || []).some((p: any) => p?.ativo === false && p?.nome_invisivel !== true);
+      const anyVisible = (produtos2 || []).some((p: any) => p?.ativo === true && p?.nome_invisivel !== true);
       return anyVisible;
     }
     throw prodError;
@@ -141,7 +141,7 @@ export async function getCategoriesWithProductsByNames(names: string[]): Promise
       .from('produtos')
       .select('categoria_id, nome_invisivel')
       .in('categoria_id', ids)
-      .eq('ativo', false)
+      .eq('ativo', true)
       .eq('nome_invisivel', false);
 
     let presentes = new Set<string>();
@@ -155,9 +155,9 @@ export async function getCategoriesWithProductsByNames(names: string[]): Promise
           .from('produtos')
           .select('categoria_id, nome_invisivel')
           .in('categoria_id', ids)
-          .eq('ativo', false);
+          .eq('ativo', true);
         if (e2) return [];
-        presentes = new Set<string>((p2 || []).filter((p: any) => p?.ativo === false && p?.nome_invisivel !== true).map((p: any) => p.categoria_id));
+        presentes = new Set<string>((p2 || []).filter((p: any) => p?.ativo === true && p?.nome_invisivel !== true).map((p: any) => p.categoria_id));
       } else {
         throw prodError;
       }

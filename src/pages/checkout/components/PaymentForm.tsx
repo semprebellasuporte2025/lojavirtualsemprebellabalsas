@@ -32,15 +32,17 @@ export default function PaymentForm({ data, onChange, onNext, onBack }: PaymentF
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="md:col-span-3">
           <div className="flex items-center gap-4">
-            <label className="flex items-center gap-2">
-              <input
-                type="radio"
-                name="metodo"
-                checked={data.metodo === 'pix'}
-                onChange={() => handleMetodoChange('pix')}
-              />
-              <span>PIX</span>
-            </label>
+            {data.metodo !== 'cartao' && (
+              <label className="flex items-center gap-2">
+                <input
+                  type="radio"
+                  name="metodo"
+                  checked={data.metodo === 'pix'}
+                  onChange={() => handleMetodoChange('pix')}
+                />
+                <span>PIX</span>
+              </label>
+            )}
             <label className="flex items-center gap-2">
               <input
                 type="radio"

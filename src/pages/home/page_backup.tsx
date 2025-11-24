@@ -9,6 +9,7 @@ import SEOHead from '../../components/feature/SEOHead';
 import { supabase } from '../../lib/supabase';
 import type { Produto } from '../../lib/supabase';
 import { useNavigate, Link } from 'react-router-dom';
+import { buildProductUrl } from '@/utils/productUrl';
 import Newsletter from '../../components/feature/Newsletter';
 import { useRouteRefresh } from '../../hooks/useRouteRefresh';
 
@@ -78,8 +79,9 @@ export default function HomePage() {
     }
   };
 
-  const handleProductClick = (id: string) => {
-    navigate(`/produto/${id}`);
+  const handleProductClick = (produto: Produto) => {
+    const url = buildProductUrl({ id: produto.id, slug: produto.slug, nome: produto.nome });
+    navigate(url);
   };
 
   const handleVerMaisRecentes = () => {
@@ -136,7 +138,7 @@ export default function HomePage() {
                     return (
                       <div
                         key={produto.id}
-                        onClick={() => handleProductClick(produto.id)}
+                        onClick={() => handleProductClick(produto)}
                         className="bg-white rounded-lg overflow-hidden hover:shadow-xl transition-shadow group border border-gray-200 cursor-pointer"
                       >
                         <div className="relative overflow-hidden bg-gray-50">
@@ -209,7 +211,7 @@ export default function HomePage() {
                           </div>
 
                           <Link
-                            to={`/produto/${produto.id}`}
+                            to={buildProductUrl({ id: produto.id, slug: produto.slug, nome: produto.nome })}
                             onClick={(e) => { e.stopPropagation(); }}
                             className="w-full block text-center py-2.5 bg-pink-600 text-white text-sm font-semibold rounded hover:bg-pink-700 transition-colors whitespace-nowrap"
                           >

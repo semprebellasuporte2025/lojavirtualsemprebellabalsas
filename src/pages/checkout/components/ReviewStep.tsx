@@ -47,9 +47,7 @@ export default function ReviewStep({ checkoutData, onBack, onConfirm, isProcessi
         <div className="border rounded-lg p-4 md:col-span-2">
           <div className="flex items-center justify-between mb-2">
             <h3 className="font-semibold">Pagamento</h3>
-            {onEditStep && (
-              <button type="button" onClick={() => onEditStep('payment')} className="text-sm text-pink-600 hover:text-pink-700">Editar</button>
-            )}
+            {/* Edição de pagamento removida: seleção é feita no carrinho */}
           </div>
           <div className="space-y-3">
             <p><span className="text-gray-600">Método:</span> {payment.metodo.toUpperCase()}</p>

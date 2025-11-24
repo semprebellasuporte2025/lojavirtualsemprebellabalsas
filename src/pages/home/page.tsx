@@ -10,7 +10,8 @@ import { supabase } from '../../lib/supabase';
 import type { Produto } from '../../lib/supabase';
 import { useNavigate, Link } from 'react-router-dom';
 import Newsletter from '../../components/feature/Newsletter';
-import { getCategoriesWithProductsByNames } from '../../utils/categoryFilter';
+import { getCategoriesWithProductsByNames, loadCategoriesWithProducts } from '../../utils/categoryFilter';
+import { buildProductUrl } from '../../utils/productUrl';
 
 export default function HomePage() {
   const [recentProducts, setRecentProducts] = useState<Produto[]>([]);
@@ -54,7 +55,14 @@ export default function HomePage() {
 
       try {
         const valid = await getCategoriesWithProductsByNames(categoriesToCheck);
-        setCategoriesToShow(valid);
+        if (valid.length > 0) {
+          setCategoriesToShow(valid);
+        } else {
+          // Fallback: carregar categorias ativas que possuem produtos, independente do nome
+          const cats = await loadCategoriesWithProducts();
+          const names = (cats || []).map(c => c.nome);
+          setCategoriesToShow(names);
+        }
       } catch (error) {
         console.error('Erro ao verificar categorias com produtos:', error);
       }
@@ -117,7 +125,7 @@ export default function HomePage() {
   };
 
   const handleProductClick = (produto: Produto) => {
-    navigate(`/produto/${produto.slug || produto.id}`);
+    navigate(buildProductUrl({ id: produto.id, nome: produto.nome, slug: (produto as any).slug }));
   };
 
   const handleVerMaisRecentes = () => {
@@ -261,7 +269,7 @@ export default function HomePage() {
                           </div>
 
                           <Link
-                            to={`/produto/${produto.slug || produto.id}`}
+                            to={buildProductUrl({ id: produto.id, nome: produto.nome, slug: (produto as any).slug })}
                             onClick={(e) => { e.stopPropagation(); }}
                             className="w-full block text-center py-2.5 bg-pink-600 text-white text-sm font-semibold rounded hover:bg-pink-700 transition-colors whitespace-nowrap"
                           >

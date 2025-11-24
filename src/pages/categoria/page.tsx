@@ -7,6 +7,7 @@ import SEOHead from '../../components/feature/SEOHead';
 import BannerSlider from '../../components/feature/BannerSlider';
 import { supabase } from '../../lib/supabase';
 import type { Produto } from '../../lib/supabase';
+import { buildProductUrl } from '../../utils/productUrl';
 import Newsletter from '../../components/feature/Newsletter';
 import { isSlugLike, isUuid, buildCategoryUrl } from '../../utils/categoryRoutes';
 import { generateSlug } from '../../utils/formatters';
@@ -234,7 +235,7 @@ export default function CategoriaPage() {
   });
 
   const handleProductClick = (produto: Produto) => {
-    navigate(`/produto/${produto.slug || produto.id}`);
+    navigate(buildProductUrl({ id: produto.id, nome: produto.nome, slug: (produto as any).slug }));
   };
 
   const handleFiltroChange = (filtro: 'tamanho' | 'cor' | 'categoria', valor: string) => {
@@ -563,7 +564,7 @@ export default function CategoriaPage() {
                             </div>
 
                             <Link
-                              to={`/produto/${produto.slug || produto.id}`}
+                              to={buildProductUrl({ id: produto.id, nome: produto.nome, slug: (produto as any).slug })}
                               onClick={(e) => { e.stopPropagation(); }}
                               className="w-full block text-center py-2.5 bg-pink-600 text-white text-sm font-semibold rounded hover:bg-pink-700 transition-colors whitespace-nowrap"
                             >

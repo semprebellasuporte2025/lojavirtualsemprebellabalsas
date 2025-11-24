@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../../../../components/feature/AdminLayout';
 import { supabase } from '../../../../lib/supabase';
+import { slugify, ensureUniqueProductSlug } from '../../../../utils/productSlug';
 import { useToast } from '../../../../hooks/useToast';
 import RichTextEditor from '../../../../components/base/RichTextEditor';
 import { AVAILABLE_COLORS, AVAILABLE_SIZES, findClosestColorName } from '../../../../constants/colors';
@@ -151,6 +152,10 @@ const CadastrarProdutoCopy = () => {
         return;
       }
 
+      // Gerar slug único para o produto
+      const baseSlug = slugify(formData.nome);
+      const finalSlug = await ensureUniqueProductSlug(baseSlug);
+
       // Inserir produto principal
       const { data: produtoDataInsert, error: produtoError } = await supabase
         .from('produtos')
@@ -170,6 +175,7 @@ const CadastrarProdutoCopy = () => {
           ativo: formData.ativo,
           destaque: formData.destaque,
           recem_chegado: formData.recemChegado,
+          slug: finalSlug,
           nome_invisivel: formData.nomeInvisivel,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()

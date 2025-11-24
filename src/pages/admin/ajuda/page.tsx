@@ -1,9 +1,18 @@
 import { useState } from 'react';
 import AdminLayout from '../../../components/feature/AdminLayout';
+import { supabase } from '../../../lib/supabase';
+import { slugify, ensureUniqueProductSlug, isValidProductSlug } from '../../../utils/productSlug';
+import { migrateBannerLinks, migrateInstagramLinks } from '../../../utils/urlMigrations';
+import { useToast } from '../../../hooks/useToast';
 
 export default function Ajuda() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('todos');
+  const [isFixingSlugs, setIsFixingSlugs] = useState(false);
+  const [fixResult, setFixResult] = useState<{ fixed: number; skipped: number; errors: number } | null>(null);
+  const [isMigratingUrls, setIsMigratingUrls] = useState(false);
+  const [migrationResult, setMigrationResult] = useState<{ scanned: number; updated: number; skipped: number; errors: number } | null>(null);
+  const { showToast } = useToast();
 
   const categorias = [
     { id: 'todos', label: 'Todos', icon: 'ri-apps-line' },
@@ -123,6 +132,119 @@ export default function Ajuda() {
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Central de Ajuda</h1>
           <p className="text-gray-600 dark:text-gray-400">Encontre respostas e aprenda a usar o sistema</p>
+        </div>
+
+        {/* Correção de Slugs de Produtos */}
+        <div className="mb-8 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+          <div className="flex items-start justify-between">
+            <div className="flex items-start">
+              <div className="w-12 h-12 bg-pink-100 dark:bg-pink-900/20 rounded-lg flex items-center justify-center text-pink-600 mr-4 flex-shrink-0">
+                <i className="ri-link-m text-2xl"></i>
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-900 dark:text-white mb-1">Corrigir Slugs de Produtos</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Atualiza produtos que estão com slug ausente ou inválido para um slug gerado a partir do nome, mantendo unicidade.</p>
+                {fixResult && (
+                  <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">Corrigidos: {fixResult.fixed} • Ignorados: {fixResult.skipped} • Erros: {fixResult.errors}</p>
+                )}
+              </div>
+            </div>
+            <button
+              className="px-4 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-colors whitespace-nowrap cursor-pointer disabled:opacity-60"
+              onClick={async () => {
+                if (isFixingSlugs) return;
+                setIsFixingSlugs(true);
+                setFixResult(null);
+                try {
+                  const { data: products, error } = await supabase
+                    .from('produtos')
+                    .select('id, nome, slug');
+                  if (error) throw error;
+                  let fixed = 0;
+                  let skipped = 0;
+                  let errors = 0;
+                  for (const p of products || []) {
+                    const currentSlug = p.slug as string | null;
+                    if (currentSlug && isValidProductSlug(currentSlug)) {
+                      skipped++;
+                      continue;
+                    }
+                    const base = slugify((p.nome as string) || '');
+                    if (!base) {
+                      errors++;
+                      continue;
+                    }
+                    const final = await ensureUniqueProductSlug(base, p.id as string);
+                    const { error: upErr } = await supabase
+                      .from('produtos')
+                      .update({ slug: final, updated_at: new Date().toISOString() })
+                      .eq('id', p.id as string);
+                    if (upErr) {
+                      errors++;
+                    } else {
+                      fixed++;
+                    }
+                  }
+                  setFixResult({ fixed, skipped, errors });
+                  showToast(`Slugs corrigidos: ${fixed}. Erros: ${errors}.`, errors ? 'info' : 'success');
+                } catch (e) {
+                  console.error('Erro ao corrigir slugs:', e);
+                  showToast('Erro ao corrigir slugs de produtos', 'error');
+                } finally {
+                  setIsFixingSlugs(false);
+                }
+              }}
+              disabled={isFixingSlugs}
+            >
+              {isFixingSlugs ? 'Corrigindo…' : 'Corrigir Slugs'}
+            </button>
+          </div>
+        </div>
+
+        {/* Migração de URLs com UUID para Slug */}
+        <div className="mb-8 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+          <div className="flex items-start justify-between">
+            <div className="flex items-start">
+              <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/20 rounded-lg flex items-center justify-center text-blue-600 mr-4 flex-shrink-0">
+                <i className="ri-route-line text-2xl"></i>
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-900 dark:text-white mb-1">Migrar URLs com UUID para Slug</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Identifica e atualiza URLs em banners e links do Instagram que apontam para produtos/categorias com UUID, substituindo por slugs canônicos.</p>
+                {migrationResult && (
+                  <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">Verificados: {migrationResult.scanned} • Atualizados: {migrationResult.updated} • Ignorados: {migrationResult.skipped} • Erros: {migrationResult.errors}</p>
+                )}
+              </div>
+            </div>
+            <button
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap cursor-pointer disabled:opacity-60"
+              onClick={async () => {
+                if (isMigratingUrls) return;
+                setIsMigratingUrls(true);
+                setMigrationResult(null);
+                try {
+                  const banners = await migrateBannerLinks();
+                  const instagram = await migrateInstagramLinks();
+                  const totals = {
+                    scanned: banners.scanned + instagram.scanned,
+                    updated: banners.updated + instagram.updated,
+                    skipped: banners.skipped + instagram.skipped,
+                    errors: banners.errors + instagram.errors,
+                  };
+                  setMigrationResult(totals);
+                  showToast(`URLs atualizadas: ${totals.updated}. Erros: ${totals.errors}.`, totals.errors ? 'info' : 'success');
+                } catch (e) {
+                  console.error('Erro na migração de URLs:', e);
+                  showToast('Erro ao migrar URLs com UUID', 'error');
+                } finally {
+                  setIsMigratingUrls(false);
+                }
+              }}
+              disabled={isMigratingUrls}
+            >
+              {isMigratingUrls ? 'Migrando…' : 'Migrar URLs'}
+            </button>
+          </div>
         </div>
 
         {/* Busca */}

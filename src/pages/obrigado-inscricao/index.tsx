@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import type { Produto } from '../../lib/supabase';
 import { Link } from 'react-router-dom';
+import { buildProductUrl } from '../../utils/productUrl';
 
 const ObrigadoInscricaoPage: React.FC = () => {
   const [produtos, setProdutos] = useState<Produto[]>([]);
@@ -106,7 +107,7 @@ const ObrigadoInscricaoPage: React.FC = () => {
 
               return (
                 <Link
-                  to={`/produto/${produto.slug || produto.id}`}
+                  to={buildProductUrl({ id: produto.id, nome: produto.nome, slug: (produto as any).slug })}
                   key={produto.id}
                   className="bg-white rounded-lg overflow-hidden hover:shadow-xl transition-shadow group border border-gray-200 cursor-pointer flex flex-col"
                 >

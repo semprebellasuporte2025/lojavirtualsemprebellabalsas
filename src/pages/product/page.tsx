@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import Header from '../../components/feature/Header';
 import Footer from '../../components/feature/Footer';
 import ProductGallery from './components/ProductGallery';
@@ -15,6 +15,8 @@ import { useCart } from '../../hooks/useCart';
 
 export default function ProductPage() {
   const { slug } = useParams<{ slug: string }>();
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const [produto, setProduto] = useState<Produto | null>(null);
   const [loading, setLoading] = useState(true);
   const addItem = useCart((state) => state.addItem);
@@ -49,8 +51,8 @@ export default function ProductPage() {
         return;
       }
 
-      // Se não encontrou por slug, verifica se o parâmetro é um UUID
-      // e tenta buscar por ID (para compatibilidade com URLs antigas)
+      // Se não encontrou por slug, verifica compatibilidade com UUID
+      // 1) se o path é um UUID
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
       if (slug && uuidRegex.test(slug)) {
         console.log('Tentando buscar produto por ID (compatibilidade):', slug);
@@ -66,6 +68,30 @@ export default function ProductPage() {
         
         if (dataById) {
           setProduto(dataById);
+          return;
+        }
+      }
+
+      // 2) se veio com query ?id=<uuid>, usar como fallback sem quebrar a URL com slug
+      const qpId = (searchParams.get('id') || '').trim();
+      if (qpId && uuidRegex.test(qpId)) {
+        const { data: dataById, error: errorById } = await supabase
+          .from('produtos')
+          .select('*, categorias(nome), variantes_produto(*)')
+          .eq('id', qpId)
+          .maybeSingle();
+
+        if (errorById) {
+          console.error('Erro ao carregar produto por ID (query):', errorById);
+        }
+
+        if (dataById) {
+          setProduto(dataById);
+          // Se o produto tem slug, normaliza a URL para a canônica
+          const canonical = (dataById.slug || '').trim();
+          if (canonical) {
+            navigate(`/produto/${canonical}`, { replace: true });
+          }
           return;
         }
       }

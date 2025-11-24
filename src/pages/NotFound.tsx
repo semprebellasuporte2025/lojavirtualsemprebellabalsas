@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
+import { buildProductUrl } from '@/utils/productUrl';
 
 interface Product {
   id: string;
@@ -178,7 +179,7 @@ const NotFound: React.FC = () => {
               {recentProducts.map((product) => (
                 <Link
                   key={product.id}
-                  to={`/product/${product.id}`}
+                  to={buildProductUrl({ id: product.id, nome: product.nome, slug: (product as any).slug })}
                   className="group block bg-gray-50 dark:bg-gray-700 rounded-xl p-4 hover:shadow-lg transition-all duration-300"
                 >
                   <div className="aspect-square bg-gray-200 dark:bg-gray-600 rounded-lg mb-4 overflow-hidden">

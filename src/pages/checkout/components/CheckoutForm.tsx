@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState, useRef } from 'react';
 import type { User } from '@supabase/supabase-js';
 import CustomerDataForm from './CustomerDataForm';
 import ShippingForm from './ShippingForm';
-import PaymentForm from './PaymentForm';
 import ReviewStep from './ReviewStep';
 import type { CheckoutData, CheckoutStep } from '../types.ts';
 import { supabase } from '@/lib/supabase';
@@ -48,7 +47,8 @@ export default function CheckoutForm({
       tipo: 'entrega'
     },
     payment: {
-      metodo: 'pix'
+      // Respeitar o método selecionado no carrinho
+      metodo: (typeof cartPaymentMethod === 'string' ? cartPaymentMethod : 'pix')
     }
   });
 
@@ -96,7 +96,14 @@ export default function CheckoutForm({
     }
   }, [pixPaymentData]);
 
-  // Reidratar estado do checkout salvo
+  // Ao alternar para cartão, limpar qualquer exibição/estado de PIX
+  useEffect(() => {
+    if (checkoutData.payment.metodo === 'cartao' && pixPaymentData) {
+      setPixPaymentData(null);
+    }
+  }, [checkoutData.payment.metodo]);
+
+  // Reidratar estado do checkout salvo, mas SEM sobrescrever o método do carrinho
   useEffect(() => {
     try {
       const savedState = localStorage.getItem('checkout-state');
@@ -108,17 +115,33 @@ export default function CheckoutForm({
 
       if (savedState) {
         const parsed = JSON.parse(savedState);
-        if (parsed?.data) setCheckoutData(parsed.data as CheckoutData);
-        if (parsed?.step) setCurrentStep(parsed.step as CheckoutStep);
+        if (parsed?.data) {
+          const preferredMethod: 'pix' | 'cartao' = (cartPaymentMethod || (savedPaymentMethod === 'cartao' ? 'cartao' : 'pix')) as 'pix' | 'cartao';
+          setCheckoutData((prev) => ({
+            ...prev,
+            ...parsed.data,
+            payment: {
+              ...prev.payment,
+              ...parsed.data.payment,
+              // Forçar preferência ao método do carrinho/localStorage
+              metodo: preferredMethod,
+            }
+          }));
+        }
+        if (parsed?.step) {
+          const step = parsed.step as CheckoutStep | 'payment';
+          // Mapear antigo 'payment' para 'review'
+          setCurrentStep(step === 'payment' ? 'review' : (step as CheckoutStep));
+        }
       }
     } catch {
       // ignora erros de parse
     }
   }, []);
 
-  const steps: CheckoutStep[] = ['customer', 'shipping', 'payment', 'review'];
+  const steps: CheckoutStep[] = ['customer', 'shipping', 'review'];
   const currentStepIndex = steps.indexOf(currentStep);
-  // Etapa 3 apenas seleciona método; valores são calculados na confirmação
+  // Etapa de pagamento removida: método é escolhido no carrinho
 
   const goToNextStep = () => {
     if (currentStepIndex < steps.length - 1) {
@@ -246,15 +269,9 @@ export default function CheckoutForm({
       setCurrentStep('shipping');
       if (prefillInfo.customer) showToast('Dados do cliente pré-preenchidos', 'success');
     }
-    // Se já estamos em shipping e endereço está completo, avançar
+    // Se já estamos em shipping e endereço está completo, avançar direto para revisão
     if (currentStep === 'shipping' && isShippingValid) {
-      // Se o método de pagamento é PIX (não requer campos), ir direto à revisão
-      const metodo = checkoutData.payment.metodo;
-      if (metodo === 'pix') {
-        setCurrentStep('review');
-      } else {
-        setCurrentStep('payment');
-      }
+      setCurrentStep('review');
       if (prefillInfo.shipping) showToast('Endereço de entrega pré-preenchido', 'success');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -381,10 +398,15 @@ export default function CheckoutForm({
             : undefined,
         };
 
-        // Sempre passar redirectUrl para Checkout Pro do cartão, mesmo em http (dev)
-        const safeRedirect = typeof window !== 'undefined'
-          ? `${window.location.origin}/minha-conta/pedidos`
-          : undefined;
+        // Definir URL de retorno para Checkout Pro do cartão
+        // Regra: usa VITE_MP_BACK_URL_SUCCESS se existir; caso contrário,
+        // se origin for https usa /minha-conta/pedidos; senão, usa domínio público n8n
+        const envBackUrl = (import.meta as any)?.env?.VITE_MP_BACK_URL_SUCCESS as string | undefined;
+        const origin = typeof window !== 'undefined' ? window.location.origin : undefined;
+        const defaultHttpsBackUrl = origin && origin.startsWith('https')
+          ? `${origin}/minha-conta/pedidos`
+          : 'https://portaln8n.semprebellabalsas.com.br/webhook/notificacoes_mercadopago';
+        const safeRedirect = envBackUrl || defaultHttpsBackUrl;
 
         if (formaPagamento === 'pix') {
           try {
@@ -413,15 +435,15 @@ export default function CheckoutForm({
             console.error('Erro ao chamar payPix:', pixError);
             onError(pixError instanceof Error ? pixError.message : 'Erro no pagamento PIX');
           }
-        } else if (formaPagamento === 'cartao') {
-          // Etapa 3 só seleciona o método: usar Checkout Pro para cartão
-          const cardResult = await payCard({
-            amount: total,
-            description: `Pedido #${numeroPedido}`,
-            orderNumber: numeroPedido,
-            payer,
-            redirectUrl: safeRedirect,
-          });
+          } else if (formaPagamento === 'cartao') {
+            // Etapa 3 só seleciona o método: usar Checkout Pro para cartão
+            const cardResult = await payCard({
+              amount: total,
+              description: `Pedido #${numeroPedido}`,
+              orderNumber: numeroPedido,
+              payer,
+              redirectUrl: safeRedirect,
+            });
 
           if (cardResult.init_point) {
             window.location.href = cardResult.init_point;
@@ -467,15 +489,7 @@ export default function CheckoutForm({
             onBack={goToPreviousStep}
           />
         );
-      case 'payment':
-        return (
-          <PaymentForm
-            data={checkoutData.payment}
-            onChange={(data) => updateCheckoutData('payment', data)}
-            onNext={goToNextStep}
-            onBack={goToPreviousStep}
-          />
-        );
+      // Etapa de pagamento removida
       case 'review':
         return (
           <ReviewStep
@@ -532,7 +546,6 @@ export default function CheckoutForm({
         <div className="flex justify-between text-xs text-gray-600">
           <span className="text-center w-16 sm:w-20">Dados</span>
           <span className="text-center w-16 sm:w-20">Entrega</span>
-          <span className="text-center w-16 sm:w-20">Pagamento</span>
           <span className="text-center w-16 sm:w-20">Revisão</span>
         </div>
       </div>
@@ -541,7 +554,7 @@ export default function CheckoutForm({
       {renderStep()}
 
       {/* Exibição do PIX após geração */}
-      {pixPaymentData && (
+      {checkoutData.payment.metodo === 'pix' && pixPaymentData && (
         <div ref={pixDisplayRef} className="mt-8 p-6 bg-gray-100 rounded-lg text-center">
           <h2 className="text-2xl font-bold text-gray-800 mb-4">Pague com PIX para confirmar seu pedido</h2>
           <p className="text-gray-600 mb-4">Escaneie o QR Code abaixo com o app do seu banco:</p>

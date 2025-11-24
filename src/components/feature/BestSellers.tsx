@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import type { Produto } from '../../lib/supabase';
 import { useNavigate, Link } from 'react-router-dom';
+import { buildProductUrl } from '../../utils/productUrl';
 
 export default function BestSellers() {
   const [produtos, setProdutos] = useState<Produto[]>([]);
@@ -112,7 +113,7 @@ export default function BestSellers() {
   };
 
   const handleProductClick = (produto: Produto) => {
-    navigate(`/produto/${produto.slug || produto.id}`);
+    navigate(buildProductUrl({ id: produto.id, nome: produto.nome, slug: (produto as any).slug }));
   };
 
   const handleVerMais = () => {
@@ -251,7 +252,7 @@ export default function BestSellers() {
                   </div>
 
                   <Link
-                    to={`/produto/${produto.slug || produto.id}`}
+                    to={buildProductUrl({ id: produto.id, nome: produto.nome, slug: (produto as any).slug })}
                     onClick={(e) => { e.stopPropagation(); }}
                     className="mt-2 w-full block text-center py-2.5 bg-pink-600 text-white text-sm font-semibold rounded hover:bg-pink-700 transition-colors whitespace-nowrap"
                   >
