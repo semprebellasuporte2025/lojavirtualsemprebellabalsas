@@ -41,9 +41,9 @@ type PayRequest = PixRequest | CardRequest;
 const MP_PAYMENTS_API = 'https://api.mercadopago.com/v1/payments';
 const MP_PREFERENCES_API = 'https://api.mercadopago.com/checkout/preferences';
 
-// Configuração do Supabase para validação JWT
+// Configuração do Supabase para validação JWT (usar ANON_KEY)
 const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
-const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') || '';
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
@@ -77,9 +77,17 @@ Deno.serve(async (req: Request) => {
 
   const userToken = authHeader.replace('Bearer ', '');
   
+  // Verificar configuração básica
+  if (!supabaseUrl || !supabaseAnonKey) {
+    return new Response(
+      JSON.stringify({ success: false, error: 'Configuração do Supabase ausente (URL/ANON_KEY)' }),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
   try {
-    // Criar cliente Supabase com o token do usuário
-    const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+    // Criar cliente Supabase com ANON_KEY e token do usuário
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
       global: {
         headers: {
           Authorization: `Bearer ${userToken}`,

@@ -118,6 +118,7 @@ export default function CheckoutForm({
 
   const steps: CheckoutStep[] = ['customer', 'shipping', 'payment', 'review'];
   const currentStepIndex = steps.indexOf(currentStep);
+  // Etapa 3 apenas seleciona método; valores são calculados na confirmação
 
   const goToNextStep = () => {
     if (currentStepIndex < steps.length - 1) {
@@ -380,8 +381,10 @@ export default function CheckoutForm({
             : undefined,
         };
 
-        const isHttps = typeof window !== 'undefined' && window.location.protocol === 'https:';
-        const safeRedirect = isHttps ? `${window.location.origin}/minha-conta/pedidos` : undefined;
+        // Sempre passar redirectUrl para Checkout Pro do cartão, mesmo em http (dev)
+        const safeRedirect = typeof window !== 'undefined'
+          ? `${window.location.origin}/minha-conta/pedidos`
+          : undefined;
 
         if (formaPagamento === 'pix') {
           try {
@@ -411,16 +414,15 @@ export default function CheckoutForm({
             onError(pixError instanceof Error ? pixError.message : 'Erro no pagamento PIX');
           }
         } else if (formaPagamento === 'cartao') {
+          // Etapa 3 só seleciona o método: usar Checkout Pro para cartão
           const cardResult = await payCard({
             amount: total,
             description: `Pedido #${numeroPedido}`,
-            orderNumber: numeroPedido, // Corrigido de orderId para numeroPedido
-            payer: {
-              email: checkoutData.customer.email,
-              first_name: checkoutData.customer.nome.split(' ')[0],
-            },
+            orderNumber: numeroPedido,
+            payer,
             redirectUrl: safeRedirect,
           });
+
           if (cardResult.init_point) {
             window.location.href = cardResult.init_point;
           } else {

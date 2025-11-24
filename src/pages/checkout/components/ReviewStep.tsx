@@ -51,15 +51,9 @@ export default function ReviewStep({ checkoutData, onBack, onConfirm, isProcessi
               <button type="button" onClick={() => onEditStep('payment')} className="text-sm text-pink-600 hover:text-pink-700">Editar</button>
             )}
           </div>
-          {payment.metodo === 'cartao' ? (
-            <>
-              <p><span className="text-gray-600">Cartão:</span> **** **** **** {payment.numeroCartao?.slice(-4)}</p>
-              <p><span className="text-gray-600">Titular:</span> {payment.nomeTitular}</p>
-              <p><span className="text-gray-600">Validade:</span> {payment.validade}</p>
-            </>
-          ) : (
+          <div className="space-y-3">
             <p><span className="text-gray-600">Método:</span> {payment.metodo.toUpperCase()}</p>
-          )}
+          </div>
         </div>
       </div>
 

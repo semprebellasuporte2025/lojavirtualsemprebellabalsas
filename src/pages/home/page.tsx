@@ -103,7 +103,11 @@ export default function HomePage() {
       }
     } catch (error: any) {
       if (error && error.message && !error.message.includes('AbortError')) {
-        console.error('Erro ao carregar produtos recentes:', error);
+        console.error('Erro detalhado ao carregar produtos recentes:', {
+          message: error.message,
+          stack: error.stack,
+          details: error.details, // Adicionado para mais detalhes do Supabase
+        });
       }
     } finally {
       if (!signal.aborted) {

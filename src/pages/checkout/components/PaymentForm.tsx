@@ -1,7 +1,5 @@
 import { useEffect } from 'react';
 import type { PaymentData } from '../types.ts';
-// Checkout Pro não precisa dos campos do cartão no site
-// Mantemos imports mínimos sem validações locais de cartão
 
 interface PaymentFormProps {
   data: PaymentData;
@@ -24,11 +22,8 @@ export default function PaymentForm({ data, onChange, onNext, onBack }: PaymentF
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Sem validação de cartão: Checkout Pro lida com o pagamento
     onNext();
   };
-
-  const isValid = () => true;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -59,20 +54,21 @@ export default function PaymentForm({ data, onChange, onNext, onBack }: PaymentF
         </div>
       </div>
 
-      {data.metodo === 'cartao' ? (
-        <div className="p-4 rounded-lg bg-gray-50 text-gray-700 border border-gray-200">
-          <p className="text-sm">
-            Pagamento via Mercado Pago (Checkout Pro). Serão exibidas apenas as opções Pix,
-            Cartão de Crédito e pagamento pelo app.
-          </p>
-        </div>
-      ) : (
-        <div className="p-4 rounded-lg bg-gray-50 text-gray-700 border border-gray-200">
-          <p className="text-sm">
-            Pagamento via PIX com 10% de desconto nos produtos. Após confirmar, seu pedido será criado e você poderá acompanhar em "Minha Conta".
-          </p>
+      {data.metodo === 'cartao' && (
+        <div className="space-y-4">
+          <div className="p-4 rounded-lg bg-gray-50 text-gray-700 border border-gray-200">
+            <p className="text-sm">
+              Você selecionou pagamento com cartão. Os dados do cartão serão preenchidos na página segura do Mercado Pago após confirmar seu pedido.
+            </p>
+          </div>
         </div>
       )}
+
+      <div className="p-4 rounded-lg bg-gray-50 text-gray-700 border border-gray-200">
+        <p className="text-sm">
+          Após confirmar, seu pedido será criado. Você poderá acompanhar em "Minha Conta". Pagamentos serão processados pelo método selecionado assim que configurarmos o provedor.
+        </p>
+      </div>
 
       {/* Mensagem de modo demonstração removida conforme solicitado */}
 
@@ -86,8 +82,8 @@ export default function PaymentForm({ data, onChange, onNext, onBack }: PaymentF
         </button>
         <button
           type="submit"
-          disabled={!isValid()}
           className="w-full md:w-auto bg-pink-600 text-white px-8 py-3 rounded-lg font-medium hover:bg-pink-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+          disabled={false}
         >
           Continuar
         </button>

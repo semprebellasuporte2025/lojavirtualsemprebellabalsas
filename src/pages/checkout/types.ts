@@ -23,6 +23,10 @@ export interface PaymentData {
   validade?: string;
   cvv?: string;
   parcelas?: number;
+  // Campos para integração Mercado Pago
+  cardToken?: string;
+  paymentMethodId?: string;
+  issuerId?: string;
 }
 
 export interface CheckoutData {

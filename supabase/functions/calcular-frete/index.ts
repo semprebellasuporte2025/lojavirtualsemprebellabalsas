@@ -1,9 +1,5 @@
 // Migrado para Deno.serve para evitar import remoto do std/http
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+import { corsHeaders } from '../shared/cors.ts';
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
