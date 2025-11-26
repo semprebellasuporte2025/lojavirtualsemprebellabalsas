@@ -1,7 +1,12 @@
 require('dotenv').config();
 
-const SUPABASE_URL = process.env.VITE_PUBLIC_SUPABASE_URL || 'https://cproxdqrraiujnewbsvp.supabase.co';
+const SUPABASE_URL = process.env.VITE_PUBLIC_SUPABASE_URL;
 const ANON_KEY = process.env.VITE_PUBLIC_SUPABASE_ANON_KEY;
+
+if (!SUPABASE_URL || !ANON_KEY) {
+  console.error('❌ Defina VITE_PUBLIC_SUPABASE_URL e VITE_PUBLIC_SUPABASE_ANON_KEY no ambiente');
+  process.exit(1);
+}
 
 console.log('URL:', SUPABASE_URL);
 console.log('Chave Anônima:', ANON_KEY);

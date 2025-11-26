@@ -851,7 +851,7 @@ export default function ProductInfo({ produto, onAddToCart }: ProductInfoProps) 
           <button
             onClick={calculateFrete}
             disabled={calculatingFrete}
-            className="sm:w-auto w-full h-14 px-6 bg-pink-600 text-white rounded-lg font-medium hover:bg-pink-700 transition-colors cursor-pointer whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
+            className="sm:w-auto w-full h-10 sm:h-14 px-6 bg-pink-600 text-white rounded-lg font-medium hover:bg-pink-700 transition-colors cursor-pointer whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {calculatingFrete ? (
               <>

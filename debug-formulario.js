@@ -1,9 +1,15 @@
 // Script para debug do formulário - simula exatamente o que o frontend faz
+import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
 
 // Configuração do Supabase (mesmas variáveis do frontend)
-const supabaseUrl = "https://cproxdqrraiujnewbsvp.supabase.co";
-const supabaseKey = "sb_publishable_rTW_XToE2y-HAx4duwsTtw_lrKt_qhM";
+const supabaseUrl = process.env.VITE_PUBLIC_SUPABASE_URL;
+const supabaseKey = process.env.VITE_PUBLIC_SUPABASE_ANON_KEY;
+
+if (!supabaseUrl || !supabaseKey) {
+  console.error('❌ Defina VITE_PUBLIC_SUPABASE_URL e VITE_PUBLIC_SUPABASE_ANON_KEY no ambiente');
+  process.exit(1);
+}
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 

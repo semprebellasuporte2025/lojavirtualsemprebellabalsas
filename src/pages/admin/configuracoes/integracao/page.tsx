@@ -7,16 +7,11 @@ export default function ConfiguracoesIntegracaoPage() {
   const { showToast } = useToast();
 
   const [formData, setFormData] = useState({
-    // Pagamentos
-    paypalAtivo: false,
-    paypalClientId: '',
-    paypalClientSecret: '',
-    paypalSandbox: true,
-    
-    stripeAtivo: false,
-    stripePublicKey: '',
-    stripeSecretKey: '',
-    stripeSandbox: true,
+    // Pagamentos (apenas Mercado Pago)
+    mercadoPagoAtivo: false,
+    mercadoPagoPublicKey: '',
+    mercadoPagoAccessToken: '',
+    mercadoPagoSandbox: true,
     
     // Correios
     correiosAtivo: true,
@@ -43,16 +38,7 @@ export default function ConfiguracoesIntegracaoPage() {
     facebookPixelAtivo: false,
     facebookPixelId: '',
     
-    // Email Marketing
-    mailchimpAtivo: false,
-    mailchimpApiKey: '',
-    mailchimpListId: '',
-    
-    // ERP
-    erpAtivo: false,
-    erpUrl: '',
-    erpToken: '',
-    erpSincronizacao: 'manual'
+    // (Abas Marketing e ERP removidas)
   });
 
   const [activeTab, setActiveTab] = useState('pagamentos');
@@ -79,8 +65,7 @@ export default function ConfiguracoesIntegracaoPage() {
     { id: 'correios', label: 'Correios', icon: 'ri-truck-line' },
     { id: 'social', label: 'Redes Sociais', icon: 'ri-share-line' },
     { id: 'analytics', label: 'Analytics', icon: 'ri-bar-chart-line' },
-    { id: 'marketing', label: 'Marketing', icon: 'ri-mail-send-line' },
-    { id: 'erp', label: 'ERP', icon: 'ri-database-line' }
+    // abas Marketing e ERP removidas conforme solicitação
   ];
 
   return (
@@ -118,81 +103,25 @@ export default function ConfiguracoesIntegracaoPage() {
             {/* Tab Pagamentos */}
             {activeTab === 'pagamentos' && (
               <div className="space-y-6">
-
-                {/* PayPal */}
+                {/* Mercado Pago */}
                 <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
                   <div className="flex items-center justify-between mb-4">
                     <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center">
-                      <img src="https://readdy.ai/api/search-image?query=paypal%20logo%20icon%20payment%20gateway%20blue&width=32&height=32&seq=pp1&orientation=squarish" alt="PayPal" className="w-8 h-8 mr-2" />
-                      PayPal
+                      <img src="https://readdy.ai/api/search-image?query=mercado%20pago%20logo%20icon&width=32&height=32&seq=mp1&orientation=squarish" alt="Mercado Pago" className="w-8 h-8 mr-2" />
+                      Mercado Pago
                     </h2>
                     <label className="relative inline-flex items-center cursor-pointer">
                       <input
                         type="checkbox"
-                        name="paypalAtivo"
-                        checked={formData.paypalAtivo}
+                        name="mercadoPagoAtivo"
+                        checked={formData.mercadoPagoAtivo}
                         onChange={handleInputChange}
                         className="sr-only peer"
                       />
                       <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-pink-300 dark:peer-focus:ring-pink-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-pink-600"></div>
                     </label>
                   </div>
-                  {formData.paypalAtivo && (
-                    <div className="space-y-4">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            Client ID
-                          </label>
-                          <input
-                            type="text"
-                            name="paypalClientId"
-                            value={formData.paypalClientId}
-                            onChange={handleInputChange}
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            Client Secret
-                          </label>
-                          <input
-                            type="password"
-                            name="paypalClientSecret"
-                            value={formData.paypalClientSecret}
-                            onChange={handleInputChange}
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-pink-5
-                            00 focus:border-transparent dark:bg-gray-700 dark:text-white"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Stripe */}
-                <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center">
-                      <img src="https://readdy.ai/api/search-image?query=stripe%20logo%20icon%20payment%20gateway%20purple&width=32&height=32&seq=st1&orientation=squarish" alt="Stripe" className="w-8 h-8 mr-2" />
-                      Stripe
-                    </h2>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        name="stripeAtivo"
-                        checked={formData.stripeAtivo}
-                        onChange={handleInputChange}
-                        className="sr-only peer"
-                      />
-                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-pink-300 dark:peer-focus:ring-pink-800 rounded-full 
-                      peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] 
-                      after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border 
-                      after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 
-                      peer-checked:bg-pink-600"></div>
-                    </label>
-                  </div>
-                  {formData.stripeAtivo && (
+                  {formData.mercadoPagoAtivo && (
                     <div className="space-y-4">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
@@ -201,32 +130,43 @@ export default function ConfiguracoesIntegracaoPage() {
                           </label>
                           <input
                             type="text"
-                            name="stripePublicKey"
-                            value={formData.stripePublicKey}
+                            name="mercadoPagoPublicKey"
+                            value={formData.mercadoPagoPublicKey}
                             onChange={handleInputChange}
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 
-                            rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent 
-                            dark:bg-gray-700 dark:text-white"
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
                           />
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            Secret Key
+                            Access Token
                           </label>
                           <input
                             type="password"
-                            name="stripeSecretKey"
-                            value={formData.stripeSecretKey}
+                            name="mercadoPagoAccessToken"
+                            value={formData.mercadoPagoAccessToken}
                             onChange={handleInputChange}
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 
-                            rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent 
-                            dark:bg-gray-700 dark:text-white"
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
                           />
                         </div>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Ambiente de testes (Sandbox)</span>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            name="mercadoPagoSandbox"
+                            checked={formData.mercadoPagoSandbox}
+                            onChange={handleInputChange}
+                            className="sr-only peer"
+                          />
+                          <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-pink-300 dark:peer-focus:ring-pink-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-pink-600"></div>
+                        </label>
                       </div>
                     </div>
                   )}
                 </div>
+                
+                {/* Stripe removido conforme solicitação */}
               </div>
             )}
 

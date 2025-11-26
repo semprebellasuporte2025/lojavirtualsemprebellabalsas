@@ -1,10 +1,16 @@
 const { createClient } = require('@supabase/supabase-js');
 const fs = require('fs');
 const path = require('path');
+require('dotenv').config();
 
 // Configuração do Supabase
-const supabaseUrl = process.env.VITE_PUBLIC_SUPABASE_URL || 'https://your-project.supabase.co';
-const supabaseKey = process.env.VITE_PUBLIC_SUPABASE_ANON_KEY || 'your-anon-key';
+const supabaseUrl = process.env.VITE_PUBLIC_SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+if (!supabaseUrl || !supabaseKey) {
+  console.error('❌ Defina VITE_PUBLIC_SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY no ambiente');
+  process.exit(1);
+}
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 

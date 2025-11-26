@@ -1,16 +1,17 @@
 // Script simples para testar conexão com Supabase e buscar banners
+require('dotenv').config();
 const { createClient } = require('@supabase/supabase-js');
 
-// Configurações do Supabase - usar valores do .env
-const supabaseUrl = "https://cproxdqrraiujnewbsvp.supabase.co";
-const supabaseKey = "sb_publishable_rTW_XToE2y-HAx4duwsTtw_lrKt_qhM";
+// Configurações do Supabase via ambiente
+const supabaseUrl = process.env.VITE_PUBLIC_SUPABASE_URL;
+const supabaseKey = process.env.VITE_PUBLIC_SUPABASE_ANON_KEY;
 
 console.log('Testando conexão com Supabase...');
 console.log('URL:', supabaseUrl);
 console.log('Chave:', supabaseKey ? '***' + supabaseKey.slice(-8) : 'Não configurada');
 
 if (!supabaseUrl || !supabaseKey) {
-  console.error('Variáveis de ambiente não configuradas!');
+  console.error('❌ Defina VITE_PUBLIC_SUPABASE_URL e VITE_PUBLIC_SUPABASE_ANON_KEY no ambiente');
   process.exit(1);
 }
 

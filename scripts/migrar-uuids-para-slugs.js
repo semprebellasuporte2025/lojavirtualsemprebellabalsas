@@ -5,11 +5,11 @@
 import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
 
-const SUPABASE_URL = process.env.VITE_PUBLIC_SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_PUBLIC_SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+const SUPABASE_URL = process.env.VITE_PUBLIC_SUPABASE_URL;
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY; // exige Service Role para atualizações
 
 if (!SUPABASE_URL || !SUPABASE_KEY) {
-  console.error('❌ Configure VITE_PUBLIC_SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY (ou VITE_PUBLIC_SUPABASE_ANON_KEY) no .env.local');
+  console.error('❌ Configure VITE_PUBLIC_SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY no ambiente (.env.local)');
   process.exit(1);
 }
 
@@ -239,7 +239,7 @@ async function migrateLinksInstagram() {
 (async () => {
   console.log('⚙️ Iniciando migração de UUIDs para slugs...');
   console.log('   Supabase URL:', SUPABASE_URL);
-  console.log('   Usando chave:', SUPABASE_KEY === process.env.SUPABASE_SERVICE_ROLE_KEY ? 'Service Role' : 'Anon');
+  console.log('   Usando chave: Service Role');
   try {
     await migrateProductSlugs();
     await migrateCategorySlugs();

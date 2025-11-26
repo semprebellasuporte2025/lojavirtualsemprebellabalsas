@@ -1,8 +1,14 @@
 // Script simples para testar conexão com Supabase
+import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = 'https://cproxdqrraiujnewbsvp.supabase.co';
-const supabaseAnonKey = 'sb_publishable_rTW_XToE2y-HAx4duwsTtw_lrKt_qhM';
+const supabaseUrl = process.env.VITE_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.VITE_PUBLIC_SUPABASE_ANON_KEY;
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.error('❌ Defina VITE_PUBLIC_SUPABASE_URL e VITE_PUBLIC_SUPABASE_ANON_KEY no ambiente');
+  process.exit(1);
+}
 
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 

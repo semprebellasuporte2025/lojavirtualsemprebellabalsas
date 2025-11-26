@@ -1,9 +1,15 @@
 // Script para executar a função SQL manualmente
+require('dotenv').config();
 const { createClient } = require('@supabase/supabase-js');
 
-// Estas variáveis precisam ser configuradas com suas credenciais reais
-const SUPABASE_URL = process.env.SUPABASE_URL || 'https://seu-projeto.supabase.co';
-const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || 'sua_chave_de_servico';
+// Variáveis de ambiente obrigatórias
+const SUPABASE_URL = process.env.VITE_PUBLIC_SUPABASE_URL;
+const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
+  console.error('❌ Defina VITE_PUBLIC_SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY no ambiente');
+  process.exit(1);
+}
 
 async function executeSQL() {
   try {
@@ -75,11 +81,11 @@ async function executeSQL() {
 }
 
 // Verificar se as credenciais estão disponíveis
-if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+if (!process.env.VITE_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
   console.log('⚠️  Credenciais não encontradas nas variáveis de ambiente');
   console.log('Para usar este script, configure:');
-  console.log('SUPABASE_URL=https://seu-projeto.supabase.co');
-  console.log('SUPABASE_SERVICE_ROLE_KEY=sua_chave_de_servico_aqui');
+  console.log('VITE_PUBLIC_SUPABASE_URL=https://seu-projeto.supabase.co');
+  console.log('SUPABASE_SERVICE_ROLE_KEY=<sua_service_role_key>');
   console.log('\nOu execute manualmente no Supabase Studio');
 }
 

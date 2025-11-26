@@ -1,8 +1,13 @@
 // Teste direto da Edge Function pagar-mp para verificar deploy e resposta
 import 'dotenv/config';
 
-const SUPABASE_URL = process.env.VITE_PUBLIC_SUPABASE_URL || 'https://cproxdqrraiujnewbsvp.supabase.co';
-const ANON_KEY = process.env.VITE_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_rTW_XToE2y-HAx4duwsTtw_lrKt_qhM';
+const SUPABASE_URL = process.env.VITE_PUBLIC_SUPABASE_URL;
+const ANON_KEY = process.env.VITE_PUBLIC_SUPABASE_ANON_KEY;
+
+if (!SUPABASE_URL || !ANON_KEY) {
+  console.error('❌ Defina VITE_PUBLIC_SUPABASE_URL e VITE_PUBLIC_SUPABASE_ANON_KEY no ambiente');
+  process.exit(1);
+}
 
 async function testPagarMp() {
   const url = `${SUPABASE_URL}/functions/v1/pagar-mp`;

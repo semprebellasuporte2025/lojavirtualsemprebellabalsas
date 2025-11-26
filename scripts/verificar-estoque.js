@@ -1,9 +1,14 @@
 // Script para verificar estoque dos produtos usando a API do Supabase
 import { createClient } from '@supabase/supabase-js';
 
-// Configuração - substitua com suas credenciais reais
-const supabaseUrl = process.env.VITE_SUPABASE_URL || 'https://seu-projeto.supabase.co';
-const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || 'sua-chave-anonima';
+// Configuração via variáveis de ambiente (sem fallbacks)
+const supabaseUrl = process.env.VITE_PUBLIC_SUPABASE_URL;
+const supabaseKey = process.env.VITE_PUBLIC_SUPABASE_ANON_KEY;
+
+if (!supabaseUrl || !supabaseKey) {
+  console.error('❌ Faltam variáveis: defina VITE_PUBLIC_SUPABASE_URL e VITE_PUBLIC_SUPABASE_ANON_KEY');
+  process.exit(1);
+}
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 

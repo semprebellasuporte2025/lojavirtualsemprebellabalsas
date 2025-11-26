@@ -1,20 +1,14 @@
 // Script para testar conexão com Supabase e verificar banners
+import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
 
-// Carregar variáveis de ambiente do arquivo .env se existir
-try {
-  import('dotenv').then(dotenv => {
-    dotenv.config();
-    console.log('Arquivo .env carregado');
-  }).catch(() => {
-    console.log('Nenhum arquivo .env encontrado, usando valores padrão');
-  });
-} catch (e) {
-  console.log('Nenhum arquivo .env encontrado, usando valores padrão');
-}
+const supabaseUrl = process.env.VITE_PUBLIC_SUPABASE_URL;
+const supabaseKey = process.env.VITE_PUBLIC_SUPABASE_ANON_KEY;
 
-const supabaseUrl = process.env.VITE_PUBLIC_SUPABASE_URL || 'https://abc123.supabase.co';
-const supabaseKey = process.env.VITE_PUBLIC_SUPABASE_ANON_KEY || 'fake-key';
+if (!supabaseUrl || !supabaseKey) {
+  console.error('❌ Defina VITE_PUBLIC_SUPABASE_URL e VITE_PUBLIC_SUPABASE_ANON_KEY no ambiente');
+  process.exit(1);
+}
 
 console.log('URL do Supabase:', supabaseUrl);
 console.log('Tentando conectar ao Supabase...');

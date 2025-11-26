@@ -62,9 +62,7 @@ const AdminUsuariosListarPage = lazy(() => import('../pages/admin/usuarios/lista
 const AdminContaPage = lazy(() => import('../pages/admin/conta/page'));
 const AdminConfiguracoesGeraisPage = lazy(() => import('../pages/admin/configuracoes/gerais/page'));
 const AdminConfiguracoesIntegracaoPage = lazy(() => import('../pages/admin/configuracoes/integracao/page'));
-const AdminConfiguracoesNotificacoesPage = lazy(() => import('../pages/admin/configuracoes/notificacoes/page'));
-const AdminConfiguracoesSistemaPage = lazy(() => import('../pages/admin/configuracoes/sistema/page'));
-const AdminAjudaPage = lazy(() => import('../pages/admin/ajuda/page'));
+// Removidos: páginas de Configurações/Notificações, Configurações/Sistema e Ajuda
 const AdminDebugUploadPage = lazy(() => import('../pages/admin/debug-upload'));
 const AdminDebugColorVariationsPage = lazy(() => import('../pages/admin/debug-color-variations'));
 
@@ -284,20 +282,9 @@ const routes: RouteObject[] = [
         path: 'integracao',
         element: <Suspense fallback={<LoadingFallback />}><AdminConfiguracoesIntegracaoPage /></Suspense>,
       },
-      {
-        path: 'notificacoes',
-        element: <Suspense fallback={<LoadingFallback />}><AdminConfiguracoesNotificacoesPage /></Suspense>,
-      },
-      {
-        path: 'sistema',
-        element: <Suspense fallback={<LoadingFallback />}><AdminConfiguracoesSistemaPage /></Suspense>,
-      },
     ]
   },
-  {
-    path: '/paineladmin/ajuda',
-    element: <Suspense fallback={<LoadingFallback />}><AdminAjudaPage /></Suspense>,
-  },
+  // Removida rota: /paineladmin/ajuda
   {
     path: '/paineladmin/debug-upload',
     element: <Suspense fallback={<LoadingFallback />}><AdminDebugUploadPage /></Suspense>,

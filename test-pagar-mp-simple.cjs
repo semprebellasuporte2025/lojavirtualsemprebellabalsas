@@ -1,6 +1,13 @@
 require('dotenv').config();
 
-const SUPABASE_URL = process.env.VITE_PUBLIC_SUPABASE_URL || 'https://cproxdqrraiujnewbsvp.supabase.co';
+const SUPABASE_URL = process.env.VITE_PUBLIC_SUPABASE_URL;
+const ANON_KEY = process.env.VITE_PUBLIC_SUPABASE_ANON_KEY;
+
+if (!SUPABASE_URL || !ANON_KEY) {
+  console.error('❌ Defina VITE_PUBLIC_SUPABASE_URL e VITE_PUBLIC_SUPABASE_ANON_KEY no ambiente');
+  process.exit(1);
+}
+
 const FUNCTION_URL = `${SUPABASE_URL}/functions/v1/pagar-mp`;
 
 async function testPagarMP() {
@@ -13,7 +20,7 @@ async function testPagarMP() {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'apikey': process.env.VITE_PUBLIC_SUPABASE_ANON_KEY
+        'apikey': ANON_KEY
       },
       body: JSON.stringify({
         email: 'everaldozs@gmail.com',

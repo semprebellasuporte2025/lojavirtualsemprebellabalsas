@@ -132,15 +132,10 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       submenu: [
         { title: 'Gerais', path: '/paineladmin/configuracoes/gerais' },
         { title: 'Integração', path: '/paineladmin/configuracoes/integracao' },
-        { title: 'Notificações', path: '/paineladmin/configuracoes/notificacoes' },
-        { title: 'Sistema', path: '/paineladmin/configuracoes/sistema' },
+        // Removidos: Notificações e Sistema
       ],
     },
-    {
-      title: 'Ajuda',
-      icon: 'ri-question-line',
-      path: '/paineladmin/ajuda',
-    },
+    // Removido: menu Ajuda
   ];
 
   const toggleMenu = (title: string) => {

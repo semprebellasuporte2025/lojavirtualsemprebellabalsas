@@ -1,9 +1,15 @@
 // Script detalhado para verificar o estado dos banners
+require('dotenv').config();
 const { createClient } = require('@supabase/supabase-js');
 
 // Configurações do Supabase
-const supabaseUrl = "https://cproxdqrraiujnewbsvp.supabase.co";
-const supabaseKey = "sb_publishable_rTW_XToE2y-HAx4duwsTtw_lrKt_qhM";
+const supabaseUrl = process.env.VITE_PUBLIC_SUPABASE_URL;
+const supabaseKey = process.env.VITE_PUBLIC_SUPABASE_ANON_KEY;
+
+if (!supabaseUrl || !supabaseKey) {
+  console.error('❌ Defina VITE_PUBLIC_SUPABASE_URL e VITE_PUBLIC_SUPABASE_ANON_KEY no ambiente');
+  process.exit(1);
+}
 
 console.log('🔍 Verificando detalhes dos banners...\n');
 
