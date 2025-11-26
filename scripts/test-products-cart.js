@@ -51,8 +51,8 @@ async function testProductsAndCart() {
       console.log('');
     });
 
-    // 2. Testar adição ao carrinho com o primeiro produto
-    const produtoTeste = produtos[0];
+    // 2. Escolher o produto para teste: prioriza "teste" e cai para o primeiro
+    const produtoTeste = (produtos.find(p => (p.nome || '').toLowerCase() === 'teste') || produtos[0]);
     console.log(`🛒 Testando adição do produto "${produtoTeste.nome}" ao carrinho...`);
 
     // Simular adição ao carrinho (usando localStorage ou session)

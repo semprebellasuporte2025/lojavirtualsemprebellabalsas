@@ -2,12 +2,12 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { supabasePublic } from '../../../lib/supabasePublic';
-import { supabase } from '../../../lib/supabase';
 import { useAuth } from '../../../hooks/useAuth';
 import { fetchActiveBanners, subscribeToBannerChanges } from './bannerService';
 import { getCachedBanners, setCachedBanners, clearBannerCache } from './bannerCache';
 import { logBanner } from '../../../lib/logger';
-import { toSupabaseRenderUrl } from './bannerUrlUtils';
+// import { toSupabaseRenderUrl } from './bannerUrlUtils';
+import { handleImageError } from '../../../utils/imageFallback';
 
 interface Banner {
   id: string;
@@ -67,6 +67,8 @@ export default function BannerSlider() {
       unsubscribe();
     };
   }, [isAdmin]);
+
+  // Removido pré-carregamento externo para evitar bloqueios ORB
 
   // Detecta viewport mobile para decidir qual URL usar diretamente no <img>
   useEffect(() => {
@@ -286,7 +288,7 @@ export default function BannerSlider() {
           id: 'fallback-1',
           titulo: 'Bem-vindo à SempreBella',
           subtitulo: 'Descubra nossa coleção exclusiva',
-          imagem_url: 'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=1920&h=600&fit=crop',
+          imagem_url: '/placeholder-large.svg',
           link_destino: '/produtos',
           texto_botao: 'Ver Produtos',
           ordem_exibicao: 1,
@@ -296,7 +298,7 @@ export default function BannerSlider() {
           id: 'fallback-2', 
           titulo: 'Promoções Especiais',
           subtitulo: 'Até 30% de desconto em itens selecionados',
-          imagem_url: 'https://images.unsplash.com/photo-1556906781-2f0520405b71?w=1920&h=600&fit=crop',
+          imagem_url: '/placeholder-large.svg',
           link_destino: '/promocoes',
           texto_botao: 'Conferir Ofertas',
           ordem_exibicao: 2,
@@ -306,7 +308,7 @@ export default function BannerSlider() {
           id: 'fallback-3',
           titulo: 'Novidades Chegaram',
           subtitulo: 'Confira os lançamentos da temporada',
-          imagem_url: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=1920&h=600&fit=crop',
+          imagem_url: '/placeholder-large.svg',
           link_destino: '/novidades',
           texto_botao: 'Ver Novidades',
           ordem_exibicao: 3,
@@ -401,33 +403,50 @@ export default function BannerSlider() {
             className={`min-w-full h-full relative ${banner.link_destino ? 'cursor-pointer' : 'cursor-default'}`}
             onClick={() => handleBannerClick(banner)}
           >
-            <picture>
-              <img
-                src={
-                  isMobile
-                    ? (resolvedMobile[banner.id] ?? resolvedDesktop[banner.id] ?? '/placeholder-large.svg')
-                    : (resolvedDesktop[banner.id] ?? '/placeholder-large.svg')
-                }
-                alt={banner.titulo || 'Banner'}
-                className="w-full h-full object-cover object-top"
-                style={{
-                  opacity: 1,
-                }}
-                loading="lazy"
+          <picture>
+            <img
+              src={
+                isMobile
+                  ? (resolvedMobile[banner.id] ?? resolvedDesktop[banner.id] ?? '/placeholder-large.svg')
+                  : (resolvedDesktop[banner.id] ?? '/placeholder-large.svg')
+              }
+              data-original-src={
+                isMobile
+                  ? (resolvedMobile[banner.id] ?? resolvedDesktop[banner.id] ?? '/placeholder-large.svg')
+                  : (resolvedDesktop[banner.id] ?? '/placeholder-large.svg')
+              }
+              alt={banner.titulo || 'Banner'}
+              className="w-full h-full object-cover object-top"
+              style={{
+                opacity: 1,
+              }}
+              loading="lazy"
               onAbort={(e) => {
-                const target = e.target as HTMLImageElement;
+                const target = e.currentTarget as HTMLImageElement;
                 target.style.opacity = '1';
-                const desktop = resolvedDesktop[banner.id];
-                target.src = desktop ?? '/placeholder-large.svg';
+                const originalSrc = target.getAttribute('data-original-src') || target.src;
+                const fallback = handleImageError(originalSrc, (msg, details) => logBanner('warn', msg, details));
+                if (fallback) {
+                  target.src = fallback;
+                } else {
+                  const desktop = resolvedDesktop[banner.id];
+                  target.src = desktop ?? '/placeholder-large.svg';
+                }
               }}
               onError={(e) => {
-                const target = e.target as HTMLImageElement;
+                const target = e.currentTarget as HTMLImageElement;
                 target.style.opacity = '1';
-                const desktop = resolvedDesktop[banner.id];
-                target.src = desktop ?? '/placeholder-large.svg';
+                const originalSrc = target.getAttribute('data-original-src') || target.src;
+                const fallback = handleImageError(originalSrc, (msg, details) => logBanner('warn', msg, details));
+                if (fallback) {
+                  target.src = fallback;
+                } else {
+                  const desktop = resolvedDesktop[banner.id];
+                  target.src = desktop ?? '/placeholder-large.svg';
+                }
               }}
-              />
-            </picture>
+            />
+          </picture>
             
             {/* Conteúdo do banner */}
             <div className="absolute inset-0 flex items-end justify-start p-12 md:p-24 pb-16 md:pb-24">

@@ -80,8 +80,17 @@ export default function ListarProdutosPage() {
     return matchSearch && matchCategoria && matchStatus;
   });
 
+  // Coloca o produto de nome "teste" no topo da lista filtrada
+  const sortedFilteredProdutos = [...filteredProdutos].sort((a, b) => {
+    const isATeste = (a?.nome || '').trim().toLowerCase() === 'teste';
+    const isBTeste = (b?.nome || '').trim().toLowerCase() === 'teste';
+    if (isATeste && !isBTeste) return -1;
+    if (!isATeste && isBTeste) return 1;
+    return 0; // mantém ordem original entre os demais
+  });
+
   // Paginação (client-side)
-  const totalFiltered = filteredProdutos.length;
+  const totalFiltered = sortedFilteredProdutos.length;
   const totalPages = Math.max(1, Math.ceil(totalFiltered / pageSize));
   useEffect(() => {
     // Resetar para primeira página quando filtros ou pageSize mudarem
@@ -93,7 +102,7 @@ export default function ListarProdutosPage() {
   }, [totalPages]);
   const startIndex = (currentPage - 1) * pageSize;
   const endIndex = Math.min(startIndex + pageSize, totalFiltered);
-  const paginatedProdutos = filteredProdutos.slice(startIndex, endIndex);
+  const paginatedProdutos = sortedFilteredProdutos.slice(startIndex, endIndex);
 
   const handleDelete = (id: string) => {
     setProdutoToDelete(id);

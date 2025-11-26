@@ -61,7 +61,14 @@ BEGIN
 
   -- Inserir itens do pedido se fornecidos
   IF p_itens IS NOT NULL AND array_length(p_itens, 1) > 0 THEN
-    PERFORM public.inserir_itens_pedido(p_itens);
+    -- Anexar pedido_id a cada item e delegar para função de inserção
+    DECLARE v_itens_com_pedido JSONB[];
+    BEGIN
+      SELECT array_agg(it || jsonb_build_object('pedido_id', v_pedido_id::text))
+        INTO v_itens_com_pedido
+      FROM unnest(p_itens) AS it;
+      PERFORM public.inserir_itens_pedido(v_itens_com_pedido);
+    END;
   END IF;
 
   RETURN v_pedido_id;

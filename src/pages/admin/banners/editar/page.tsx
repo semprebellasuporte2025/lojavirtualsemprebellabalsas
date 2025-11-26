@@ -20,7 +20,7 @@ interface Banner {
 export default function AdminBannersEditarPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { toast, showToast, hideToast } = useToast();
+  const { showToast } = useToast();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -189,7 +189,7 @@ export default function AdminBannersEditarPage() {
       if (imageFile) {
         const fileName = `banners/${Date.now()}-${imageFile.name}`;
         
-        const { data: uploadData, error: uploadError } = await supabaseWithAuth.storage
+        const { error: uploadError } = await supabaseWithAuth.storage
           .from('banners')
           .upload(fileName, imageFile);
           
@@ -212,9 +212,12 @@ export default function AdminBannersEditarPage() {
           .getPublicUrl(fileNameMobile);
         imageUrlMobile = urlMobileData.publicUrl;
       }
+      // Gera título automático se o campo estiver vazio
+      const titulo = formData.titulo.trim() || `Banner ${new Date().toLocaleDateString('pt-BR')} ${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+
       // Monta payload de atualização
       const payload: any = {
-        titulo: formData.titulo,
+        titulo: titulo,
         subtitulo: formData.subtitulo,
         imagem_url: imageUrl,
         imagem_url_mobile: imageUrlMobile,

@@ -7,6 +7,7 @@
     "@lexical/utils": "^0.22.0",
     "@stripe/react-stripe-js": "4.0.2",
     "@supabase/supabase-js": "^2.57.4",
+    "@vercel/node": "^5.5.10",
     "axios": "^1.13.1",
     "bootstrap": "^5.3.8",
     "dotenv": "^17.2.3",
@@ -63,7 +64,8 @@
     "preview": "vite preview",
     "test": "vitest",
     "test:run": "vitest run",
-    "migrate:slugs": "node scripts/migrar-uuids-para-slugs.js"
+    "migrate:slugs": "node scripts/migrar-uuids-para-slugs.js",
+    "test:stock": "node scripts/test-checkout-stock.js"
   },
   "type": "module",
   "version": "0.0.0",

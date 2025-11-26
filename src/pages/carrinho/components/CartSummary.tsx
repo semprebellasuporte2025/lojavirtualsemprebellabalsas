@@ -97,7 +97,7 @@ export default function CartSummary({ subtotal, shipping }: CartSummaryProps) {
   const handleApplyCoupon = async () => {
     if (!couponValid || !couponData) return;
     setAppliedCoupon({ ...couponData });
-    showToast(`Cupom ${couponData.nome} aplicado (-${couponData.desconto_percentual}%).`, 'success');
+    showToast(`Cupom ${couponData.nome} aplicado (-${couponData.desconto_percentual}%).`, 'success', 3000);
   };
 
   return (

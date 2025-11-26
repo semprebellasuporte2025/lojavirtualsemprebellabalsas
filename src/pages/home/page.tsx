@@ -19,6 +19,18 @@ export default function HomePage() {
   const [categoriesToShow, setCategoriesToShow] = useState<string[]>([]);
   const navigate = useNavigate();
 
+  // Move o produto com nome "teste" para o topo da lista
+  const bumpTesteFirst = (arr: Produto[]) => {
+    const idx = arr.findIndex(p => (p?.nome || '').trim().toLowerCase() === 'teste');
+    if (idx > 0) {
+      const copy = [...arr];
+      const [hit] = copy.splice(idx, 1);
+      copy.unshift(hit);
+      return copy;
+    }
+    return arr;
+  };
+
   useEffect(() => {
     const controller = new AbortController();
     carregarProdutosRecentes(controller.signal);
@@ -99,7 +111,7 @@ export default function HomePage() {
             .abortSignal(signal);
           if (!err2 && !signal.aborted) {
             const safe = (data2 || []).filter((p: any) => p?.ativo === true && p?.nome_invisivel !== true);
-            setRecentProducts(safe as Produto[]);
+            setRecentProducts(bumpTesteFirst(safe as Produto[]));
             return;
           }
         }
@@ -107,7 +119,7 @@ export default function HomePage() {
       }
 
       if (!signal.aborted) {
-        setRecentProducts((data || []) as Produto[]);
+        setRecentProducts(bumpTesteFirst((data || []) as Produto[]));
       }
     } catch (error: any) {
       if (error && error.message && !error.message.includes('AbortError')) {

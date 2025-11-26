@@ -15,17 +15,23 @@ RETURNS TRIGGER AS $$
 DECLARE
     variante_id UUID;
     variante_estoque INTEGER;
+    quantidade_abs INTEGER;
 BEGIN
+    -- Ignorar movimentações originadas por venda automática
+    IF NEW.motivo = 'Venda realizada' THEN
+        RETURN NEW;
+    END IF;
+
+    quantidade_abs := ABS(COALESCE(NEW.quantidade, 0));
+
     -- Determinar qual variação deve ser atualizada
-    -- Para simplificação, vamos usar a primeira variação ativa do produto
-    -- Em um sistema real, você precisaria de lógica mais sofisticada
     SELECT id, estoque INTO variante_id, variante_estoque
     FROM public.variantes_produto 
     WHERE produto_id = NEW.produto_id 
     AND ativo = true
     ORDER BY created_at
     LIMIT 1;
-    
+
     -- Se não encontrar variação ativa, criar uma padrão
     IF variante_id IS NULL THEN
         INSERT INTO public.variantes_produto (
@@ -39,29 +45,29 @@ BEGIN
             'DEFAULT-' || NEW.produto_id
         ) RETURNING id INTO variante_id;
     END IF;
-    
+
     -- Para entrada: somar ao estoque da variação
     IF NEW.tipo = 'entrada' THEN
         UPDATE public.variantes_produto 
-        SET estoque = COALESCE(estoque, 0) + NEW.quantidade,
+        SET estoque = COALESCE(estoque, 0) + quantidade_abs,
             updated_at = NOW()
         WHERE id = variante_id;
-    
+
     -- Para saída: subtrair do estoque da variação
     ELSIF NEW.tipo = 'saida' THEN
         UPDATE public.variantes_produto 
-        SET estoque = GREATEST(0, COALESCE(estoque, 0) - NEW.quantidade),
+        SET estoque = GREATEST(0, COALESCE(estoque, 0) - quantidade_abs),
             updated_at = NOW()
         WHERE id = variante_id;
-    
+
     -- Para ajuste: aplicar a quantidade (pode ser positiva ou negativa)
     ELSIF NEW.tipo = 'ajuste' THEN
         UPDATE public.variantes_produto 
-        SET estoque = GREATEST(0, COALESCE(estoque, 0) + NEW.quantidade),
+        SET estoque = GREATEST(0, COALESCE(estoque, 0) + (CASE WHEN NEW.quantidade >= 0 THEN quantidade_abs ELSE -quantidade_abs END)),
             updated_at = NOW()
         WHERE id = variante_id;
     END IF;
-    
+
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
@@ -107,37 +113,70 @@ CREATE OR REPLACE FUNCTION registrar_venda_atualizar_estoque()
 RETURNS TRIGGER AS $$
 DECLARE
     variante_id UUID;
-    variante_estoque INTEGER;
+    v_cor TEXT;
+    v_tamanho TEXT;
+    v_disponivel INTEGER := 0;
+    rows_updated INTEGER := 0;
 BEGIN
-    -- Encontrar a variação apropriada para o produto
-    SELECT id, estoque INTO variante_id, variante_estoque
-    FROM public.variantes_produto 
-    WHERE produto_id = NEW.produto_id::UUID
-    AND ativo = true
-    ORDER BY estoque DESC
-    LIMIT 1;
-    
-    -- Se não encontrar variação, criar uma padrão
-    IF variante_id IS NULL THEN
-        INSERT INTO public.variantes_produto (
-            produto_id, cor, tamanho, estoque, ativo, sku
-        ) VALUES (
-            NEW.produto_id::UUID,
-            'Padrão',
-            'Único',
-            0,
-            true,
-            'DEFAULT-' || NEW.produto_id
-        ) RETURNING id INTO variante_id;
+    -- Normalizar cor/tamanho informados no item
+    v_cor := NULLIF(LOWER(TRIM(COALESCE(NEW.cor, ''))), '');
+    v_tamanho := NULLIF(LOWER(TRIM(COALESCE(NEW.tamanho, ''))), '');
+
+    -- Selecionar variação pela combinação de cor/tamanho se fornecida; caso contrário, por maior estoque
+    IF v_cor IS NOT NULL OR v_tamanho IS NOT NULL THEN
+        SELECT id INTO variante_id
+        FROM public.variantes_produto 
+        WHERE produto_id = NEW.produto_id::UUID
+          AND ativo = true
+          AND (v_cor IS NULL OR LOWER(COALESCE(cor, '')) = v_cor)
+          AND (v_tamanho IS NULL OR LOWER(COALESCE(tamanho, '')) = v_tamanho)
+        ORDER BY estoque DESC NULLS LAST, created_at
+        LIMIT 1;
+
+        -- Se o usuário selecionou cor/tamanho e não foi encontrada variação ativa correspondente, falhar explicitamente
+        IF variante_id IS NULL THEN
+            RAISE EXCEPTION 'Variação selecionada (cor/tamanho) não encontrada ou inativa para o produto %', NEW.produto_id
+                USING ERRCODE = '22000';
+        END IF;
+    ELSE
+        -- Fallback: maior estoque entre variações ativas
+        SELECT id INTO variante_id
+        FROM public.variantes_produto 
+        WHERE produto_id = NEW.produto_id::UUID
+          AND ativo = true
+        ORDER BY estoque DESC NULLS LAST, created_at
+        LIMIT 1;
+
+        -- Criar variação padrão caso não exista nenhuma ativa
+        IF variante_id IS NULL THEN
+            INSERT INTO public.variantes_produto (
+                produto_id, cor, tamanho, estoque, ativo, sku
+            ) VALUES (
+                NEW.produto_id::UUID,
+                'Padrão',
+                'Único',
+                0,
+                true,
+                'DEFAULT-' || NEW.produto_id
+            ) RETURNING id INTO variante_id;
+        END IF;
     END IF;
-    
-    -- Atualizar o estoque da variação
+
+    -- Baixa de estoque atômica: só atualiza se houver estoque suficiente
     UPDATE public.variantes_produto 
-    SET estoque = GREATEST(0, COALESCE(estoque, 0) - NEW.quantidade),
+    SET estoque = estoque - NEW.quantidade,
         updated_at = NOW()
-    WHERE id = variante_id;
-    
-    -- Registrar a movimentação de estoque
+    WHERE id = variante_id
+      AND COALESCE(estoque, 0) >= NEW.quantidade;
+    GET DIAGNOSTICS rows_updated = ROW_COUNT;
+
+    IF rows_updated = 0 THEN
+        SELECT COALESCE(estoque, 0) INTO v_disponivel FROM public.variantes_produto WHERE id = variante_id;
+        RAISE EXCEPTION 'Estoque insuficiente para o produto. Estoque disponível: %, Quantidade solicitada: %', v_disponivel, NEW.quantidade
+            USING ERRCODE = '22000';
+    END IF;
+
+    -- Registrar movimentação (ignorada pelo trigger de atualização para evitar dupla contagem)
     INSERT INTO public.movimentacoes_estoque (
         produto_id,
         tipo,
@@ -150,9 +189,9 @@ BEGIN
     ) VALUES (
         NEW.produto_id::UUID,
         'saida',
-        NEW.quantidade * -1,
+        NEW.quantidade,
         NEW.preco_unitario,
-        NEW.subtotal * -1,
+        NEW.subtotal,
         'Venda realizada',
         'Venda automática - Pedido: ' || (
             SELECT numero_pedido 
@@ -161,7 +200,7 @@ BEGIN
         ),
         'Sistema - Venda Automática'
     );
-    
+
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;

@@ -1,10 +1,10 @@
-import { FC, useEffect } from 'react';
+import { type FC, useEffect } from 'react';
 
 interface ToastProps {
   message: string;
   type?: 'success' | 'error' | 'info';
   onClose: () => void;
-  duration?: number; // Duração em milissegundos (padrão: 4000ms = 4s)
+  duration?: number; // Duração em milissegundos (padrão: 3000ms = 3s)
 }
 
 const typeStyles: Record<NonNullable<ToastProps['type']>, string> = {
@@ -19,7 +19,7 @@ const typeIcon: Record<NonNullable<ToastProps['type']>, string> = {
   info: 'ri-information-line',
 };
 
-const Toast: FC<ToastProps> = ({ message, type = 'info', onClose, duration = 4000 }) => {
+const Toast: FC<ToastProps> = ({ message, type = 'info', onClose, duration = 3000 }) => {
   const styles = typeStyles[type];
   const icon = typeIcon[type];
 

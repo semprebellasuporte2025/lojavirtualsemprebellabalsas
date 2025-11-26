@@ -6,11 +6,12 @@ interface ToastState {
   message: string;
   type: 'success' | 'error' | 'info';
   isVisible: boolean;
+  duration?: number;
 }
 
 interface ToastContextType {
   toast: ToastState;
-  showToast: (message: string, type?: 'success' | 'error' | 'info') => void;
+  showToast: (message: string, type?: 'success' | 'error' | 'info', duration?: number) => void;
   hideToast: () => void;
 }
 
@@ -28,11 +29,12 @@ export function useToastState() {
   const [toast, setToast] = useState<ToastState>({
     message: '',
     type: 'success',
-    isVisible: false
+    isVisible: false,
+    duration: undefined,
   });
 
-  const showToast = useCallback((message: string, type: 'success' | 'error' | 'info' = 'success') => {
-    setToast({ message, type, isVisible: true });
+  const showToast = useCallback((message: string, type: 'success' | 'error' | 'info' = 'success', duration?: number) => {
+    setToast({ message, type, isVisible: true, duration });
   }, []);
 
   const hideToast = useCallback(() => {

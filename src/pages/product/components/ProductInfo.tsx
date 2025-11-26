@@ -3,6 +3,7 @@ import { useState, useRef, useEffect } from 'react';
 import Button from '../../../components/base/Button';
 import { useToast } from '../../../hooks/useToast';
 import { supabase } from '../../../lib/supabase';
+import { AVAILABLE_COLORS } from '../../../constants/colors';
 
 interface ProductInfoProps {
   produto: any;
@@ -21,9 +22,10 @@ export default function ProductInfo({ produto, onAddToCart }: ProductInfoProps) 
   const [calculatingFrete, setCalculatingFrete] = useState(false);
   const [freteError, setFreteError] = useState('');
   const [isSizeGuideOpen, setIsSizeGuideOpen] = useState(false);
-  const [highlightSize, setHighlightSize] = useState(false);
   const sizeSectionRef = useRef<HTMLDivElement>(null);
   const { showToast } = useToast();
+
+  // Permitir qualquer cor e tamanho disponível nas variantes
 
   // Estado para estoque real do Supabase
   const [variantesState, setVariantesState] = useState<any[]>(Array.isArray(produto?.variantes_produto) ? produto?.variantes_produto : []);
@@ -102,20 +104,26 @@ export default function ProductInfo({ produto, onAddToCart }: ProductInfoProps) 
   }, [produto?.id]);
 
   // Derivar cores e tamanhos a partir das variantes do produto (estado em tempo real)
-  const variantes: any[] = Array.isArray(variantesState) ? variantesState : [];
+  // Filtra variantes inativas ou com estoque zero para não aparecerem na UI
+  const variantes: any[] = (Array.isArray(variantesState) ? variantesState : [])
+    .filter(v => v?.ativo !== false && Number(v?.estoque ?? 0) > 0);
   const coresFromVariantes = (() => {
-    const map = new Map<string, { name: string; hex: string }>();
+    // Unifica por nome de cor e não depende obrigatoriamente de cor_hex
+    const set = new Set<string>();
     variantes.forEach(v => {
-      const hex = (v?.cor_hex || '').toLowerCase();
-      const name = v?.cor || '';
-      if (hex) {
-        const key = hex;
-        if (!map.has(key)) {
-          map.set(key, { name, hex });
-        }
-      }
+      const name = String(v?.cor || '').toLowerCase();
+      if (name) set.add(name);
     });
-    return Array.from(map.values());
+
+    const options = Array.from(set.values()).map((nameLower) => {
+      const matchVariant = variantes.find(v => String(v?.cor || '').toLowerCase() === nameLower && (v?.cor_hex || '').startsWith('#'));
+      const fallback = AVAILABLE_COLORS.find(c => c.name.toLowerCase() === nameLower)?.hex || '#DC143C';
+      const hex = String(matchVariant?.cor_hex || fallback);
+      const label = nameLower.charAt(0).toUpperCase() + nameLower.slice(1);
+      return { name: label, hex };
+    });
+
+    return options;
   })();
 
   const sizesFromVariantes = (() => {
@@ -133,6 +141,27 @@ export default function ProductInfo({ produto, onAddToCart }: ProductInfoProps) 
     });
     return map;
   })();
+
+  // Disponibilidade por opção considerando variante ativa
+  const isColorEnabled = (colorName: string) => {
+    const n = (colorName || '').toLowerCase();
+    if (!n) return false;
+    // Não restringe pela seleção atual; habilita se houver estoque para a cor em qualquer tamanho
+    const total = variantes
+      .filter(v => String(v.cor || '').toLowerCase() === n && v.ativo !== false)
+      .reduce((sum, v) => sum + Number(v?.estoque ?? 0), 0);
+    return total > 0;
+  };
+
+  const isSizeEnabled = (size: string) => {
+    const s = String(size || '');
+    if (!s) return false;
+    // Não restringe pela seleção atual; habilita se houver estoque para o tamanho em qualquer cor
+    const total = variantes
+      .filter(v => String(v.tamanho) === s && v.ativo !== false)
+      .reduce((sum, v) => sum + Number(v?.estoque ?? 0), 0);
+    return total > 0;
+  };
 
   // Corrigir comparação de cores - normalizar para evitar problemas de case sensitivity
   const selectedVariant = variantes.find(v => 
@@ -169,10 +198,8 @@ export default function ProductInfo({ produto, onAddToCart }: ProductInfoProps) 
     if (!isMultiple) {
       if (!selectedSize || !selectedColor) {
         setValidationMsg('Selecione cor e tamanho antes de adicionar ao carrinho.');
-        setHighlightSize(true);
       } else {
         setValidationMsg('');
-        setHighlightSize(false);
       }
       return;
     }
@@ -198,12 +225,6 @@ export default function ProductInfo({ produto, onAddToCart }: ProductInfoProps) 
     setValidationMsg('');
   }, [selectedSize, selectedColor, combinations, quantity, stock]);
 
-  // Limpar destaque ao escolher cor e tamanho
-  useEffect(() => {
-    if (selectedSize && selectedColor) {
-      setHighlightSize(false);
-    }
-  }, [selectedSize, selectedColor]);
 
   // Valores padrão somente quando não há dados
   const product = {
@@ -221,12 +242,15 @@ export default function ProductInfo({ produto, onAddToCart }: ProductInfoProps) 
   };
   const isProductInactive = produto?.ativo === false;
 
+  // Exibir apenas os pares fixos permitidos
+  const displayColors = (product.colors || []);
+  const displaySizes = (product.sizes || []);
+
   const handleAddToCart = () => {
     const isMultiple = quantity > 1;
     if (!isMultiple) {
       if (!selectedSize || !selectedColor) {
         setValidationMsg('Selecione cor e tamanho antes de adicionar ao carrinho.');
-        setHighlightSize(true);
         return;
       }
       if (onAddToCart) {
@@ -241,7 +265,7 @@ export default function ProductInfo({ produto, onAddToCart }: ProductInfoProps) 
           color: selectedColor,
           material: produto?.material || undefined
         });
-        showToast('Produto adicionado ao carrinho!', 'success');
+        showToast('Produto adicionado ao carrinho!', 'success', 3000);
       }
       return;
     }
@@ -255,7 +279,6 @@ export default function ProductInfo({ produto, onAddToCart }: ProductInfoProps) 
 
       if (!fallbackBase) {
         setValidationMsg('Selecione cor e tamanho para completar a quantidade.');
-        setHighlightSize(true);
         return;
       }
 
@@ -301,7 +324,7 @@ export default function ProductInfo({ produto, onAddToCart }: ProductInfoProps) 
         });
       });
 
-      showToast('Itens adicionados ao carrinho!', 'success');
+      showToast('Itens adicionados ao carrinho!', 'success', 3000);
     }
   };
 
@@ -338,14 +361,76 @@ export default function ProductInfo({ produto, onAddToCart }: ProductInfoProps) 
 
   const handleSelectSize = (size: string) => {
     setSelectedSize(size);
-    tryAutoAddCombination(size, undefined);
+
+    // Encontrar cores disponíveis para o tamanho selecionado
+    const colorsForSizeLower = Array.from(new Set(
+      variantes
+        .filter(v => String(v.tamanho) === size)
+        .map(v => String(v.cor || '').toLowerCase())
+    ));
+
+    const currentColorLower = (selectedColor || '').toLowerCase();
+
+    // Se houver apenas uma cor para o tamanho, selecionar automaticamente
+    if (colorsForSizeLower.length === 1) {
+      const targetLower = colorsForSizeLower[0];
+      const colorObj = (product.colors || []).find(c => String(c.name || '').toLowerCase() === targetLower);
+      const nextColorName = colorObj?.name || targetLower;
+      setSelectedColor(nextColorName);
+      tryAutoAddCombination(size, nextColorName);
+      return;
+    }
+
+    // Manter a cor atual se for válida para o tamanho
+    if (selectedColor && colorsForSizeLower.includes(currentColorLower)) {
+      tryAutoAddCombination(size, selectedColor);
+      return;
+    }
+
+    // Selecionar a primeira cor disponível para o tamanho
+    if (colorsForSizeLower.length > 0) {
+      const firstLower = colorsForSizeLower[0];
+      const colorObj = (product.colors || []).find(c => String(c.name || '').toLowerCase() === firstLower);
+      const nextColorName = colorObj?.name || firstLower;
+      setSelectedColor(nextColorName);
+      tryAutoAddCombination(size, nextColorName);
+    } else {
+      // Nenhuma cor disponível para o tamanho
+      setSelectedColor('');
+    }
   };
 
   const handleSelectColor = (colorName: string) => {
+    const nameLower = (colorName || '').toLowerCase();
     setSelectedColor(colorName);
-    // Ao selecionar a cor, se já houver tamanho selecionado e quantidade > 1,
-    // adiciona automaticamente a combinação respeitando estoque e quantidade.
-    tryAutoAddCombination(undefined, colorName);
+
+    // Encontrar tamanhos ativos e com estoque > 0 para a cor selecionada
+    const sizesForColor = Array.from(new Set(
+      variantes
+        .filter(v => String(v.cor || '').toLowerCase() === nameLower)
+        .map(v => String(v.tamanho))
+    ));
+
+    if (sizesForColor.length === 1) {
+      setSelectedSize(sizesForColor[0]);
+      tryAutoAddCombination(sizesForColor[0], colorName);
+      return;
+    }
+
+    // Quando houver mais de um tamanho disponível, mantém o tamanho atual se for válido
+    if (selectedSize && sizesForColor.includes(selectedSize)) {
+      tryAutoAddCombination(selectedSize, colorName);
+      return;
+    }
+
+    // Caso não haja tamanho previamente selecionado, escolhe o primeiro disponível
+    if (sizesForColor.length > 0) {
+      setSelectedSize(sizesForColor[0]);
+      tryAutoAddCombination(sizesForColor[0], colorName);
+    } else {
+      // Nenhum tamanho disponível para a cor (deve ser raro, pois filtramos variantes sem estoque)
+      setSelectedSize('');
+    }
   };
 
   // handleRemoveCombination removido: não há UI para remoção manual de combinações.
@@ -534,6 +619,9 @@ export default function ProductInfo({ produto, onAddToCart }: ProductInfoProps) 
         <p className="text-sm text-gray-800 mt-3">
           Escolha o seu tamanho e a cor
         </p>
+        <p className="text-xs text-gray-600 mt-1">
+          Selecione qualquer combinação disponível.
+        </p>
       </div>
 
       {/* Color Selection */}
@@ -542,18 +630,21 @@ export default function ProductInfo({ produto, onAddToCart }: ProductInfoProps) 
           Cor: {selectedColor && <span className="text-pink-600">{selectedColor}</span>}
         </label>
         <div className="flex flex-wrap gap-4 items-start">
-          {product.colors.map((color: any) => {
+          {displayColors.map((color: any) => {
             const hex = (color.hex || '').toLowerCase();
             const name = (color.name || '').toLowerCase();
             const isWhite = hex === '#ffffff' || hex === '#fff' || name === 'branco' || name === 'white';
             const selected = selectedColor === color.name;
+            const colorEnabled = isColorEnabled(color.name);
             return (
               <div key={color.name} className="flex flex-col items-center w-16">
                 <button
-                  onClick={() => handleSelectColor(color.name)}
-                  className={`relative w-12 h-12 rounded-full cursor-pointer transition-all ${
-                    selected ? 'ring-2 ring-pink-600 ring-offset-2 scale-110' : 'hover:scale-105'
-                  } ${isWhite ? 'border border-gray-300' : ''}`}
+                  onClick={() => { if (colorEnabled) handleSelectColor(color.name); }}
+                  disabled={!colorEnabled}
+                  aria-disabled={!colorEnabled}
+                  className={`relative w-12 h-12 rounded-full transition-all ${
+                    selected ? 'ring-2 ring-pink-600 ring-offset-2 scale-110' : (colorEnabled ? 'hover:scale-105' : '')
+                  } ${isWhite ? 'border border-gray-300' : ''} ${colorEnabled ? 'cursor-pointer' : 'cursor-not-allowed opacity-40'}`}
                   style={{ backgroundColor: color.hex }}
                   aria-label={color.name}
                 >
@@ -562,7 +653,7 @@ export default function ProductInfo({ produto, onAddToCart }: ProductInfoProps) 
                   )}
                 </button>
                 <span
-                  className={`w-full text-center text-xs font-medium mt-1 truncate ${selected ? 'text-pink-600' : 'text-gray-700'}`}
+                  className={`w-full text-center text-xs font-medium mt-1 truncate ${selected ? 'text-pink-600' : (colorEnabled ? 'text-gray-700' : 'text-gray-400')}`}
                   title={color.name}
                 >
                   {color.name}
@@ -574,29 +665,40 @@ export default function ProductInfo({ produto, onAddToCart }: ProductInfoProps) 
       </div>
 
       {/* Size Selection */}
-      <div ref={sizeSectionRef} className={highlightSize ? 'ring-2 ring-pink-500 ring-offset-2 rounded-lg p-2' : ''}>
+      <div ref={sizeSectionRef}>
         <label className="block text-sm font-semibold text-gray-900 mb-3">
           Tamanho: {selectedSize && <span className="text-pink-600">{selectedSize}</span>}
         </label>
         <div className="flex flex-wrap gap-3">
-          {product.sizes.map((size: string) => (
-            <button
-              key={size}
-              onClick={() => handleSelectSize(size)}
-              className={`px-6 py-3 border-2 rounded-lg font-medium cursor-pointer transition-all whitespace-nowrap ${
-                selectedSize === size
-                  ? 'border-pink-600 bg-pink-600 text-white'
-                  : 'border-gray-300 text-gray-700 hover:border-pink-600'
-              }`}
-            >
-              {size}
-            </button>
-          ))}
+          {displaySizes.map((size: string) => {
+            const sizeEnabled = isSizeEnabled(size);
+            return (
+              <button
+                key={size}
+                onClick={() => sizeEnabled && handleSelectSize(size)}
+                disabled={!sizeEnabled}
+                aria-disabled={!sizeEnabled}
+                className={`px-6 py-3 border-2 rounded-lg font-medium transition-all whitespace-nowrap ${
+                  selectedSize === size
+                    ? 'border-pink-600 bg-pink-600 text-white'
+                    : sizeEnabled ? 'border-gray-300 text-gray-700 hover:border-pink-600 cursor-pointer' : 'border-gray-200 text-gray-400 cursor-not-allowed opacity-50'
+                }`}
+              >
+                {size}
+              </button>
+            );
+          })}
         </div>
         {quantity > 2 && (
           <p className="mt-3 text-xs text-gray-600">
             Quantidade maior que 2: selecione até {quantity} combinações (Cor + Tamanho).
             Se selecionar menos, completaremos com a sua última escolha ao adicionar ao carrinho.
+          </p>
+        )}
+
+        {(selectedSize && selectedColor) && (
+          <p className="mt-3 text-sm font-medium text-gray-800">
+            Variação selecionada: <span className="text-pink-600">{selectedColor} + {selectedSize}</span>
           </p>
         )}
       </div>

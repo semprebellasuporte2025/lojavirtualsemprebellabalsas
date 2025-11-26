@@ -9,6 +9,7 @@ import CartSummary from './components/CartSummary';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../../hooks/useCart';
 import { useProductStock } from '../../hooks/useProductStock';
+import { useVariantStockMap } from '../../hooks/useVariantStockMap';
 
 export default function CarrinhoPage() {
   const navigate = useNavigate();
@@ -27,31 +28,33 @@ export default function CarrinhoPage() {
   }, [items]);
   
   const { stockInfo } = useProductStock(productIds);
-  
-  // Criar mapa de estoque por produto ID
+  const { map: variantStockMap } = useVariantStockMap(productIds);
+
+  // Criar mapa de estoque agregado por produto ID (soma de variantes)
   const stockMap = new Map<string, number>();
   stockInfo.forEach(info => {
     stockMap.set(info.productId, info.stock);
   });
 
   const handleQuantityChange = (id: string, newQuantity: number) => {
-    // Extrair ID do produto para verificar estoque
-    const productId = id.split('|')[0];
-    const maxStock = stockMap.get(productId);
-    
-    console.log(`handleQuantityChange - ID: ${id}, Produto: ${productId}, Nova Qtd: ${newQuantity}, MaxStock: ${maxStock}`);
-    
-    // Validar se a nova quantidade não excede o estoque disponível
+    // Extrair campos do item no carrinho: produto|tamanho|cor
+    const [productId, size, colorRaw] = id.split('|');
+    const color = (colorRaw || '').toLowerCase();
+
+    // Estoque máximo por variante (se disponível), caso contrário usar agregado por produto
+    const variantKey = `${productId}|${size}|${color}`;
+    const variantMax = variantStockMap.get(variantKey);
+    const productMax = stockMap.get(productId);
+    const maxStock = (variantMax !== undefined) ? variantMax : productMax;
+
+    console.log(`handleQuantityChange - ID: ${id}, Variante: ${variantKey}, Nova Qtd: ${newQuantity}, MaxStock: ${maxStock}`);
+
+    // Validar limites
     if (maxStock !== undefined && newQuantity > maxStock) {
-      console.log(`Tentativa de aumentar além do estoque. Definindo como ${maxStock}`);
-      // Se tentar aumentar além do estoque, definir como estoque máximo
       updateQuantity(id, maxStock);
     } else if (newQuantity < 1) {
-      console.log(`Tentativa de diminuir abaixo de 1. Definindo como 1`);
-      // Não permitir quantidade menor que 1
       updateQuantity(id, 1);
     } else {
-      console.log(`Quantidade válida. Atualizando para ${newQuantity}`);
       updateQuantity(id, newQuantity);
     }
   };
@@ -101,8 +104,11 @@ export default function CarrinhoPage() {
                 <div className="lg:col-span-2 space-y-4">
                   {items.map((item) => {
                     // Extrair ID do produto do item do carrinho
-                    const productId = item.id.split('|')[0];
-                    const maxStock = stockMap.get(productId);
+                    const [productId, size, colorRaw] = item.id.split('|');
+                    const variantKey = `${productId}|${size}|${(colorRaw || '').toLowerCase()}`;
+                    const variantMax = variantStockMap.get(variantKey);
+                    const productMax = stockMap.get(productId);
+                    const maxStock = (variantMax !== undefined) ? variantMax : productMax;
                     
                     return (
                       <CartItem

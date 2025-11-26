@@ -120,10 +120,12 @@ export default function CadastrarBanner() {
         publicUrlMobile = publicUrlM;
       }
 
+      // Gera título automático se o campo estiver vazio
+      const titulo = formData.titulo.trim() || `Banner ${new Date().toLocaleDateString('pt-BR')} ${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+
       // Monta payload de inserção
       const payload: any = {
-        // título pode ficar em branco; banco aceita string vazia
-        titulo: formData.titulo,
+        titulo: titulo,
         subtitulo: formData.subtitulo || null,
         imagem_url: publicUrl,
         imagem_url_mobile: publicUrlMobile,

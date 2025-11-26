@@ -1,5 +1,5 @@
 
-import { ReactNode } from 'react';
+import { type ReactNode } from 'react';
 import { ToastContext, useToastState } from '../../hooks/useToast';
 import Toast from '../base/Toast';
 
@@ -18,6 +18,7 @@ export function ToastProvider({ children }: ToastProviderProps) {
           message={toast.message}
           type={toast.type}
           onClose={hideToast}
+          duration={toast.duration}
         />
       )}
     </ToastContext.Provider>

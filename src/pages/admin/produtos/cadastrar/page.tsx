@@ -5,7 +5,7 @@ import { supabase } from '../../../../lib/supabase';
 import { slugify, ensureUniqueProductSlug } from '../../../../utils/productSlug';
 import { useToast } from '../../../../hooks/useToast';
 import RichTextEditor from '../../../../components/base/RichTextEditor';
-import { AVAILABLE_COLORS, AVAILABLE_SIZES, findClosestColorName } from '../../../../constants/colors';
+import { AVAILABLE_COLORS, AVAILABLE_SIZES } from '../../../../constants/colors';
 import type { ColorOption } from '../../../../constants/colors';
 
 interface ProductVariation {
@@ -44,7 +44,8 @@ const CadastrarProdutoCopy = () => {
   const [images, setImages] = useState<string[]>([]);
   const [variations, setVariations] = useState<ProductVariation[]>([]);
   const [isUploading, setIsUploading] = useState(false);
-  const [availableSizes] = useState(AVAILABLE_SIZES);
+  // Lista de tamanhos disponível para qualquer produto
+  const [availableSizes] = useState<string[]>(AVAILABLE_SIZES);
   const [availableColors] = useState<ColorOption[]>(AVAILABLE_COLORS);
   const [categorias, setCategorias] = useState<{ id: string; nome: string }[]>([]);
   const saveAttemptsRef = useRef<number>(0); // Contador de tentativas de salvamento
@@ -82,6 +83,7 @@ const CadastrarProdutoCopy = () => {
 
 
 
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     console.log('[CadastrarProduto] 🚀 handleSubmit chamado - enviando para n8n');
@@ -106,6 +108,15 @@ const CadastrarProdutoCopy = () => {
       
       if (isUploading) {
         showToast('Aguarde o término do upload das imagens', 'info');
+        setIsLoading(false);
+        isSavingRef.current = false;
+        return;
+      }
+
+      // Validação genérica mínima
+      const hasInvalid = variations.some(v => !v.size || !v.color || !String(v.colorHex || '').startsWith('#'));
+      if (hasInvalid) {
+        showToast('Preencha tamanho, cor e código hex (#RRGGBB) em todas as variações.', 'error');
         setIsLoading(false);
         isSavingRef.current = false;
         return;
@@ -411,65 +422,46 @@ const CadastrarProdutoCopy = () => {
     setImages(images.filter((_, i) => i !== index));
   };
 
+  // Inicializa com uma variação padrão para facilitar o preenchimento
+  useEffect(() => {
+    if (variations.length === 0) {
+      const def = availableColors[0] || { name: 'Preto', hex: '#000000' } as any;
+      setVariations([
+        { id: `${Date.now()}`, size: 'M', color: def.name, colorHex: def.hex, stock: 0, sku: '' }
+      ]);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const addVariation = () => {
+    const defColor = availableColors[0] || { name: 'Preto', hex: '#000000' } as any;
     const newVariation: ProductVariation = {
       id: Date.now().toString(),
-      size: availableSizes[0],
-      color: availableColors[0].name,
-      colorHex: availableColors[0].hex,
+      size: 'M',
+      color: defColor.name,
+      colorHex: defColor.hex,
       stock: 0,
       sku: ''
     };
-    setVariations([...variations, newVariation]);
+    setVariations(prev => [...prev, newVariation]);
   };
 
 
 
   const updateVariation = (id: string, field: keyof ProductVariation, value: string | number) => {
-    setVariations(variations.map(variation => {
-      if (variation.id === id) {
-        const updatedVariation = { ...variation, [field]: value };
-
-        if (field === 'color') {
-          const selectedColor = availableColors.find(c => c.name === value);
-          if (selectedColor) {
-            updatedVariation.colorHex = selectedColor.hex;
-            updatedVariation.color = selectedColor.name;
-          } else {
-            const typed = (value as string);
-            const isHex = /^#([0-9A-Fa-f]{6})$/.test(typed);
-            if (isHex) {
-              updatedVariation.colorHex = typed;
-              const nearest = findClosestColorName(typed);
-              updatedVariation.color = nearest ?? typed;
-            } else {
-              // Nome livre digitado: mantém o nome como digitado e não altera o hex atual
-              updatedVariation.color = typed;
-            }
-          }
-        } else if (field === 'colorHex') {
-          const hex = (value as string);
-          updatedVariation.colorHex = hex;
-          const matched = availableColors.find(c => c.hex.toLowerCase() === hex.toLowerCase());
-          if (matched) {
-            updatedVariation.color = matched.name;
-          } else {
-            const nearest = findClosestColorName(hex);
-            updatedVariation.color = nearest ?? hex;
-          }
-        } else if (field === 'stock') {
-          const n = Math.floor(Number(value));
-          updatedVariation.stock = Number.isFinite(n) && n > 0 ? n : 0;
-        }
-
-        return updatedVariation;
+    setVariations(prev => prev.map(variation => {
+      if (variation.id !== id) return variation;
+      if (field === 'stock') {
+        const n = Math.floor(Number(value));
+        return { ...variation, stock: Number.isFinite(n) && n > 0 ? n : 0 };
       }
-      return variation;
+      return { ...variation, [field]: value } as ProductVariation;
     }));
   };
 
   const removeVariation = (id: string) => {
-    setVariations(variations.filter(variation => variation.id !== id));
+    setVariations(prev => prev.filter(v => v.id !== id));
+    showToast('Variação removida.', 'success');
   };
 
   const resetForm = () => {
@@ -700,7 +692,7 @@ const CadastrarProdutoCopy = () => {
 
           {/* Variações do Produto */}
           <div className="bg-gray-50 p-4 rounded-lg mt-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Variações do Produto</h3>
+            <h3 className="text-lg font-medium text-gray-900 mb-1">Variações do Produto</h3>
             {variations.map((variation) => (
               <div key={variation.id} className="grid grid-cols-1 md:grid-cols-12 gap-4 mb-4 p-4 border rounded-md">
                 <div className="md:col-span-2">

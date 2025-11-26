@@ -1,0 +1,7 @@
+﻿name: backup01.zip
+created_at: 2025-11-25 14:57:50
+size_bytes: 6674248
+size_mb: 6.37
+sha256: 0C5CB5E0B64D2F6F3724A9BFEAB266DC52EE9DDBD9E1F4824E0343396027A253
+excluded: .git, node_modules, dist, .vercel
+cwd: C:\semprebella2

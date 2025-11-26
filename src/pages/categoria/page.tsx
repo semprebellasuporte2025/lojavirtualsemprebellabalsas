@@ -217,7 +217,19 @@ export default function CategoriaPage() {
     return true;
   });
 
-  const produtosOrdenados = [...produtosFiltrados].sort((a, b) => {
+  // Move o produto com nome "teste" para o topo
+  const bumpTesteFirst = (arr: Produto[]) => {
+    const idx = arr.findIndex(p => (p?.nome || '').trim().toLowerCase() === 'teste');
+    if (idx > 0) {
+      const copy = [...arr];
+      const [hit] = copy.splice(idx, 1);
+      copy.unshift(hit);
+      return copy;
+    }
+    return arr;
+  };
+
+  const baseOrdenados = [...produtosFiltrados].sort((a, b) => {
     if (ordenacao === 'menor-preco') {
       const precoA = a.preco_promocional || a.preco;
       const precoB = b.preco_promocional || b.preco;
@@ -233,6 +245,8 @@ export default function CategoriaPage() {
     const dateB = new Date(b.created_at || 0).getTime();
     return dateB - dateA;
   });
+
+  const produtosOrdenados = bumpTesteFirst(baseOrdenados);
 
   const handleProductClick = (produto: Produto) => {
     navigate(buildProductUrl({ id: produto.id, nome: produto.nome, slug: (produto as any).slug }));

@@ -48,7 +48,8 @@ const EditarProduto = () => {
   });
   const [images, setImages] = useState<string[]>([]);
   const [variations, setVariations] = useState<ProductVariation[]>([]);
-  const [availableSizes] = useState(AVAILABLE_SIZES);
+  // Lista de tamanhos disponível para qualquer produto
+  const [availableSizes] = useState<string[]>(AVAILABLE_SIZES);
   const [availableColors] = useState<ColorOption[]>(AVAILABLE_COLORS);
   const [categorias, setCategorias] = useState<any[]>([]);
   const [existingSlug, setExistingSlug] = useState<string | null>(null);
@@ -130,9 +131,9 @@ const EditarProduto = () => {
 
       setImages(produto.imagens || []);
 
-      // Converter variações para o formato do componente
+      // Converter variações sem impor regras fixas
       if (variacoes) {
-        const variationsFormatted = variacoes.map((variacao, index) => ({
+        const formatted = (variacoes || []).map((variacao, index) => ({
           id: variacao.id?.toString() || index.toString(),
           size: variacao.tamanho || 'M',
           color: variacao.cor || 'Preto',
@@ -140,7 +141,7 @@ const EditarProduto = () => {
           stock: typeof variacao.estoque === 'number' ? variacao.estoque : 0,
           sku: variacao.sku || ''
         }));
-        setVariations(variationsFormatted);
+        setVariations(formatted);
       }
 
     } catch (error) {
@@ -156,9 +157,10 @@ const EditarProduto = () => {
     setIsLoading(true);
     
     try {
-      // Validar se há pelo menos uma variação
-      if (variations.length === 0) {
-        showToast('Adicione pelo menos uma variação do produto (cor e tamanho)', 'error');
+      // Validação genérica mínima
+      const hasInvalid = variations.some(v => !v.size || !v.color || !String(v.colorHex || '').startsWith('#'));
+      if (hasInvalid) {
+        showToast('Preencha tamanho, cor e código hex (#RRGGBB) em todas as variações.', 'error');
         setIsLoading(false);
         return;
       }
@@ -433,48 +435,32 @@ const EditarProduto = () => {
   };
 
   const addVariation = () => {
+    const defColor = availableColors[0] || { name: 'Preto', hex: '#000000' } as any;
     const newVariation: ProductVariation = {
       id: Date.now().toString(),
-      size: availableSizes[0],
-      color: availableColors[0].name,
-      colorHex: availableColors[0].hex,
+      size: 'M',
+      color: defColor.name,
+      colorHex: defColor.hex,
       stock: 0,
       sku: ''
     };
-    setVariations([...variations, newVariation]);
+    setVariations(prev => [...prev, newVariation]);
   };
 
   const updateVariation = (id: string, field: keyof ProductVariation, value: string | number) => {
-    setVariations(variations.map(variation => {
-      if (variation.id === id) {
-        if (field === 'color') {
-          const selectedColor = availableColors.find(color => color.name === value);
-          return {
-            ...variation,
-            color: value as string,
-            colorHex: selectedColor?.hex || '#000000'
-          };
-        }
-        if (field === 'colorHex') {
-          const selectedColor = availableColors.find(color => color.hex.toLowerCase() === (value as string).toLowerCase());
-          return {
-            ...variation,
-            colorHex: value as string,
-            color: selectedColor?.name || variation.color
-          };
-        }
-        if (field === 'stock') {
-          const n = Math.floor(Number(value));
-          return { ...variation, stock: Number.isFinite(n) && n > 0 ? n : 0 };
-        }
-        return { ...variation, [field]: value };
+    setVariations(prev => prev.map(variation => {
+      if (variation.id !== id) return variation;
+      if (field === 'stock') {
+        const n = Math.floor(Number(value));
+        return { ...variation, stock: Number.isFinite(n) && n > 0 ? n : 0 };
       }
-      return variation;
+      return { ...variation, [field]: value } as ProductVariation;
     }));
   };
 
   const removeVariation = (id: string) => {
-    setVariations(variations.filter(variation => variation.id !== id));
+    setVariations(prev => prev.filter(v => v.id !== id));
+    showToast('Variação removida.', 'success');
   };
 
   return (
@@ -742,11 +728,13 @@ const EditarProduto = () => {
                                   className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
                                   placeholder="Digite o nome da cor"
                                 />
-                                <div
-                                  className="w-8 h-8 rounded-md border border-gray-300"
-                                  style={{ backgroundColor: variation.colorHex }}
-                                  title={variation.color}
-                                ></div>
+                                <input
+                                  type="color"
+                                  value={variation.colorHex || '#000000'}
+                                  onChange={(e) => updateVariation(variation.id, 'colorHex', e.target.value)}
+                                  className="w-10 h-10 p-0 border border-gray-300 rounded"
+                                  title="Selecionar cor"
+                                />
                               </div>
                             </div>
 
@@ -795,7 +783,7 @@ const EditarProduto = () => {
                               <button
                                 type="button"
                                 onClick={() => removeVariation(variation.id)}
-                                className="w-full px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors whitespace-nowrap flex items-center justify-center cursor-pointer"
+                                className="w-full px-3 py-2 bg-red-600 hover:bg-red-700 transition-colors text-white rounded-lg whitespace-nowrap flex items-center justify-center"
                               >
                                 <i className="ri-delete-bin-line"></i>
                               </button>

@@ -22,6 +22,7 @@ export default function ListarVendas() {
   const [editingVenda, setEditingVenda] = useState<Venda | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [updating, setUpdating] = useState(false);
+  const [originalStatus, setOriginalStatus] = useState<string | null>(null);
   const [autoOpenedFromParam, setAutoOpenedFromParam] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [vendaParaExcluir, setVendaParaExcluir] = useState<Venda | null>(null);
@@ -30,11 +31,13 @@ export default function ListarVendas() {
   const openEditModal = (venda: Venda) => {
     setEditingVenda(venda);
     setIsModalOpen(true);
+    setOriginalStatus(venda.status);
   };
 
   const closeEditModal = () => {
     setEditingVenda(null);
     setIsModalOpen(false);
+    setOriginalStatus(null);
   };
 
   const updateVenda = async (e: React.FormEvent) => {
@@ -43,7 +46,10 @@ export default function ListarVendas() {
 
     setUpdating(true);
     try {
-      const { error } = await supabase
+      const statusChangedToCancelado = originalStatus !== 'cancelado' && editingVenda.status === 'cancelado';
+
+      // 1) Atualiza o pedido
+      const { error: updateError } = await supabase
         .from('pedidos')
         .update({
           status: editingVenda.status,
@@ -51,7 +57,75 @@ export default function ListarVendas() {
         })
         .eq('id', editingVenda.id);
 
-      if (error) throw error;
+      if (updateError) throw updateError;
+
+      // 2) Se mudou para cancelado, reverter estoque com movimentações de ENTRADA
+      if (statusChangedToCancelado) {
+        try {
+          // Verifica se já existem movimentações de cancelamento para evitar duplicidade
+          const { data: existingMovs, error: checkError } = await supabase
+            .from('movimentacoes_estoque')
+            .select('id')
+            .ilike('observacoes', `%Pedido: ${editingVenda.numero_pedido}%`)
+            .eq('motivo', 'Cancelamento de pedido')
+            .limit(1);
+
+          if (checkError) {
+            console.warn('Falha ao verificar movimentações de cancelamento:', checkError.message);
+          }
+
+          const alreadyHasCancelMovements = (existingMovs && existingMovs.length > 0);
+
+          if (!alreadyHasCancelMovements) {
+            // Monta os movimentos a partir dos itens carregados; se não houver, busca do banco
+            let itens: ItemPedido[] = editingVenda.itens_pedido || [];
+            if (!itens || itens.length === 0) {
+              const { data: itensDb, error: itensErr } = await supabase
+                .from('itens_pedido')
+                .select('id, produto_id, quantidade, preco_unitario, subtotal')
+                .eq('pedido_id', editingVenda.id);
+              if (itensErr) throw itensErr;
+              itens = (itensDb || []).map((item: any) => ({
+                id: item.id,
+                produto_id: item.produto_id,
+                nome: '',
+                quantidade: item.quantidade,
+                preco_unitario: item.preco_unitario,
+                subtotal: item.subtotal,
+                tamanho: undefined,
+                cor: undefined,
+                imagem: undefined
+              }));
+            }
+
+            if (itens.length > 0) {
+              const movimentos = itens.map(item => ({
+                produto_id: item.produto_id,
+                tipo: 'entrada',
+                quantidade: item.quantidade,
+                valor_unitario: item.preco_unitario ?? 0,
+                valor_total: item.subtotal ?? 0,
+                motivo: 'Cancelamento de pedido',
+                observacoes: `Cancelamento - Pedido: ${editingVenda.numero_pedido}`,
+                usuario_nome: 'Sistema - Cancelamento via App'
+              }));
+
+              const { error: movError } = await supabase
+                .from('movimentacoes_estoque')
+                .insert(movimentos);
+
+              if (movError) throw movError;
+              showToast('Estoque revertido com movimentações de entrada.', 'success');
+            }
+          } else {
+            // Já existem movimentos de cancelamento; não duplicar
+            showToast('Cancelamento registrado. Movimentações já existentes foram mantidas.', 'info');
+          }
+        } catch (cancelErr: any) {
+          console.error('Erro ao registrar movimentações de cancelamento:', cancelErr);
+          showToast(`Erro ao reverter estoque no cancelamento: ${cancelErr.message}`, 'error');
+        }
+      }
 
       showToast('Venda atualizada com sucesso!', 'success');
       closeEditModal();
@@ -64,16 +138,7 @@ export default function ListarVendas() {
     }
   };
 
-  const handleDeleteVenda = async (vendaId: string) => {
-    // Mantido por compatibilidade, mas agora abrimos o modal padrão
-    const venda = vendas.find(v => v.id === vendaId) || null;
-    if (venda) {
-      setVendaParaExcluir(venda);
-      setShowDeleteModal(true);
-    } else {
-      showToast('Venda não encontrada para exclusão.', 'error');
-    }
-  };
+  // Função antiga de exclusão removida (não utilizada)
 
   const openDeleteModal = (venda: Venda) => {
     // Bloquear atendentes
@@ -350,8 +415,8 @@ export default function ListarVendas() {
   // (duplicatas removidas)
 
   return (
-    <AdminLayout className="no-print">
-      <div className="space-y-6">
+    <AdminLayout>
+      <div className="no-print space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -798,6 +863,7 @@ export default function ListarVendas() {
         show={showDeleteModal}
         onHide={closeDeleteModal}
         onConfirm={confirmDeleteVenda}
+        isLoading={deleting}
         title="Confirmar exclusão"
         body={
           vendaParaExcluir 

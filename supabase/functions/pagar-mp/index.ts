@@ -86,17 +86,11 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    // Criar cliente Supabase com ANON_KEY e token do usuário
-    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-      global: {
-        headers: {
-          Authorization: `Bearer ${userToken}`,
-        },
-      },
-    });
+    // Criar cliente Supabase com ANON_KEY
+    const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-    // Verificar se o token é válido pegando o usuário
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    // Verificar se o token é válido pegando o usuário com header de autorização personalizado
+    const { data: { user }, error: authError } = await supabase.auth.getUser(userToken);
     
     if (authError || !user) {
       console.error('Erro na autenticação:', authError);

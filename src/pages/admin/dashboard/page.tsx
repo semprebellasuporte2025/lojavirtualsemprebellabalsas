@@ -143,101 +143,81 @@ export default function DashboardPage() {
         setPedidosRecentes(pedidosData);
       }
 
-      // Carregar resumo do negócio
-      const { data: businessData, error: businessError } = await supabase.rpc('get_business_summary');
-      if (businessError) {
-        console.error('Erro ao carregar resumo do negócio:', businessError);
-        console.log('Função get_business_summary não encontrada ou com erro. Usando consulta direta...');
+      // Carregar resumo do negócio sem usar RPC (evita erro 400)
+      // Calcular usando variantes e pedidos diretamente
+      const { data: variantesPositivas, error: variantesError } = await supabase
+        .from('variantes_produto')
+        .select('produto_id')
+        .gt('estoque', 0);
 
-        // Fallback: calcular usando variantes de produto (estoque por variação)
-        const { data: variantesPositivas, error: variantesError } = await supabase
-          .from('variantes_produto')
-          .select('produto_id')
-          .gt('estoque', 0)
-          .eq('ativo', true);
-
-        if (variantesError) {
-          console.error('Erro ao carregar variantes para resumo do negócio:', variantesError);
-        }
-
-        const produtoIdsComEstoque = Array.from(new Set((variantesPositivas || []).map(v => v.produto_id).filter(Boolean)));
-
-        let produtosAtivosCount = 0;
-        if (produtoIdsComEstoque.length > 0) {
-          const { count: ativosCount } = await supabase
-            .from('produtos')
-            .select('*', { count: 'exact', head: true })
-            .in('id', produtoIdsComEstoque)
-            .eq('ativo', true);
-          produtosAtivosCount = ativosCount || 0;
-        }
-
-        // Produtos com estoque baixo: soma estoque de variações por produto e filtrar <= 5
-        const { data: variantesTodas, error: variantesTodasError } = await supabase
-          .from('variantes_produto')
-          .select('produto_id, estoque')
-          .eq('ativo', true);
-
-        if (variantesTodasError) {
-          console.error('Erro ao carregar variantes para estoque baixo:', variantesTodasError);
-        }
-
-        const somaPorProduto = new Map<string, number>();
-        for (const v of (variantesTodas || [])) {
-          const id = v.produto_id as string;
-          const atual = somaPorProduto.get(id) || 0;
-          somaPorProduto.set(id, atual + (v.estoque || 0));
-        }
-        const idsEstoqueBaixo = Array.from(somaPorProduto.entries())
-          .filter(([_, total]) => total <= 5 && total >= 0)
-          .map(([id]) => id);
-
-        let produtosEstoqueBaixoCount = 0;
-        if (idsEstoqueBaixo.length > 0) {
-          const { count: baixoCount } = await supabase
-            .from('produtos')
-            .select('*', { count: 'exact', head: true })
-            .in('id', idsEstoqueBaixo)
-            .eq('ativo', true);
-          produtosEstoqueBaixoCount = baixoCount || 0;
-        }
-
-        // Calcular taxa de entrega usando pedidos
-        const { count: pedidosEntregues } = await supabase
-          .from('pedidos')
-          .select('*', { count: 'exact', head: true })
-          .eq('status', 'entregue');
-
-        const { count: totalPedidos } = await supabase
-          .from('pedidos')
-          .select('*', { count: 'exact', head: true })
-          .neq('status', 'cancelado');
-
-        const totalPedidosNum = Number(totalPedidos ?? 0);
-        const pedidosEntreguesNum = Number(pedidosEntregues ?? 0);
-        const taxaEntrega = totalPedidosNum > 0
-          ? Math.round((pedidosEntreguesNum / totalPedidosNum) * 100 * 10) / 10
-          : 0;
-
-        console.log('Fallback - Pedidos entregues:', pedidosEntreguesNum, 'Total pedidos:', totalPedidosNum, 'Taxa:', taxaEntrega);
-
-        setBusinessSummary({
-          produtosAtivos: produtosAtivosCount,
-          taxaEntrega: taxaEntrega,
-          regiaoPrincipal: 'Balsas - MA',
-          produtosEstoqueBaixo: produtosEstoqueBaixoCount
-        });
-      } else if (businessData && businessData.length > 0) {
-        const business = businessData[0];
-        console.log('Dados do resumo do negócio carregados:', business);
-        setBusinessSummary({
-          produtosAtivos: business.produtos_ativos || 0,
-          // Compatibiliza nomes: taxa_entrega_percentual (antigo) ou taxa_entrega (novo)
-          taxaEntrega: parseFloat((business.taxa_entrega_percentual ?? business.taxa_entrega ?? '0') as string),
-          regiaoPrincipal: business.regiao_principal || 'Balsas - MA',
-          produtosEstoqueBaixo: business.produtos_estoque_baixo || 0
-        });
+      if (variantesError) {
+        console.error('Erro ao carregar variantes para resumo do negócio:', variantesError);
       }
+
+      const produtoIdsComEstoque = Array.from(new Set((variantesPositivas || []).map(v => v.produto_id).filter(Boolean)));
+
+      let produtosAtivosCount = 0;
+      if (produtoIdsComEstoque.length > 0) {
+        const { count: ativosCount } = await supabase
+          .from('produtos')
+          .select('*', { count: 'exact', head: true })
+          .in('id', produtoIdsComEstoque)
+          .eq('ativo', true);
+        produtosAtivosCount = ativosCount || 0;
+      }
+
+      // Produtos com estoque baixo: soma estoque de variações por produto e filtrar <= 5
+      const { data: variantesTodas, error: variantesTodasError } = await supabase
+        .from('variantes_produto')
+        .select('produto_id, estoque');
+
+      if (variantesTodasError) {
+        console.error('Erro ao carregar variantes para estoque baixo:', variantesTodasError);
+      }
+
+      const somaPorProduto = new Map<string, number>();
+      for (const v of (variantesTodas || [])) {
+        const id = v.produto_id as string;
+        const atual = somaPorProduto.get(id) || 0;
+        somaPorProduto.set(id, atual + (v.estoque || 0));
+      }
+      const idsEstoqueBaixo = Array.from(somaPorProduto.entries())
+        .filter(([_, total]) => total <= 5 && total >= 0)
+        .map(([id]) => id);
+
+      let produtosEstoqueBaixoCount = 0;
+      if (idsEstoqueBaixo.length > 0) {
+        const { count: baixoCount } = await supabase
+          .from('produtos')
+          .select('*', { count: 'exact', head: true })
+          .in('id', idsEstoqueBaixo)
+          .eq('ativo', true);
+        produtosEstoqueBaixoCount = baixoCount || 0;
+      }
+
+      // Calcular taxa de entrega usando pedidos
+      const { count: pedidosEntregues } = await supabase
+        .from('pedidos')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'entregue');
+
+      const { count: totalPedidos } = await supabase
+        .from('pedidos')
+        .select('*', { count: 'exact', head: true })
+        .neq('status', 'cancelado');
+
+      const totalPedidosNum = Number(totalPedidos ?? 0);
+      const pedidosEntreguesNum = Number(pedidosEntregues ?? 0);
+      const taxaEntrega = totalPedidosNum > 0
+        ? Math.round((pedidosEntreguesNum / totalPedidosNum) * 100 * 10) / 10
+        : 0;
+
+      setBusinessSummary({
+        produtosAtivos: produtosAtivosCount,
+        taxaEntrega,
+        regiaoPrincipal: 'Balsas - MA',
+        produtosEstoqueBaixo: produtosEstoqueBaixoCount
+      });
 
     } catch (error) {
       console.error('Erro ao carregar dados:', error);

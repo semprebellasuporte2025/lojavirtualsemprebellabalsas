@@ -39,7 +39,7 @@ const NotFound: React.FC = () => {
             nome,
             preco,
             imagem_url,
-            categorias:nome
+            categoria_nome
           `)
           .eq('ativo', true)
           .order('created_at', { ascending: false })
