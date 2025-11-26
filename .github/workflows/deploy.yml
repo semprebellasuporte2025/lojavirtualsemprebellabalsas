@@ -35,7 +35,8 @@ jobs:
       with:
         vercel-token: ${{ secrets.VERCEL_TOKEN }}
         vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-        vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+        # Fixar o Project ID para o projeto de produção informado
+        vercel-project-id: prj_193mosUaYMObeYLV0KceDsJHmCnq
         vercel-args: '--prod'
       env:
         VITE_PUBLIC_SUPABASE_URL: ${{ secrets.VITE_PUBLIC_SUPABASE_URL }}
