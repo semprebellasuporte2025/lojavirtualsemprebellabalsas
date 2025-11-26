@@ -581,11 +581,7 @@ export default function ProductInfo({ produto, onAddToCart }: ProductInfoProps) 
               <i className="ri-alert-line"></i> erro de conexão
             </span>
           )}
-          {!loadingStock && !stockError && (
-            <span className="text-gray-500 text-sm flex items-center gap-1" title="Estoque em tempo real">
-              <i className="ri-database-2-line"></i> realtime
-            </span>
-          )}
+          {/* Indicador de estoque em tempo real removido conforme solicitação */}
         </div>
         <div className="mt-2">
           <button
