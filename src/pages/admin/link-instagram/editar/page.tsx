@@ -32,7 +32,7 @@ export default function EditarLinkInstagramPage() {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const bucket = 'imagens-links';
+  const bucket = 'imagens-produtos';
 
   const parseSupabasePublicUrl = (url: string | null | undefined): { bucket: string; path: string } | null => {
     if (!url) return null;
@@ -60,18 +60,22 @@ export default function EditarLinkInstagramPage() {
     }
 
     try {
-      // 1. Excluir do Storage
-      const { error: storageError } = await supabase.storage.from(parsed.bucket).remove([parsed.path]);
-      if (storageError && storageError.message !== 'The resource was not found') {
-        throw storageError;
-      }
-
-      // 2. Limpar campos no banco de dados
+      // 1. Limpar campos no banco de dados (não bloquear por erro de storage)
       const { error: dbError } = await supabase
         .from('link_instagram')
         .update({ link_img: null, img_link: null })
         .eq('id', id);
       if (dbError) throw dbError;
+
+      // 2. Tentar excluir do Storage (best-effort)
+      try {
+        const { error: storageError } = await supabase.storage.from(parsed.bucket).remove([parsed.path]);
+        if (storageError && storageError.message !== 'The resource was not found') {
+          console.warn('Falha ao remover imagem do storage (prosseguindo):', storageError);
+        }
+      } catch (err) {
+        console.warn('Erro de rede/remocao no storage (prosseguindo):', err);
+      }
 
       // 3. Atualizar estado local
       setForm(prev => ({ ...prev, link_img: null, img_link: null }));
@@ -157,7 +161,14 @@ export default function EditarLinkInstagramPage() {
         const oldUrl = form.link_img || form.img_link || null;
         const oldParsed = parseSupabasePublicUrl(oldUrl);
         if (oldParsed) {
-          await supabase.storage.from(oldParsed.bucket).remove([oldParsed.path]);
+          try {
+            const { error: storageError } = await supabase.storage.from(oldParsed.bucket).remove([oldParsed.path]);
+            if (storageError && storageError.message !== 'The resource was not found') {
+              console.warn('Falha ao remover imagem antiga do storage:', storageError);
+            }
+          } catch (err) {
+            console.warn('Erro ao remover imagem antiga (rede/storage):', err);
+          }
         }
       }
 
