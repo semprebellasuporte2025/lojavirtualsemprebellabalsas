@@ -24,14 +24,12 @@ export default function LinkInstagramListarPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [linkToDelete, setLinkToDelete] = useState<string | null>(null);
 
-  const bucket = 'imagens-produtos';
-
-  const storagePathFromPublicUrl = (url: string | null | undefined) => {
+  const parseSupabasePublicUrl = (url: string | null | undefined): { bucket: string; path: string } | null => {
     if (!url) return null;
-    const marker = `/storage/v1/object/public/${bucket}/`;
-    const idx = url.indexOf(marker);
-    if (idx === -1) return null;
-    return url.substring(idx + marker.length);
+    const match = url.match(/\/storage\/v1\/object\/public\/([^/]+)\/(.+)$/);
+    if (!match) return null;
+    const [, bucket, path] = match;
+    return { bucket, path: decodeURIComponent(path) };
   };
 
   useEffect(() => {
@@ -102,11 +100,11 @@ export default function LinkInstagramListarPage() {
 
       // Excluir imagem do storage (se existir)
       const imageUrl = linkData?.link_img || linkData?.img_link || null;
-      const storagePath = storagePathFromPublicUrl(imageUrl);
-      if (storagePath) {
+      const parsed = parseSupabasePublicUrl(imageUrl);
+      if (parsed) {
         const { error: storageError } = await supabase.storage
-          .from(bucket)
-          .remove([storagePath]);
+          .from(parsed.bucket)
+          .remove([parsed.path]);
         if (storageError) {
           console.warn('Erro ao remover imagem do storage (link removido do banco):', storageError);
         }

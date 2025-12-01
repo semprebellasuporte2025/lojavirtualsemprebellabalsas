@@ -34,12 +34,13 @@ export default function EditarLinkInstagramPage() {
 
   const bucket = 'imagens-links';
 
-  const storagePathFromPublicUrl = (url: string | null | undefined) => {
+  const parseSupabasePublicUrl = (url: string | null | undefined): { bucket: string; path: string } | null => {
     if (!url) return null;
-    const bucketMarker = `${bucket}/`;
-    const idx = url.indexOf(bucketMarker);
-    if (idx !== -1) {
-      return decodeURIComponent(url.substring(idx + bucketMarker.length));
+    // Formato esperado: https://<project>.supabase.co/storage/v1/object/public/<bucket>/<path>
+    const match = url.match(/\/storage\/v1\/object\/public\/([^/]+)\/(.+)$/);
+    if (match) {
+      const [, bkt, pth] = match;
+      return { bucket: bkt, path: decodeURIComponent(pth) };
     }
     return null;
   };
@@ -52,15 +53,15 @@ export default function EditarLinkInstagramPage() {
       return;
     }
 
-    const imagePath = storagePathFromPublicUrl(imageUrl);
-    if (!imagePath) {
+    const parsed = parseSupabasePublicUrl(imageUrl);
+    if (!parsed) {
       showToast('Não foi possível determinar o caminho da imagem para exclusão.', 'error');
       return;
     }
 
     try {
       // 1. Excluir do Storage
-      const { error: storageError } = await supabase.storage.from(bucket).remove([imagePath]);
+      const { error: storageError } = await supabase.storage.from(parsed.bucket).remove([parsed.path]);
       if (storageError && storageError.message !== 'The resource was not found') {
         throw storageError;
       }
@@ -154,9 +155,9 @@ export default function EditarLinkInstagramPage() {
 
         // Remover imagem antiga, se houver
         const oldUrl = form.link_img || form.img_link || null;
-        const oldPath = storagePathFromPublicUrl(oldUrl);
-        if (oldPath) {
-          await supabase.storage.from(bucket).remove([oldPath]);
+        const oldParsed = parseSupabasePublicUrl(oldUrl);
+        if (oldParsed) {
+          await supabase.storage.from(oldParsed.bucket).remove([oldParsed.path]);
         }
       }
 
