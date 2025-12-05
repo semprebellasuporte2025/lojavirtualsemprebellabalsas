@@ -181,7 +181,7 @@ const EditarProduto = () => {
       // Preparar slug: definir apenas se estiver ausente ou inválido
       let slugToApply: string | undefined = undefined;
       if (!existingSlug || !isValidProductSlug(existingSlug)) {
-        const base = slugify(formData.nome);
+        const base = slugify((formData.nome || '').trim());
         slugToApply = await ensureUniqueProductSlug(base, id);
       }
 

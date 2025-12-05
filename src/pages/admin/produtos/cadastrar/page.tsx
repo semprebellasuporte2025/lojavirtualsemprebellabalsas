@@ -163,8 +163,8 @@ const CadastrarProdutoCopy = () => {
         return;
       }
 
-      // Gerar slug único para o produto
-      const baseSlug = slugify(formData.nome);
+      // Gerar slug único para o produto (trim para garantir 1ª letra)
+      const baseSlug = slugify((formData.nome || '').trim());
       const finalSlug = await ensureUniqueProductSlug(baseSlug);
 
       // Inserir produto principal
