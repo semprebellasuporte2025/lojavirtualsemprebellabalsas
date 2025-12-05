@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { useNavigate, Link, NavLink } from 'react-router-dom';
+import { useNavigate, Link, NavLink, useLocation } from 'react-router-dom';
 import { useCart } from '../../hooks/useCart';
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
@@ -12,6 +12,7 @@ export default function Header() {
   // Usa seletor puro para evitar qualquer efeito colateral ao obter a contagem
   const cartItemCount = useCart((state) => state.items.reduce((total, item) => total + item.quantity, 0));
   const navigate = useNavigate();
+  const location = useLocation();
   const [isMenuOpen] = useState(false);
   const { user, signOut } = useAuth(); // Adicionando signOut do hook useAuth
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -190,12 +191,21 @@ export default function Header() {
                 Contato
               </button>
             </li>
-            <li>
-              <a href="#" className="block py-2 text-pink-600 font-bold cursor-pointer whitespace-nowrap">
-                <i className="ri-fire-fill mr-1"></i>
-                Black Friday
-              </a>
-            </li>
+            {location.pathname === '/' && (
+              <li>
+                <a href="#" className="relative block py-2 text-pink-600 font-bold cursor-pointer whitespace-nowrap">
+                  <span className="inline-block relative">
+                    Natal
+                    <img
+                      src="/santa-hat.svg"
+                      alt="Gorro do Papai Noel"
+                      className="absolute -top-3 -left-3 w-5 h-5"
+                      style={{ transform: 'rotate(-20deg)' }}
+                    />
+                  </span>
+                </a>
+              </li>
+            )}
           </ul>
         </div>
       </nav>
