@@ -60,6 +60,7 @@ const CadastrarProdutoCopy = () => {
   const alturaRef = useRef<HTMLInputElement>(null);
   const larguraRef = useRef<HTMLInputElement>(null);
   const profundidadeRef = useRef<HTMLInputElement>(null);
+  const prevReferenciaRef = useRef<string>('');
 
   useEffect(() => {
     const fetchCategorias = async () => {
@@ -86,7 +87,7 @@ const CadastrarProdutoCopy = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('[CadastrarProduto] 🚀 handleSubmit chamado - enviando para n8n');
+    console.log('[CadastrarProduto] 🚀 handleSubmit chamado - iniciando cadastro de produto');
     
     // Proteção contra dupla execução
     if (isSavingRef.current) {
@@ -122,6 +123,27 @@ const CadastrarProdutoCopy = () => {
         return;
       }
 
+      // Verificar duplicidade por referência
+      if (formData.referencia) {
+        const { data: refExists, error: refError } = await supabase
+          .from('produtos')
+          .select('id')
+          .eq('referencia', formData.referencia)
+          .limit(1);
+        if (refError) {
+          showToast('Erro ao verificar referência do produto.', 'error');
+          setIsLoading(false);
+          isSavingRef.current = false;
+          return;
+        }
+        if (refExists && refExists.length > 0) {
+          showToast('Este produto já está cadastrado.', 'error');
+          setIsLoading(false);
+          isSavingRef.current = false;
+          return;
+        }
+      }
+
       // Preparar dados para envio
       const produtoData = {
         nome: formData.nome,
@@ -147,7 +169,7 @@ const CadastrarProdutoCopy = () => {
         }))
       };
 
-      console.log('[CadastrarProduto] 📤 Enviando dados para n8n:', produtoData);
+      console.log('[CadastrarProduto] 📤 Preparando dados do produto:', produtoData);
 
       // Buscar categoria_id pelo nome
       const { data: categoriaData, error: categoriaError } = await supabase
@@ -230,9 +252,14 @@ const CadastrarProdutoCopy = () => {
       saveAttemptsRef.current = 0;
 
     } catch (error) {
-      console.error('[CadastrarProduto] ❌ Erro ao enviar para n8n:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
-      showToast(`Erro ao cadastrar produto: ${errorMessage}`, 'error');
+      console.error('[CadastrarProduto] ❌ Erro no cadastro do produto:', error);
+      const code = (error as any)?.code;
+      const message = (error as any)?.message ?? (error instanceof Error ? error.message : 'Erro desconhecido');
+      if (code === '23505' || /duplicate key|unique constraint/i.test(String(message))) {
+        showToast('Este produto já está cadastrado.', 'error');
+      } else {
+        showToast(`Erro ao cadastrar produto: ${String(message)}`, 'error');
+      }
     } finally {
       setIsLoading(false);
       isSavingRef.current = false;
@@ -427,11 +454,26 @@ const CadastrarProdutoCopy = () => {
     if (variations.length === 0) {
       const def = availableColors[0] || { name: 'Preto', hex: '#000000' } as any;
       setVariations([
-        { id: `${Date.now()}`, size: 'M', color: def.name, colorHex: def.hex, stock: 0, sku: '' }
+        { id: `${Date.now()}`, size: 'M', color: def.name, colorHex: def.hex, stock: 0, sku: formData.referencia }
       ]);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Sincroniza o SKU das variações com a referência do produto
+  useEffect(() => {
+    const prev = prevReferenciaRef.current;
+    if (formData.referencia !== prev) {
+      setVariations(prevVars => prevVars.map(v => {
+        // Atualiza apenas variações sem SKU definido ou que estavam copiando a referência anterior
+        if (!v.sku || v.sku === prev) {
+          return { ...v, sku: formData.referencia };
+        }
+        return v;
+      }));
+      prevReferenciaRef.current = formData.referencia;
+    }
+  }, [formData.referencia]);
 
   const addVariation = () => {
     const defColor = availableColors[0] || { name: 'Preto', hex: '#000000' } as any;
@@ -441,7 +483,7 @@ const CadastrarProdutoCopy = () => {
       color: defColor.name,
       colorHex: defColor.hex,
       stock: 0,
-      sku: ''
+      sku: formData.referencia
     };
     setVariations(prev => [...prev, newVariation]);
   };
@@ -514,7 +556,6 @@ const CadastrarProdutoCopy = () => {
                   value={formData.nome}
                   onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
                   ref={nomeRef}
-                  onBlur={() => categoriaRef.current?.focus()}
                   onKeyDown={(e) => { if (e.key === 'Enter') categoriaRef.current?.focus(); }}
                   className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                   required
@@ -537,7 +578,6 @@ const CadastrarProdutoCopy = () => {
                     });
                   }}
                   ref={categoriaRef}
-                  onBlur={() => precoRef.current?.focus()}
                   onKeyDown={(e) => { if (e.key === 'Enter') precoRef.current?.focus(); }}
                   className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                   required
@@ -557,14 +597,13 @@ const CadastrarProdutoCopy = () => {
                     type="number"
                     id="preco"
                     name="preco"
-                    value={formData.preco}
-                    onChange={(e) => setFormData({ ...formData, preco: e.target.value })}
-                    ref={precoRef}
-                    onBlur={() => precoPromocionalRef.current?.focus()}
-                    onKeyDown={(e) => { if (e.key === 'Enter') precoPromocionalRef.current?.focus(); }}
-                    className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                    required
-                  />
+                  value={formData.preco}
+                  onChange={(e) => setFormData({ ...formData, preco: e.target.value })}
+                  ref={precoRef}
+                  onKeyDown={(e) => { if (e.key === 'Enter') precoPromocionalRef.current?.focus(); }}
+                  className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  required
+                />
                 </div>
                 <div>
                   <label htmlFor="precoPromocional" className="block text-sm font-medium text-gray-700">Preço Promocional (R$)</label>
@@ -572,13 +611,12 @@ const CadastrarProdutoCopy = () => {
                     type="number"
                     id="precoPromocional"
                     name="precoPromocional"
-                    value={formData.precoPromocional}
-                    onChange={(e) => setFormData({ ...formData, precoPromocional: e.target.value })}
-                    ref={precoPromocionalRef}
-                    onBlur={() => materialRef.current?.focus()}
-                    onKeyDown={(e) => { if (e.key === 'Enter') materialRef.current?.focus(); }}
-                    className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                  />
+                  value={formData.precoPromocional}
+                  onChange={(e) => setFormData({ ...formData, precoPromocional: e.target.value })}
+                  ref={precoPromocionalRef}
+                  onKeyDown={(e) => { if (e.key === 'Enter') materialRef.current?.focus(); }}
+                  className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                />
                 </div>
               </div>
 
@@ -629,27 +667,27 @@ const CadastrarProdutoCopy = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label htmlFor="material" className="block text-sm font-medium text-gray-700">Material</label>
-                    <input type="text" id="material" name="material" value={formData.material} onChange={(e) => setFormData({ ...formData, material: e.target.value })} ref={materialRef} onBlur={() => referenciaRef.current?.focus()} onKeyDown={(e) => { if (e.key === 'Enter') referenciaRef.current?.focus(); }} className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
+                    <input type="text" id="material" name="material" value={formData.material} onChange={(e) => setFormData({ ...formData, material: e.target.value })} ref={materialRef} onKeyDown={(e) => { if (e.key === 'Enter') referenciaRef.current?.focus(); }} className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
                   </div>
                   <div>
                     <label htmlFor="referencia" className="block text-sm font-medium text-gray-700">Referência</label>
-                    <input type="text" id="referencia" name="referencia" value={formData.referencia} onChange={(e) => setFormData({ ...formData, referencia: e.target.value })} ref={referenciaRef} onBlur={() => pesoRef.current?.focus()} onKeyDown={(e) => { if (e.key === 'Enter') pesoRef.current?.focus(); }} className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" required />
+                    <input type="text" id="referencia" name="referencia" value={formData.referencia} onChange={(e) => setFormData({ ...formData, referencia: e.target.value })} ref={referenciaRef} onKeyDown={(e) => { if (e.key === 'Enter') pesoRef.current?.focus(); }} className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" required />
                   </div>
                   <div>
                     <label htmlFor="peso" className="block text-sm font-medium text-gray-700">Peso (g)</label>
-                    <input type="number" id="peso" name="peso" value={formData.peso} onChange={(e) => setFormData({ ...formData, peso: e.target.value })} ref={pesoRef} onBlur={() => alturaRef.current?.focus()} onKeyDown={(e) => { if (e.key === 'Enter') alturaRef.current?.focus(); }} className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" required />
+                    <input type="number" id="peso" name="peso" value={formData.peso} onChange={(e) => setFormData({ ...formData, peso: e.target.value })} ref={pesoRef} onKeyDown={(e) => { if (e.key === 'Enter') alturaRef.current?.focus(); }} className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" required />
                   </div>
                   <div>
                     <label htmlFor="altura" className="block text-sm font-medium text-gray-700">Altura (cm)</label>
-                    <input type="number" id="altura" name="altura" value={formData.altura} onChange={(e) => setFormData({ ...formData, altura: e.target.value })} ref={alturaRef} onBlur={() => larguraRef.current?.focus()} onKeyDown={(e) => { if (e.key === 'Enter') larguraRef.current?.focus(); }} className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
+                    <input type="number" id="altura" name="altura" value={formData.altura} onChange={(e) => setFormData({ ...formData, altura: e.target.value })} ref={alturaRef} onKeyDown={(e) => { if (e.key === 'Enter') larguraRef.current?.focus(); }} className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
                   </div>
                   <div>
                     <label htmlFor="largura" className="block text-sm font-medium text-gray-700">Largura (cm)</label>
-                    <input type="number" id="largura" name="largura" value={formData.largura} onChange={(e) => setFormData({ ...formData, largura: e.target.value })} ref={larguraRef} onBlur={() => profundidadeRef.current?.focus()} onKeyDown={(e) => { if (e.key === 'Enter') profundidadeRef.current?.focus(); }} className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
+                    <input type="number" id="largura" name="largura" value={formData.largura} onChange={(e) => setFormData({ ...formData, largura: e.target.value })} ref={larguraRef} onKeyDown={(e) => { if (e.key === 'Enter') profundidadeRef.current?.focus(); }} className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
                   </div>
                   <div>
                     <label htmlFor="profundidade" className="block text-sm font-medium text-gray-700">Profundidade (cm)</label>
-                    <input type="number" id="profundidade" name="profundidade" value={formData.profundidade} onChange={(e) => setFormData({ ...formData, profundidade: e.target.value })} ref={profundidadeRef} onBlur={() => document.getElementById('descricao')?.focus()} onKeyDown={(e) => { if (e.key === 'Enter') document.getElementById('descricao')?.focus(); }} className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
+                    <input type="number" id="profundidade" name="profundidade" value={formData.profundidade} onChange={(e) => setFormData({ ...formData, profundidade: e.target.value })} ref={profundidadeRef} onKeyDown={(e) => { if (e.key === 'Enter') document.getElementById('descricao')?.focus(); }} className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
                   </div>
 
                 </div>

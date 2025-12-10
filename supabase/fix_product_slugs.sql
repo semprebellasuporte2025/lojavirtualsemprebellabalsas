@@ -17,6 +17,8 @@ BEGIN
     IF nome IS NULL OR nome = '' THEN
       RETURN '';
     END IF;
+    -- Remove espaços em excesso antes de gerar a slug
+    nome := TRIM(nome);
     s := LOWER(UNACCENT(nome));
     -- Substitui qualquer caractere não alfanumérico por '-'
     s := REGEXP_REPLACE(s, '[^a-z0-9]+', '-', 'g');
@@ -27,6 +29,9 @@ BEGIN
     RETURN s;
 END;
 $$;
+
+-- IMPORTANTE: desativa o índice único temporariamente para permitir o recálculo
+DROP INDEX IF EXISTS produtos_slug_unique;
 
 -- Recalcula slugs com base no nome
 UPDATE public.produtos p
