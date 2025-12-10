@@ -123,12 +123,13 @@ const CadastrarProdutoCopy = () => {
         return;
       }
 
-      // Verificar duplicidade por referência
-      if (formData.referencia) {
+      // Verificar duplicidade por referência (apenas quando há valor não vazio)
+      const referenciaTrim = (formData.referencia || '').trim();
+      if (referenciaTrim.length > 0) {
         const { data: refExists, error: refError } = await supabase
           .from('produtos')
           .select('id')
-          .eq('referencia', formData.referencia)
+          .eq('referencia', referenciaTrim)
           .limit(1);
         if (refError) {
           showToast('Erro ao verificar referência do produto.', 'error');
@@ -137,7 +138,7 @@ const CadastrarProdutoCopy = () => {
           return;
         }
         if (refExists && refExists.length > 0) {
-          showToast('Este produto já está cadastrado.', 'error');
+          showToast('Referência já cadastrada para outro produto.', 'error');
           setIsLoading(false);
           isSavingRef.current = false;
           return;
@@ -185,42 +186,53 @@ const CadastrarProdutoCopy = () => {
         return;
       }
 
-      // Gerar slug único para o produto (trim para garantir 1ª letra)
+      // Gerar slug único e lidar com conflitos automaticamente
       const baseSlug = slugify((formData.nome || '').trim());
-      const finalSlug = await ensureUniqueProductSlug(baseSlug);
-
-      // Inserir produto principal
-      const { data: produtoDataInsert, error: produtoError } = await supabase
-        .from('produtos')
-        .insert({
-          nome: formData.nome,
-          categoria_id: categoriaData.id,
-          preco: parseFloat(formData.preco),
-          preco_promocional: formData.precoPromocional ? parseFloat(formData.precoPromocional) : null,
-          descricao: formData.descricao,
-          material: formData.material || null,
-          referencia: formData.referencia,
-          peso: parseFloat(formData.peso),
-          altura: formData.altura ? parseFloat(formData.altura) : null,
-          largura: formData.largura ? parseFloat(formData.largura) : null,
-          profundidade: formData.profundidade ? parseFloat(formData.profundidade) : null,
-          imagens: images,
-          ativo: formData.ativo,
-          destaque: formData.destaque,
-          recem_chegado: formData.recemChegado,
-          slug: finalSlug,
-          nome_invisivel: formData.nomeInvisivel,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
-        .select();
-
-      if (produtoError) {
-        console.error('Erro ao inserir produto:', produtoError);
-        throw produtoError;
+      let slugCandidate = await ensureUniqueProductSlug(baseSlug);
+      let produtoId: string | null = null;
+      let produtoDataInsert: any[] | null = null;
+      for (let attempt = 0; attempt < 5 && !produtoId; attempt++) {
+        const { data, error } = await supabase
+          .from('produtos')
+          .insert({
+            nome: formData.nome,
+            categoria_id: categoriaData.id,
+            preco: parseFloat(formData.preco),
+            preco_promocional: formData.precoPromocional ? parseFloat(formData.precoPromocional) : null,
+            descricao: formData.descricao,
+            material: formData.material || null,
+            referencia: referenciaTrim.length > 0 ? referenciaTrim : null,
+            peso: parseFloat(formData.peso),
+            altura: formData.altura ? parseFloat(formData.altura) : null,
+            largura: formData.largura ? parseFloat(formData.largura) : null,
+            profundidade: formData.profundidade ? parseFloat(formData.profundidade) : null,
+            imagens: images,
+            ativo: formData.ativo,
+            destaque: formData.destaque,
+            recem_chegado: formData.recemChegado,
+            slug: slugCandidate,
+            nome_invisivel: formData.nomeInvisivel,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          })
+          .select();
+        if (!error && Array.isArray(data) && data.length > 0) {
+          produtoDataInsert = data;
+          produtoId = data[0].id;
+        } else if (error && ((error as any).code === '23505' || /duplicate key|unique constraint|slug/i.test(String((error as any)?.message || '')))) {
+          // Em caso de conflito de slug, gerar próximo candidato e tentar novamente
+          const suffix = attempt + 2; // começa em -2
+          slugCandidate = `${baseSlug}-${suffix}`;
+          continue;
+        } else if (error) {
+          console.error('Erro ao inserir produto:', error);
+          throw error;
+        }
       }
 
-      const produtoId = produtoDataInsert[0].id;
+      if (!produtoId) {
+        throw new Error('Não foi possível cadastrar o produto após resolver conflitos de slug.');
+      }
       console.log('[CadastrarProduto] ✅ Produto inserido com ID:', produtoId);
 
       // Inserir variações do produto
@@ -230,7 +242,7 @@ const CadastrarProdutoCopy = () => {
         cor: variation.color,
         cor_hex: variation.colorHex,
         estoque: Number.isFinite(Math.floor(Number(variation.stock))) ? Math.max(0, Math.floor(Number(variation.stock))) : 0,
-        sku: variation.sku // Usar apenas o SKU específico da variação, não gerar automaticamente
+        sku: variation.sku || referenciaTrim // Replicar referência quando SKU da variação não for informado
       }));
 
       const { error: variacoesError } = await supabase
@@ -256,7 +268,13 @@ const CadastrarProdutoCopy = () => {
       const code = (error as any)?.code;
       const message = (error as any)?.message ?? (error instanceof Error ? error.message : 'Erro desconhecido');
       if (code === '23505' || /duplicate key|unique constraint/i.test(String(message))) {
-        showToast('Este produto já está cadastrado.', 'error');
+        if (/slug/i.test(String(message))) {
+          showToast('Conflito de slug detectado. Tente novamente.', 'error');
+        } else if (/referencia/i.test(String(message))) {
+          showToast('Referência já cadastrada para outro produto.', 'error');
+        } else {
+          showToast('Registro duplicado detectado.', 'error');
+        }
       } else {
         showToast(`Erro ao cadastrar produto: ${String(message)}`, 'error');
       }

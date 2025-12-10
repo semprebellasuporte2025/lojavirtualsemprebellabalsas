@@ -166,6 +166,9 @@ export default function CategorySection({ title, categoryName }: CategorySection
           {displayProdutos.map((produto) => {
             const cores = getCoresUnicas(produto.variantes_produto || []);
             const categoriaNome = produto.categorias?.nome || categoryName;
+            const price = Number((produto as any).preco);
+            const promo = Number((produto as any).preco_promocional);
+            const hasDiscount = Number.isFinite(price) && Number.isFinite(promo) && promo > 0 && promo < price;
             
             return (
               <div
@@ -174,9 +177,9 @@ export default function CategorySection({ title, categoryName }: CategorySection
                   className="bg-white rounded-lg overflow-hidden hover:shadow-xl transition-shadow group border border-gray-200 cursor-pointer"
                 >
                 <div className="relative overflow-hidden bg-gray-50">
-                  {produto.preco_promocional && (
+                  {hasDiscount && (
                     <div className="absolute top-3 left-3 bg-red-500 text-white px-2 py-1 rounded text-xs font-bold z-10">
-                      -{Math.round(((produto.preco - produto.preco_promocional) / produto.preco) * 100)}%
+                      -{Math.round(((price - promo) / price) * 100)}%
                     </div>
                   )}
                   <img
@@ -234,18 +237,18 @@ export default function CategorySection({ title, categoryName }: CategorySection
                   )}
 
                   <div className="flex justify-between items-center mt-2">
-                    {produto.preco_promocional ? (
+                    {hasDiscount ? (
                       <div className="flex items-baseline gap-2">
                         <span className="text-gray-500 line-through">
-                          R$ {produto.preco.toFixed(2)}
+                          R$ {price.toFixed(2)}
                         </span>
                         <span className="text-xl font-bold text-pink-600">
-                          R$ {produto.preco_promocional.toFixed(2)}
+                          R$ {promo.toFixed(2)}
                         </span>
                       </div>
                     ) : (
                       <span className="text-xl font-bold text-gray-900">
-                        R$ {produto.preco.toFixed(2)}
+                        R$ {price.toFixed(2)}
                       </span>
                     )}
                   </div>
