@@ -1,4 +1,4 @@
-import { slugify, isValidProductSlug } from './productSlug';
+import { normalizeProductSlug, isValidProductSlug } from './productSlug';
 
 export type MinimalProduct = {
   id: string;
@@ -8,10 +8,9 @@ export type MinimalProduct = {
 
 export function buildProductUrl(produto: MinimalProduct): string {
   const current = (produto.slug || '').trim();
-  if (current && isValidProductSlug(current)) {
-    return `/produto/${current}`;
-  }
-  const fallback = slugify((produto.nome as string) || '') || produto.id;
-  // Inclui UUID como query para compatibilidade de carregamento quando slug não existir no banco
-  return `/produto/${fallback}?id=${encodeURIComponent(produto.id)}`;
+  const base = current && isValidProductSlug(current)
+    ? current
+    : (normalizeProductSlug((produto.nome as string) || '') || produto.id);
+  // Gera URL somente com o slug do produto (sem UUID na query)
+  return `/produto/${base}`;
 }

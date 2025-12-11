@@ -25,7 +25,7 @@ export const AVAILABLE_COLORS: ColorOption[] = [
   { name: 'Azul Claro', hex: '#87CEEB' }
 ];
 
-export const AVAILABLE_SIZES = ['PP', 'P', 'M', 'G', 'GG', 'G1', 'G2', '36', '38', '40', '42', '44', '50', '52', '54', '56', 'Único'];
+export const AVAILABLE_SIZES = ['PP', 'P', 'M', 'G', 'GG', 'G1', 'G2', '36', '38', '40', '42', '44', '46', '48', '50', '52', '54', '56', 'Único'];
 
 // Função para calcular a distância euclidiana entre duas cores RGB
 export function calculateColorDistance(hex1: string, hex2: string): number {

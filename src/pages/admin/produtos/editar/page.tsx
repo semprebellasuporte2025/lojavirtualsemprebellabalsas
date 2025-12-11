@@ -1,11 +1,11 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import AdminLayout from '../../../../components/feature/AdminLayout';
 import AdminFormButtons from '../../../../components/feature/AdminFormButtons/AdminFormButtons';
 import { useToast } from '../../../../hooks/useToast';
 import { supabase } from '../../../../lib/supabase';
-import { isValidProductSlug, slugify, ensureUniqueProductSlug } from '../../../../utils/productSlug';
+import { isValidProductSlug, normalizeProductSlug, ensureUniqueProductSlug } from '../../../../utils/productSlug';
 import RichTextEditor from '../../../../components/base/RichTextEditor';
 import { AVAILABLE_COLORS, AVAILABLE_SIZES } from '../../../../constants/colors';
 import type { ColorOption } from '../../../../constants/colors';
@@ -53,6 +53,7 @@ const EditarProduto = () => {
   const [availableColors] = useState<ColorOption[]>(AVAILABLE_COLORS);
   const [categorias, setCategorias] = useState<any[]>([]);
   const [existingSlug, setExistingSlug] = useState<string | null>(null);
+  const prevReferenciaRef = useRef<string>('');
 
   // Carregar categorias
   useEffect(() => {
@@ -80,6 +81,20 @@ const EditarProduto = () => {
       loadProduct();
     }
   }, [id]);
+
+  // Sincroniza o SKU das variações com a referência do produto
+  useEffect(() => {
+    const prev = prevReferenciaRef.current;
+    if (formData.referencia !== prev) {
+      setVariations(prevVars => prevVars.map(v => {
+        if (!v.sku || v.sku === prev) {
+          return { ...v, sku: formData.referencia };
+        }
+        return v;
+      }));
+      prevReferenciaRef.current = formData.referencia;
+    }
+  }, [formData.referencia]);
 
   const loadProduct = async () => {
     try {
@@ -181,7 +196,7 @@ const EditarProduto = () => {
       // Preparar slug: definir apenas se estiver ausente ou inválido
       let slugToApply: string | undefined = undefined;
       if (!existingSlug || !isValidProductSlug(existingSlug)) {
-        const base = slugify((formData.nome || '').trim());
+        const base = normalizeProductSlug((formData.nome || '').trim());
         slugToApply = await ensureUniqueProductSlug(base, id);
       }
 
@@ -442,7 +457,7 @@ const EditarProduto = () => {
       color: defColor.name,
       colorHex: defColor.hex,
       stock: 0,
-      sku: ''
+      sku: formData.referencia
     };
     setVariations(prev => [...prev, newVariation]);
   };
@@ -463,6 +478,19 @@ const EditarProduto = () => {
     showToast('Variação removida.', 'success');
   };
 
+  const duplicateVariation = (id: string) => {
+    setVariations(prev => {
+      const original = prev.find(v => v.id === id);
+      if (!original) return prev;
+      const newVariation: ProductVariation = {
+        ...original,
+        id: Date.now().toString()
+      };
+      return [...prev, newVariation];
+    });
+    showToast('Variação duplicada.', 'success');
+  };
+
   return (
     <AdminLayout>
       <div className="p-6">
@@ -477,8 +505,8 @@ const EditarProduto = () => {
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-sm p-6">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-2 space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+              <div className="lg:col-span-3 space-y-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Nome do Produto *
@@ -697,8 +725,8 @@ const EditarProduto = () => {
                     <div className="space-y-4">
                       {variations.map((variation) => (
                         <div key={variation.id} className="bg-gray-50 p-6 rounded-lg">
-                          <div className="grid grid-cols-12 gap-4 items-end">
-                            <div className="col-span-2">
+                          <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-end">
+                            <div className="md:col-span-2">
                               <label className="block text-sm font-medium text-gray-700 mb-2">
                                 Tamanho
                               </label>
@@ -716,7 +744,7 @@ const EditarProduto = () => {
                               </div>
                             </div>
 
-                            <div className="col-span-2">
+                            <div className="md:col-span-2">
                               <label className="block text-sm font-medium text-gray-700 mb-2">
                                 Cor
                               </label>
@@ -738,7 +766,7 @@ const EditarProduto = () => {
                               </div>
                             </div>
 
-                            <div className="col-span-2">
+                            <div className="md:col-span-2">
                               <label className="block text-sm font-medium text-gray-700 mb-2">
                                 Código Hex da Cor
                               </label>
@@ -766,7 +794,7 @@ const EditarProduto = () => {
                               />
                             </div>
 
-                            <div className="col-span-3">
+                            <div className="md:col-span-3">
                               <label className="block text-sm font-medium text-gray-700 mb-2">
                                 Referência Variação
                               </label>
@@ -779,14 +807,24 @@ const EditarProduto = () => {
                               />
                             </div>
 
-                            <div className="col-span-1">
-                              <button
-                                type="button"
-                                onClick={() => removeVariation(variation.id)}
-                                className="w-full px-3 py-2 bg-red-600 hover:bg-red-700 transition-colors text-white rounded-lg whitespace-nowrap flex items-center justify-center"
-                              >
-                                <i className="ri-delete-bin-line"></i>
-                              </button>
+                            <div className="md:col-span-1 flex items-end justify-end">
+                              <div className="flex flex-col gap-2 items-end">
+                                <button
+                                  type="button"
+                                  onClick={() => duplicateVariation(variation.id)}
+                                  className="text-indigo-600 hover:text-indigo-900 font-medium"
+                                >
+                                  Duplicar
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => removeVariation(variation.id)}
+                                  className="text-red-500 hover:text-red-700 font-medium"
+                                  title="Remover do formulário"
+                                >
+                                  Remover
+                                </button>
+                              </div>
                             </div>
                           </div>
                         </div>

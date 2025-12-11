@@ -29,6 +29,7 @@ export default function HomePage() {
         .from('produtos')
         .select('*')
         .eq('ativo', true)
+        .eq('recem_chegado', true)
         .order('created_at', { ascending: false })
         .limit(12);
 
@@ -146,9 +147,11 @@ export default function HomePage() {
                               -{Math.round(((produto.preco - produto.preco_promocional) / produto.preco) * 100)}%
                             </div>
                           )}
+                        {produto.recem_chegado === true && (
                           <div className="absolute top-3 right-3 bg-green-600 text-white px-2 py-1 rounded text-xs font-bold z-10">
-                            Novo
+                            Recém Chegado
                           </div>
+                        )}
                           <img
                             src={produto.imagens?.[0] || '/placeholder-product.svg'}
                             alt={produto.nome}

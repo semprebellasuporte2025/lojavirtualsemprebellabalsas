@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../../../../components/feature/AdminLayout';
 import { supabase } from '../../../../lib/supabase';
-import { slugify, ensureUniqueProductSlug } from '../../../../utils/productSlug';
+import { normalizeProductSlug, ensureUniqueProductSlug } from '../../../../utils/productSlug';
 import { useToast } from '../../../../hooks/useToast';
 import RichTextEditor from '../../../../components/base/RichTextEditor';
 import { AVAILABLE_COLORS, AVAILABLE_SIZES } from '../../../../constants/colors';
@@ -123,26 +123,50 @@ const CadastrarProdutoCopy = () => {
         return;
       }
 
-      // Verificar duplicidade por referência (apenas quando há valor não vazio)
+      // Validação composta: rejeita apenas quando (slug E referência) já existem
       const referenciaTrim = (formData.referencia || '').trim();
-      if (referenciaTrim.length > 0) {
-        const { data: refExists, error: refError } = await supabase
-          .from('produtos')
-          .select('id')
-          .eq('referencia', referenciaTrim)
-          .limit(1);
-        if (refError) {
-          showToast('Erro ao verificar referência do produto.', 'error');
-          setIsLoading(false);
-          isSavingRef.current = false;
-          return;
+      const baseSlugRaw = (formData.nome || '').trim();
+      const baseSlug = normalizeProductSlug(baseSlugRaw) || 'produto';
+      if (referenciaTrim.length > 0 && baseSlug.length > 0) {
+        try {
+          const { data: dupData, error: dupErr } = await supabase
+            .rpc('check_product_duplicate', { p_slug: baseSlug, p_referencia: referenciaTrim });
+          if (dupErr) {
+            console.warn('[CadastrarProduto] Falha na RPC de validação composta, usando fallback.', dupErr);
+            const { count: fallbackCount, error: fbErr } = await supabase
+              .from('produtos')
+              .select('id', { count: 'exact', head: true })
+              .eq('slug', baseSlug)
+              .eq('referencia', referenciaTrim);
+            if (!fbErr && (fallbackCount ?? 0) > 0) {
+              showToast('Já existe produto com mesma referência e slug. Altere o slug ou a referência.', 'error');
+              setIsLoading(false);
+              isSavingRef.current = false;
+              return;
+            }
+          } else if (dupData === true) {
+            showToast('Já existe produto com mesma referência e slug. Altere o slug ou a referência.', 'error');
+            setIsLoading(false);
+            isSavingRef.current = false;
+            return;
+          }
+        } catch (e) {
+          console.warn('[CadastrarProduto] Erro inesperado na validação composta:', e);
         }
-        if (refExists && refExists.length > 0) {
-          showToast('Referência já cadastrada para outro produto.', 'error');
-          setIsLoading(false);
-          isSavingRef.current = false;
-          return;
-        }
+      }
+
+      // Impedir variações com mesma combinação de Cor + Tamanho
+      const comboCount = new Map<string, number>();
+      for (const v of variations) {
+        const key = `${String(v.color || '').toLowerCase()}|${String(v.size || '').toLowerCase()}`;
+        comboCount.set(key, (comboCount.get(key) || 0) + 1);
+      }
+      const hasDuplicateCombos = Array.from(comboCount.values()).some(c => c > 1);
+      if (hasDuplicateCombos) {
+        showToast('Há variações duplicadas com mesma Cor e Tamanho. Ajuste antes de salvar.', 'error');
+        setIsLoading(false);
+        isSavingRef.current = false;
+        return;
       }
 
       // Preparar dados para envio
@@ -186,64 +210,76 @@ const CadastrarProdutoCopy = () => {
         return;
       }
 
-      // Gerar slug único e lidar com conflitos automaticamente
-      const baseSlug = slugify((formData.nome || '').trim());
-      let slugCandidate = await ensureUniqueProductSlug(baseSlug);
+      // Inserir produto com slug base; banco só rejeita se (slug+referência) forem duplicados
       let produtoId: string | null = null;
-      let produtoDataInsert: any[] | null = null;
-      for (let attempt = 0; attempt < 5 && !produtoId; attempt++) {
-        const { data, error } = await supabase
-          .from('produtos')
-          .insert({
-            nome: formData.nome,
-            categoria_id: categoriaData.id,
-            preco: parseFloat(formData.preco),
-            preco_promocional: formData.precoPromocional ? parseFloat(formData.precoPromocional) : null,
-            descricao: formData.descricao,
-            material: formData.material || null,
-            referencia: referenciaTrim.length > 0 ? referenciaTrim : null,
-            peso: parseFloat(formData.peso),
-            altura: formData.altura ? parseFloat(formData.altura) : null,
-            largura: formData.largura ? parseFloat(formData.largura) : null,
-            profundidade: formData.profundidade ? parseFloat(formData.profundidade) : null,
-            imagens: images,
-            ativo: formData.ativo,
-            destaque: formData.destaque,
-            recem_chegado: formData.recemChegado,
-            slug: slugCandidate,
-            nome_invisivel: formData.nomeInvisivel,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          })
-          .select();
-        if (!error && Array.isArray(data) && data.length > 0) {
-          produtoDataInsert = data;
-          produtoId = data[0].id;
-        } else if (error && ((error as any).code === '23505' || /duplicate key|unique constraint|slug/i.test(String((error as any)?.message || '')))) {
-          // Em caso de conflito de slug, gerar próximo candidato e tentar novamente
-          const suffix = attempt + 2; // começa em -2
-          slugCandidate = `${baseSlug}-${suffix}`;
-          continue;
-        } else if (error) {
-          console.error('Erro ao inserir produto:', error);
-          throw error;
+      const { data: insertRows, error: insertError } = await supabase
+        .from('produtos')
+        .insert({
+          nome: formData.nome,
+          categoria_id: categoriaData.id,
+          preco: parseFloat(formData.preco),
+          preco_promocional: formData.precoPromocional ? parseFloat(formData.precoPromocional) : null,
+          descricao: formData.descricao,
+          material: formData.material || null,
+          referencia: referenciaTrim.length > 0 ? referenciaTrim : null,
+          peso: parseFloat(formData.peso),
+          altura: formData.altura ? parseFloat(formData.altura) : null,
+          largura: formData.largura ? parseFloat(formData.largura) : null,
+          profundidade: formData.profundidade ? parseFloat(formData.profundidade) : null,
+          imagens: images,
+          ativo: formData.ativo,
+          destaque: formData.destaque,
+          recem_chegado: formData.recemChegado,
+          slug: baseSlug,
+          nome_invisivel: formData.nomeInvisivel,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .select();
+      if (insertError) {
+        const msg = String((insertError as any)?.message || '');
+        if ((insertError as any)?.code === '23505' || /produtos_slug_ref_unique|duplicate key|unique constraint|slug.*referencia/i.test(msg)) {
+          showToast('Já existe produto com mesma referência e slug. Altere o slug ou a referência.', 'error');
+          setIsLoading(false);
+          isSavingRef.current = false;
+          return;
         }
+        console.error('Erro ao inserir produto:', insertError);
+        throw insertError;
       }
-
+      if (Array.isArray(insertRows) && insertRows.length > 0) {
+        produtoId = insertRows[0].id;
+      }
       if (!produtoId) {
-        throw new Error('Não foi possível cadastrar o produto após resolver conflitos de slug.');
+        throw new Error('Não foi possível obter o ID do produto inserido.');
       }
       console.log('[CadastrarProduto] ✅ Produto inserido com ID:', produtoId);
 
       // Inserir variações do produto
-      const variacoesParaInserir = variations.map(variation => ({
-        produto_id: produtoId,
-        tamanho: variation.size,
-        cor: variation.color,
-        cor_hex: variation.colorHex,
-        estoque: Number.isFinite(Math.floor(Number(variation.stock))) ? Math.max(0, Math.floor(Number(variation.stock))) : 0,
-        sku: variation.sku || referenciaTrim // Replicar referência quando SKU da variação não for informado
-      }));
+      const usedSkus = new Set<string>();
+      const ensureUniqueSku = (base: string): string | null => {
+        const clean = (base || referenciaTrim || '').trim();
+        if (!clean) return null;
+        let candidate = clean;
+        let i = 1;
+        while (usedSkus.has(candidate)) {
+          candidate = `${clean}-${i++}`;
+        }
+        usedSkus.add(candidate);
+        return candidate;
+      };
+
+      const variacoesParaInserir = variations.map(variation => {
+        const finalSku = ensureUniqueSku(String(variation.sku || '')) || referenciaTrim || null;
+        return {
+          produto_id: produtoId,
+          tamanho: variation.size,
+          cor: variation.color,
+          cor_hex: variation.colorHex,
+          estoque: Number.isFinite(Math.floor(Number(variation.stock))) ? Math.max(0, Math.floor(Number(variation.stock))) : 0,
+          sku: finalSku
+        };
+      });
 
       const { error: variacoesError } = await supabase
         .from('variantes_produto')
@@ -524,6 +560,19 @@ const CadastrarProdutoCopy = () => {
     showToast('Variação removida.', 'success');
   };
 
+  const duplicateVariation = (id: string) => {
+    setVariations(prev => {
+      const original = prev.find(v => v.id === id);
+      if (!original) return prev;
+      const newVariation: ProductVariation = {
+        ...original,
+        id: Date.now().toString()
+      };
+      return [...prev, newVariation];
+    });
+    showToast('Variação duplicada.', 'success');
+  };
+
   const resetForm = () => {
     setFormData({
       nome: '',
@@ -788,7 +837,10 @@ const CadastrarProdutoCopy = () => {
                   <input type="text" id={`sku-${variation.id}`} value={variation.sku} onChange={(e) => updateVariation(variation.id, 'sku', e.target.value)} className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="Opcional" />
                 </div>
                 <div className="md:col-span-1 flex items-end">
-                  <button type="button" onClick={() => removeVariation(variation.id)} className="text-red-500 hover:text-red-700 font-medium">Remover</button>
+                  <div className="flex flex-col gap-2 items-end">
+                    <button type="button" onClick={() => duplicateVariation(variation.id)} className="text-indigo-600 hover:text-indigo-900 font-medium">Duplicar</button>
+                    <button type="button" onClick={() => removeVariation(variation.id)} className="text-red-500 hover:text-red-700 font-medium">Remover</button>
+                  </div>
                 </div>
               </div>
             ))}

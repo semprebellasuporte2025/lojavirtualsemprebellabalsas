@@ -24,6 +24,7 @@ const AuthLoginPage = lazy(() => import('../pages/auth/login/page'));
 const AuthRegisterPage = lazy(() => import('../pages/auth/register/page'));
 const WebhookTesterPage = lazy(() => import('../pages/webhook-tester/page'));
 const LinkPage = lazy(() => import('../pages/link/page'));
+const PDVPage = lazy(() => import('../pages/pdv/page'));
 
 // Páginas institucionais
 const SobreNosPage = lazy(() => import('../pages/sobre-nos/page'));
@@ -110,6 +111,10 @@ const routes: RouteObject[] = [
   {
     path: '/minha-conta',
     element: <Suspense fallback={<LoadingFallback />}><MinhaContaPage /></Suspense>,
+  },
+  {
+    path: '/pdv',
+    element: <Suspense fallback={<LoadingFallback />}><PDVPage /></Suspense>,
   },
   {
     path: '/auth/login',

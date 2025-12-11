@@ -35,25 +35,27 @@ export default function ProductPage() {
     try {
       setLoading(true);
       
-      // Primeiro tenta buscar por slug
-      const { data: dataBySlug, error: errorBySlug } = await supabase
-        .from('produtos')
-        .select('*, categorias(nome), variantes_produto(*)')
-        .eq('slug', slug)
-        .maybeSingle();
-
-      if (errorBySlug) {
-        console.error('Erro ao carregar produto por slug:', errorBySlug);
-      }
-      
-      if (dataBySlug) {
-        setProduto(dataBySlug);
-        return;
-      }
-
-      // Se não encontrou por slug, verifica compatibilidade com UUID
-      // 1) se o path é um UUID
+      // 1) Se veio com query ?id=<uuid>, prioriza carregar por ID para desambiguar slugs duplicados
+      const qpId = (searchParams.get('id') || '').trim();
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (qpId && uuidRegex.test(qpId)) {
+        const { data: dataById, error: errorById } = await supabase
+          .from('produtos')
+          .select('*, categorias(nome), variantes_produto(*)')
+          .eq('id', qpId)
+          .maybeSingle();
+
+        if (errorById) {
+          console.error('Erro ao carregar produto por ID (query):', errorById);
+        }
+
+        if (dataById) {
+          setProduto(dataById);
+          return;
+        }
+      }
+
+      // 2) se o path é um UUID, buscar por ID
       if (slug && uuidRegex.test(slug)) {
         console.log('Tentando buscar produto por ID (compatibilidade):', slug);
         const { data: dataById, error: errorById } = await supabase
@@ -72,28 +74,20 @@ export default function ProductPage() {
         }
       }
 
-      // 2) se veio com query ?id=<uuid>, usar como fallback sem quebrar a URL com slug
-      const qpId = (searchParams.get('id') || '').trim();
-      if (qpId && uuidRegex.test(qpId)) {
-        const { data: dataById, error: errorById } = await supabase
-          .from('produtos')
-          .select('*, categorias(nome), variantes_produto(*)')
-          .eq('id', qpId)
-          .maybeSingle();
+      // 3) Caso contrário, tenta buscar por slug (pode haver múltiplos; maybeSingle retorna erro se houver mais de um)
+      const { data: dataBySlug, error: errorBySlug } = await supabase
+        .from('produtos')
+        .select('*, categorias(nome), variantes_produto(*)')
+        .eq('slug', slug)
+        .maybeSingle();
 
-        if (errorById) {
-          console.error('Erro ao carregar produto por ID (query):', errorById);
-        }
-
-        if (dataById) {
-          setProduto(dataById);
-          // Se o produto tem slug, normaliza a URL para a canônica
-          const canonical = (dataById.slug || '').trim();
-          if (canonical) {
-            navigate(`/produto/${canonical}`, { replace: true });
-          }
-          return;
-        }
+      if (errorBySlug) {
+        console.error('Erro ao carregar produto por slug:', errorBySlug);
+      }
+      
+      if (dataBySlug) {
+        setProduto(dataBySlug);
+        return;
       }
 
       console.warn('Produto não encontrado com slug/ID:', slug);

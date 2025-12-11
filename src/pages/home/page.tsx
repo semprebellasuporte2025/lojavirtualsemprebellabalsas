@@ -91,6 +91,7 @@ export default function HomePage() {
         .select('*, categorias(nome), variantes_produto(cor, cor_hex)')
         .eq('ativo', true)
         .eq('nome_invisivel', false)
+        .eq('recem_chegado', true)
         .order('created_at', { ascending: false })
         .limit(12)
         .abortSignal(signal);
@@ -100,11 +101,13 @@ export default function HomePage() {
         if ((error as any)?.name === 'AbortError') {
           return;
         }
+        // Fallback quando a coluna nome_invisivel não existe
         if (/nome_invisivel/i.test(msg) && /does not exist|column/i.test(msg)) {
           const { data: data2, error: err2 } = await supabase
             .from('produtos')
             .select('*, categorias(nome), variantes_produto(cor, cor_hex)')
             .eq('ativo', true)
+            .eq('recem_chegado', true)
             .gt('estoque', 0)
             .order('created_at', { ascending: false })
             .limit(12)
@@ -112,6 +115,21 @@ export default function HomePage() {
           if (!err2 && !signal.aborted) {
             const safe = (data2 || []).filter((p: any) => p?.ativo === true && p?.nome_invisivel !== true);
             setRecentProducts(bumpTesteFirst(safe as Produto[]));
+            return;
+          }
+        }
+        // Fallback quando a coluna recem_chegado não existe
+        if (/recem_chegado/i.test(msg) && /does not exist|column/i.test(msg)) {
+          const { data: data3, error: err3 } = await supabase
+            .from('produtos')
+            .select('*, categorias(nome), variantes_produto(cor, cor_hex)')
+            .eq('ativo', true)
+            .eq('nome_invisivel', false)
+            .order('created_at', { ascending: false })
+            .limit(12)
+            .abortSignal(signal);
+          if (!err3 && !signal.aborted) {
+            setRecentProducts(bumpTesteFirst((data3 || []) as Produto[]));
             return;
           }
         }
@@ -171,9 +189,9 @@ export default function HomePage() {
           <Categories />
           
           {!loading && recentProducts.length > 0 && (
-            <section className="py-16 bg-gray-50">
+            <section className="py-6 md:py-10 bg-gray-50">
               <div className="container mx-auto px-6 sm:px-12 md:px-20 lg:px-28 xl:px-36 2xl:px-48">
-                <div className="flex justify-between items-center mb-8">
+                <div className="flex justify-between items-center mb-6">
                   <h2 className="text-3xl font-bold text-gray-800">Recém Chegados</h2>
                   {hasMoreRecent && (
                     <button
@@ -205,9 +223,11 @@ export default function HomePage() {
                               -{Math.round(((price - promo) / price) * 100)}%
                             </div>
                           )}
-                          <div className="absolute top-3 right-3 bg-green-600 text-white px-2 py-1 rounded text-xs font-bold z-10">
-                            Novo
-                          </div>
+                          {produto.recem_chegado === true && (
+                            <div className="absolute top-3 right-3 bg-green-600 text-white px-2 py-1 rounded text-xs font-bold z-10">
+                              Recém Chegado
+                            </div>
+                          )}
                           <img
                             src={produto.imagens?.[0] || '/placeholder-product.svg'}
                             alt={produto.nome}

@@ -127,7 +127,7 @@ export default function Categories({ initialCategorias, catalogLoading }: { init
 
   if (loading) {
     return (
-      <section className="py-16 bg-gray-50">
+      <section className="py-6 md:py-10 bg-gray-50">
         <div className="container mx-auto px-6 sm:px-12 md:px-20 lg:px-28 xl:px-36 2xl:px-48">
           <div className="text-center">
             <i className="ri-loader-4-line text-4xl text-pink-600 animate-spin"></i>
@@ -142,9 +142,9 @@ export default function Categories({ initialCategorias, catalogLoading }: { init
   }
 
   return (
-    <section className="py-16 bg-gray-50">
+    <section className="py-6 md:py-10 bg-gray-50">
       <div className="container mx-auto px-6 sm:px-12 md:px-20 lg:px-28 xl:px-36 2xl:px-48">
-        <div className="text-center mb-12">
+        <div className="text-center mb-8">
           <h2 className="text-3xl md:text-4xl font-bold text-gray-800 mb-4">
             Categorias
           </h2>

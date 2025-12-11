@@ -13,6 +13,11 @@ export function slugify(text: string): string {
     .replace(/-{2,}/g, '-'); // colapsa múltiplos '-'
 }
 
+// Alias explícito para normalização de slugs de produtos, conforme política da equipe
+export function normalizeProductSlug(text: string): string {
+  return slugify(text);
+}
+
 // Validação genérica de slug (minúsculas, números e hífens, sem hífen no início/fim)
 export function isValidProductSlug(slug: string): boolean {
   return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug || '');

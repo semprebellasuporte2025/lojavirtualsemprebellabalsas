@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import AdminLayout from '../../../components/feature/AdminLayout';
 import { supabase } from '../../../lib/supabase';
-import { slugify, ensureUniqueProductSlug, isValidProductSlug } from '../../../utils/productSlug';
+import { normalizeProductSlug, ensureUniqueProductSlug, isValidProductSlug } from '../../../utils/productSlug';
 import { migrateBannerLinks, migrateInstagramLinks } from '../../../utils/urlMigrations';
 import { useToast } from '../../../hooks/useToast';
 
@@ -169,7 +169,7 @@ export default function Ajuda() {
                       skipped++;
                       continue;
                     }
-                    const base = slugify((p.nome as string) || '');
+                    const base = normalizeProductSlug((p.nome as string) || '');
                     if (!base) {
                       errors++;
                       continue;

@@ -138,7 +138,7 @@ export default function CategorySection({ title, categoryName }: CategorySection
 
   if (loading) {
     return (
-      <section className="py-16 bg-white">
+      <section className="py-6 md:py-10 bg-white">
         <div className="container mx-auto px-2 sm:px-6 md:px-8 lg:px-12 xl:px-16 2xl:px-20">
           <div className="text-center">
             <i className="ri-loader-4-line text-4xl text-pink-600 animate-spin"></i>
@@ -156,9 +156,9 @@ export default function CategorySection({ title, categoryName }: CategorySection
   const hasMore = produtos.length > 8;
 
   return (
-    <section className="py-16 bg-white">
+    <section className="py-6 md:py-10 bg-white">
       <div className="container mx-auto px-6 sm:px-12 md:px-20 lg:px-28 xl:px-36 2xl:px-48">
-        <div className="mb-8">
+        <div className="mb-6">
           <h2 className="text-3xl font-bold text-gray-800">{title}</h2>
         </div>
 
@@ -266,7 +266,7 @@ export default function CategorySection({ title, categoryName }: CategorySection
         </div>
 
         {hasMore && (
-          <div className="flex justify-end mt-8">
+          <div className="flex justify-end mt-5">
             <button
               onClick={handleVerMais}
               className="px-6 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-colors whitespace-nowrap"

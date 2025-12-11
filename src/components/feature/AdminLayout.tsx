@@ -55,6 +55,11 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       path: '/paineladmin/dashboard',
     },
     {
+      title: 'PDV',
+      icon: 'ri-store-2-line',
+      path: '/pdv',
+    },
+    {
       title: 'Produtos',
       icon: 'ri-shopping-bag-line',
       submenu: [
@@ -266,6 +271,14 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
               <button className="w-10 h-10 flex items-center justify-center hover:bg-gray-100 rounded-lg transition-colors cursor-pointer">
                 <i className="ri-notification-line text-xl"></i>
               </button>
+              <a
+                 href="/pdv"
+                 target="_blank"
+                 rel="noopener noreferrer"
+                 className="px-4 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-colors whitespace-nowrap no-underline visited:text-white"
+               >
+                 PDV
+               </a>
               <a
                  href="/"
                  target="_blank"
