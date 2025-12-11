@@ -48,6 +48,19 @@ const CadastrarProdutoCopy = () => {
   const [availableSizes] = useState<string[]>(AVAILABLE_SIZES);
   const [availableColors] = useState<ColorOption[]>(AVAILABLE_COLORS);
   const [categorias, setCategorias] = useState<{ id: string; nome: string }[]>([]);
+  const [fieldErrors, setFieldErrors] = useState<{
+    nome?: boolean;
+    categoriaId?: boolean;
+    preco?: boolean;
+    referencia?: boolean;
+    peso?: boolean;
+    material?: boolean;
+    altura?: boolean;
+    largura?: boolean;
+    profundidade?: boolean;
+    descricao?: boolean;
+    images?: boolean;
+  }>({});
   const saveAttemptsRef = useRef<number>(0); // Contador de tentativas de salvamento
   const isSavingRef = useRef<boolean>(false); // Proteção contra dupla execução
   const nomeRef = useRef<HTMLInputElement>(null);
@@ -97,8 +110,91 @@ const CadastrarProdutoCopy = () => {
     
     isSavingRef.current = true;
     setIsLoading(true);
-    
+
     try {
+      // Validação de campos obrigatórios com foco no primeiro inválido
+      const errors: {
+        nome?: boolean;
+        categoriaId?: boolean;
+        preco?: boolean;
+        referencia?: boolean;
+        peso?: boolean;
+        material?: boolean;
+        altura?: boolean;
+        largura?: boolean;
+        profundidade?: boolean;
+        descricao?: boolean;
+        images?: boolean;
+      } = {};
+
+      const nomeTrim = (formData.nome || '').trim();
+      const referenciaTrim = (formData.referencia || '').trim();
+      const precoVal = parseFloat(formData.preco);
+      const pesoVal = parseFloat(formData.peso);
+      const materialTrim = (formData.material || '').trim();
+      const alturaVal = parseFloat(formData.altura);
+      const larguraVal = parseFloat(formData.largura);
+      const profundidadeVal = parseFloat(formData.profundidade);
+      const descricaoPlain = (formData.descricao || '')
+        .replace(/<[^>]*>/g, '')
+        .replace(/&nbsp;/g, ' ')
+        .trim();
+
+      if (!nomeTrim) errors.nome = true;
+      if (!formData.categoriaId) errors.categoriaId = true;
+      if (!formData.preco || Number.isNaN(precoVal)) errors.preco = true;
+      if (!referenciaTrim) errors.referencia = true;
+      if (!formData.peso || Number.isNaN(pesoVal)) errors.peso = true;
+      if (!materialTrim) errors.material = true;
+      if (!formData.altura || Number.isNaN(alturaVal)) errors.altura = true;
+      if (!formData.largura || Number.isNaN(larguraVal)) errors.largura = true;
+      if (!formData.profundidade || Number.isNaN(profundidadeVal)) errors.profundidade = true;
+      if (!descricaoPlain) errors.descricao = true;
+      if (!images || images.length === 0) errors.images = true;
+
+      if (
+        errors.nome ||
+        errors.categoriaId ||
+        errors.preco ||
+        errors.referencia ||
+        errors.peso ||
+        errors.material ||
+        errors.altura ||
+        errors.largura ||
+        errors.profundidade ||
+        errors.descricao ||
+        errors.images
+      ) {
+        setFieldErrors(errors);
+        // Focar no primeiro campo inválido (inclui campos com refs e DOM ids)
+        const tryFocus = (el: Element | null | undefined) => {
+          const anyEl = el as any;
+          if (anyEl) {
+            try { anyEl.scrollIntoView?.({ behavior: 'smooth', block: 'center' }); } catch {}
+            try { anyEl.focus?.(); } catch {}
+            return true;
+          }
+          return false;
+        };
+
+        if (errors.nome && tryFocus(nomeRef.current)) {}
+        else if (errors.categoriaId && tryFocus(categoriaRef.current)) {}
+        else if (errors.preco && tryFocus(precoRef.current)) {}
+        else if (errors.referencia && tryFocus(referenciaRef.current)) {}
+        else if (errors.peso && tryFocus(pesoRef.current)) {}
+        else if (errors.material && tryFocus(materialRef.current)) {}
+        else if (errors.altura && tryFocus(alturaRef.current)) {}
+        else if (errors.largura && tryFocus(larguraRef.current)) {}
+        else if (errors.profundidade && tryFocus(profundidadeRef.current)) {}
+        else if (errors.descricao && tryFocus(document.getElementById('descricao'))) {}
+        else if (errors.images && tryFocus(document.getElementById('file-upload'))) {}
+
+        showToast('Preencha os campos obrigatórios destacados em vermelho.', 'error');
+        setIsLoading(false);
+        isSavingRef.current = false;
+        return;
+      }
+
       // Validações básicas
       if (variations.length === 0) {
         showToast('Adicione pelo menos uma variação do produto (cor e tamanho)', 'error');
@@ -124,7 +220,7 @@ const CadastrarProdutoCopy = () => {
       }
 
       // Validação composta: rejeita apenas quando (slug E referência) já existem
-      const referenciaTrim = (formData.referencia || '').trim();
+      // referenciaTrim já calculado acima
       const baseSlugRaw = (formData.nome || '').trim();
       const baseSlug = normalizeProductSlug(baseSlugRaw) || 'produto';
       if (referenciaTrim.length > 0 && baseSlug.length > 0) {
@@ -478,6 +574,9 @@ const CadastrarProdutoCopy = () => {
       
       console.log('[Upload] Upload concluído. URLs válidas:', publicUrls.length, 'Falhas:', failedCount);
       setImages((prev) => [...prev, ...publicUrls]);
+      if (publicUrls.length > 0) {
+        setFieldErrors(prev => ({ ...prev, images: false }));
+      }
       
       if (publicUrls.length > 0) {
         if (failedCount > 0) {
@@ -615,23 +714,27 @@ const CadastrarProdutoCopy = () => {
             <div>
               {/* Nome do Produto */}
               <div className="mb-4">
-                <label htmlFor="nome" className="block text-sm font-medium text-gray-700">Nome do Produto</label>
+                <label htmlFor="nome" className="block text-sm font-medium text-gray-700">Nome do Produto <span className="text-red-500">*</span></label>
                 <input
                   type="text"
                   id="nome"
                   name="nome"
                   value={formData.nome}
-                  onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setFormData({ ...formData, nome: v });
+                    if (fieldErrors.nome) setFieldErrors(prev => ({ ...prev, nome: false }));
+                  }}
                   ref={nomeRef}
                   onKeyDown={(e) => { if (e.key === 'Enter') categoriaRef.current?.focus(); }}
-                  className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  className={`mt-1 block w-full px-3 py-2 bg-white border rounded-md shadow-sm focus:outline-none sm:text-sm ${fieldErrors.nome ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-indigo-500 focus:border-indigo-500'}`}
                   required
                 />
               </div>
 
               {/* Categoria */}
               <div className="mb-4">
-                <label htmlFor="categoria" className="block text-sm font-medium text-gray-700">Categoria</label>
+                <label htmlFor="categoria" className="block text-sm font-medium text-gray-700">Categoria <span className="text-red-500">*</span></label>
                 <select
                   id="categoria"
                   name="categoria"
@@ -643,10 +746,11 @@ const CadastrarProdutoCopy = () => {
                       categoria: selectedCat ? selectedCat.nome : '',
                       categoriaId: e.target.value 
                     });
+                    if (fieldErrors.categoriaId) setFieldErrors(prev => ({ ...prev, categoriaId: false }));
                   }}
                   ref={categoriaRef}
                   onKeyDown={(e) => { if (e.key === 'Enter') precoRef.current?.focus(); }}
-                  className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  className={`mt-1 block w-full px-3 py-2 bg-white border rounded-md shadow-sm focus:outline-none sm:text-sm ${fieldErrors.categoriaId ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-indigo-500 focus:border-indigo-500'}`}
                   required
                 >
                   <option value="">Selecione uma categoria</option>
@@ -659,16 +763,19 @@ const CadastrarProdutoCopy = () => {
               {/* Preço */}
               <div className="grid grid-cols-2 gap-4 mb-4">
                 <div>
-                  <label htmlFor="preco" className="block text-sm font-medium text-gray-700">Preço (R$)</label>
+                  <label htmlFor="preco" className="block text-sm font-medium text-gray-700">Preço (R$) <span className="text-red-500">*</span></label>
                   <input
                     type="number"
                     id="preco"
                     name="preco"
                   value={formData.preco}
-                  onChange={(e) => setFormData({ ...formData, preco: e.target.value })}
+                  onChange={(e) => {
+                    setFormData({ ...formData, preco: e.target.value });
+                    if (fieldErrors.preco) setFieldErrors(prev => ({ ...prev, preco: false }));
+                  }}
                   ref={precoRef}
                   onKeyDown={(e) => { if (e.key === 'Enter') precoPromocionalRef.current?.focus(); }}
-                  className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  className={`mt-1 block w-full px-3 py-2 bg-white border rounded-md shadow-sm focus:outline-none sm:text-sm ${fieldErrors.preco ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-indigo-500 focus:border-indigo-500'}`}
                   required
                 />
                 </div>
@@ -689,18 +796,22 @@ const CadastrarProdutoCopy = () => {
 
               {/* Descrição */}
               <div className="mb-4">
-                <label htmlFor="descricao" className="block text-sm font-medium text-gray-700">Descrição</label>
+                <label htmlFor="descricao" className="block text-sm font-medium text-gray-700">Descrição <span className="text-red-500">*</span></label>
                 <RichTextEditor
                   id="descricao"
                   value={formData.descricao}
-                  onChange={(value) => setFormData({ ...formData, descricao: value })}
+                  onChange={(value) => {
+                    setFormData({ ...formData, descricao: value });
+                    if (fieldErrors.descricao) setFieldErrors(prev => ({ ...prev, descricao: false }));
+                  }}
+                  error={Boolean(fieldErrors.descricao)}
                 />
               </div>
 
               {/* Upload de Imagens */}
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700">Imagens do Produto</label>
-                <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
+                <label className="block text-sm font-medium text-gray-700">Imagens do Produto <span className="text-red-500">*</span></label>
+                <div className={`mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-dashed rounded-md ${fieldErrors.images ? 'border-red-500' : 'border-gray-300'}`}>
                   <div className="space-y-1 text-center">
                     <svg className="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
                       <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -733,28 +844,106 @@ const CadastrarProdutoCopy = () => {
                 <h3 className="text-lg font-medium text-gray-900 mb-4">Informações Adicionais</h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label htmlFor="material" className="block text-sm font-medium text-gray-700">Material</label>
-                    <input type="text" id="material" name="material" value={formData.material} onChange={(e) => setFormData({ ...formData, material: e.target.value })} ref={materialRef} onKeyDown={(e) => { if (e.key === 'Enter') referenciaRef.current?.focus(); }} className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
+                    <label htmlFor="material" className="block text-sm font-medium text-gray-700">Material <span className="text-red-500">*</span></label>
+                    <input
+                      type="text"
+                      id="material"
+                      name="material"
+                      value={formData.material}
+                      onChange={(e) => {
+                        setFormData({ ...formData, material: e.target.value });
+                        if (fieldErrors.material) setFieldErrors(prev => ({ ...prev, material: false }));
+                      }}
+                      ref={materialRef}
+                      onKeyDown={(e) => { if (e.key === 'Enter') referenciaRef.current?.focus(); }}
+                      className={`mt-1 block w-full px-3 py-2 bg-white border rounded-md shadow-sm focus:outline-none sm:text-sm ${fieldErrors.material ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-indigo-500 focus:border-indigo-500'}`}
+                      required
+                    />
                   </div>
                   <div>
-                    <label htmlFor="referencia" className="block text-sm font-medium text-gray-700">Referência</label>
-                    <input type="text" id="referencia" name="referencia" value={formData.referencia} onChange={(e) => setFormData({ ...formData, referencia: e.target.value })} ref={referenciaRef} onKeyDown={(e) => { if (e.key === 'Enter') pesoRef.current?.focus(); }} className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" required />
+                    <label htmlFor="referencia" className="block text-sm font-medium text-gray-700">Referência <span className="text-red-500">*</span></label>
+                    <input
+                      type="text"
+                      id="referencia"
+                      name="referencia"
+                      value={formData.referencia}
+                      onChange={(e) => {
+                        setFormData({ ...formData, referencia: e.target.value });
+                        if (fieldErrors.referencia) setFieldErrors(prev => ({ ...prev, referencia: false }));
+                      }}
+                      ref={referenciaRef}
+                      onKeyDown={(e) => { if (e.key === 'Enter') pesoRef.current?.focus(); }}
+                      className={`mt-1 block w-full px-3 py-2 bg-white border rounded-md shadow-sm focus:outline-none sm:text-sm ${fieldErrors.referencia ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-indigo-500 focus:border-indigo-500'}`}
+                      required
+                    />
                   </div>
                   <div>
-                    <label htmlFor="peso" className="block text-sm font-medium text-gray-700">Peso (g)</label>
-                    <input type="number" id="peso" name="peso" value={formData.peso} onChange={(e) => setFormData({ ...formData, peso: e.target.value })} ref={pesoRef} onKeyDown={(e) => { if (e.key === 'Enter') alturaRef.current?.focus(); }} className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" required />
+                    <label htmlFor="peso" className="block text-sm font-medium text-gray-700">Peso (g) <span className="text-red-500">*</span></label>
+                    <input
+                      type="number"
+                      id="peso"
+                      name="peso"
+                      value={formData.peso}
+                      onChange={(e) => {
+                        setFormData({ ...formData, peso: e.target.value });
+                        if (fieldErrors.peso) setFieldErrors(prev => ({ ...prev, peso: false }));
+                      }}
+                      ref={pesoRef}
+                      onKeyDown={(e) => { if (e.key === 'Enter') alturaRef.current?.focus(); }}
+                      className={`mt-1 block w-full px-3 py-2 bg-white border rounded-md shadow-sm focus:outline-none sm:text-sm ${fieldErrors.peso ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-indigo-500 focus:border-indigo-500'}`}
+                      required
+                    />
                   </div>
                   <div>
-                    <label htmlFor="altura" className="block text-sm font-medium text-gray-700">Altura (cm)</label>
-                    <input type="number" id="altura" name="altura" value={formData.altura} onChange={(e) => setFormData({ ...formData, altura: e.target.value })} ref={alturaRef} onKeyDown={(e) => { if (e.key === 'Enter') larguraRef.current?.focus(); }} className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
+                    <label htmlFor="altura" className="block text-sm font-medium text-gray-700">Altura (cm) <span className="text-red-500">*</span></label>
+                    <input
+                      type="number"
+                      id="altura"
+                      name="altura"
+                      value={formData.altura}
+                      onChange={(e) => {
+                        setFormData({ ...formData, altura: e.target.value });
+                        if (fieldErrors.altura) setFieldErrors(prev => ({ ...prev, altura: false }));
+                      }}
+                      ref={alturaRef}
+                      onKeyDown={(e) => { if (e.key === 'Enter') larguraRef.current?.focus(); }}
+                      className={`mt-1 block w-full px-3 py-2 bg-white border rounded-md shadow-sm focus:outline-none sm:text-sm ${fieldErrors.altura ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-indigo-500 focus:border-indigo-500'}`}
+                      required
+                    />
                   </div>
                   <div>
-                    <label htmlFor="largura" className="block text-sm font-medium text-gray-700">Largura (cm)</label>
-                    <input type="number" id="largura" name="largura" value={formData.largura} onChange={(e) => setFormData({ ...formData, largura: e.target.value })} ref={larguraRef} onKeyDown={(e) => { if (e.key === 'Enter') profundidadeRef.current?.focus(); }} className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
+                    <label htmlFor="largura" className="block text-sm font-medium text-gray-700">Largura (cm) <span className="text-red-500">*</span></label>
+                    <input
+                      type="number"
+                      id="largura"
+                      name="largura"
+                      value={formData.largura}
+                      onChange={(e) => {
+                        setFormData({ ...formData, largura: e.target.value });
+                        if (fieldErrors.largura) setFieldErrors(prev => ({ ...prev, largura: false }));
+                      }}
+                      ref={larguraRef}
+                      onKeyDown={(e) => { if (e.key === 'Enter') profundidadeRef.current?.focus(); }}
+                      className={`mt-1 block w-full px-3 py-2 bg-white border rounded-md shadow-sm focus:outline-none sm:text-sm ${fieldErrors.largura ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-indigo-500 focus:border-indigo-500'}`}
+                      required
+                    />
                   </div>
                   <div>
-                    <label htmlFor="profundidade" className="block text-sm font-medium text-gray-700">Profundidade (cm)</label>
-                    <input type="number" id="profundidade" name="profundidade" value={formData.profundidade} onChange={(e) => setFormData({ ...formData, profundidade: e.target.value })} ref={profundidadeRef} onKeyDown={(e) => { if (e.key === 'Enter') document.getElementById('descricao')?.focus(); }} className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
+                    <label htmlFor="profundidade" className="block text-sm font-medium text-gray-700">Profundidade (cm) <span className="text-red-500">*</span></label>
+                    <input
+                      type="number"
+                      id="profundidade"
+                      name="profundidade"
+                      value={formData.profundidade}
+                      onChange={(e) => {
+                        setFormData({ ...formData, profundidade: e.target.value });
+                        if (fieldErrors.profundidade) setFieldErrors(prev => ({ ...prev, profundidade: false }));
+                      }}
+                      ref={profundidadeRef}
+                      onKeyDown={(e) => { if (e.key === 'Enter') document.getElementById('descricao')?.focus(); }}
+                      className={`mt-1 block w-full px-3 py-2 bg-white border rounded-md shadow-sm focus:outline-none sm:text-sm ${fieldErrors.profundidade ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-indigo-500 focus:border-indigo-500'}`}
+                      required
+                    />
                   </div>
 
                 </div>
@@ -801,13 +990,13 @@ const CadastrarProdutoCopy = () => {
             {variations.map((variation) => (
               <div key={variation.id} className="grid grid-cols-1 md:grid-cols-12 gap-4 mb-4 p-4 border rounded-md">
                 <div className="md:col-span-2">
-                  <label htmlFor={`size-${variation.id}`} className="block text-sm font-medium text-gray-700">Tamanho</label>
+                  <label htmlFor={`size-${variation.id}`} className="block text-sm font-medium text-gray-700">Tamanho <span className="text-red-500">*</span></label>
                   <select id={`size-${variation.id}`} value={variation.size} onChange={(e) => updateVariation(variation.id, 'size', e.target.value)} className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
                     {availableSizes.map(size => <option key={size} value={size}>{size}</option>)}
                   </select>
                 </div>
                 <div className="md:col-span-4">
-                  <label htmlFor={`color-${variation.id}`} className="block text-sm font-medium text-gray-700">Cor</label>
+                  <label htmlFor={`color-${variation.id}`} className="block text-sm font-medium text-gray-700">Cor <span className="text-red-500">*</span></label>
                   <div className="flex items-center gap-2">
                     <input
                       type="text"

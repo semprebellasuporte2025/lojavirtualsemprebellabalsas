@@ -22,6 +22,7 @@ interface RichTextEditorProps {
   onChange: (value: string) => void;
   placeholder?: string;
   id?: string; // opcional: permite associar label via htmlFor
+  error?: boolean; // opcional: permite indicar erro visual
 }
 
 function ToolbarPlugin() {
@@ -137,7 +138,7 @@ function InitialContentPlugin({ initialContent }: { initialContent: string }) {
   return null;
 }
 
-export default function RichTextEditor({ value, onChange, placeholder = 'Digite a descrição do produto...', id }: RichTextEditorProps) {
+export default function RichTextEditor({ value, onChange, placeholder = 'Digite a descrição do produto...', id, error = false }: RichTextEditorProps) {
   const initialConfig = {
     namespace: 'ProductDescriptionEditor',
     theme: {
@@ -163,7 +164,7 @@ export default function RichTextEditor({ value, onChange, placeholder = 'Digite 
 
   return (
     <LexicalComposer initialConfig={initialConfig}>
-      <div className="border border-gray-300 rounded-lg overflow-hidden bg-white">
+      <div className={`border rounded-lg overflow-hidden bg-white ${error ? 'border-red-500 ring-1 ring-red-500' : 'border-gray-300'}`}>
         <ToolbarPlugin />
         <div className="relative">
           <RichTextPlugin
