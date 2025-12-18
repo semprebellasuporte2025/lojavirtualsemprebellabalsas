@@ -9,6 +9,7 @@ import ProductTabs from './components/ProductTabs';
 import RelatedProducts from './components/RelatedProducts';
 import SEOHead from '../../components/feature/SEOHead';
 import { supabase } from '../../lib/supabase';
+import { slugify } from '../../utils/productSlug';
 import type { Produto } from '../../lib/supabase';
 import ErrorBoundary from '../../components/base/ErrorBoundary';
 import { useCart } from '../../hooks/useCart';
@@ -88,6 +89,36 @@ export default function ProductPage() {
       if (dataBySlug) {
         setProduto(dataBySlug);
         return;
+      }
+
+      // 4) Fallback: tentar resolver produtos sem slug, comparando o slug normalizado do nome
+      try {
+        const { data: candidates, error: listErr } = await supabase
+          .from('produtos')
+          .select('id, nome, categorias(nome), variantes_produto(*)')
+          .order('updated_at', { ascending: false })
+          .limit(500);
+        if (listErr) {
+          console.warn('Falha ao listar produtos para fallback de slug:', listErr);
+        } else if (Array.isArray(candidates) && candidates.length > 0) {
+          const match = candidates.find((p: any) => slugify(String(p?.nome || '')) === slug);
+          if (match?.id) {
+            const { data: dataById2, error: errorById2 } = await supabase
+              .from('produtos')
+              .select('*, categorias(nome), variantes_produto(*)')
+              .eq('id', match.id)
+              .maybeSingle();
+            if (errorById2) {
+              console.error('Erro ao carregar produto por ID (fallback nome):', errorById2);
+            }
+            if (dataById2) {
+              setProduto(dataById2);
+              return;
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('Erro no fallback de slug por nome:', e);
       }
 
       console.warn('Produto não encontrado com slug/ID:', slug);
