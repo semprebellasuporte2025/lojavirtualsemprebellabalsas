@@ -191,21 +191,7 @@ export default function Header() {
                 Contato
               </button>
             </li>
-            {location.pathname === '/' && (
-              <li>
-                <a href="#" className="relative block py-2 text-pink-600 font-bold cursor-pointer whitespace-nowrap">
-                  <span className="inline-block relative">
-                    Natal
-                    <img
-                      src="/santa-hat.svg"
-                      alt="Gorro do Papai Noel"
-                      className="absolute -top-3 -left-3 w-5 h-5"
-                      style={{ transform: 'rotate(-20deg)' }}
-                    />
-                  </span>
-                </a>
-              </li>
-            )}
+            
           </ul>
         </div>
       </nav>

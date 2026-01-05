@@ -33,7 +33,24 @@ describe('fetchActiveBanners (auth independente)', () => {
   it('faz fallback quando coluna mobile não existe', async () => {
     const client = {
       from: vi.fn().mockReturnValue({
-        select: vi.fn().mockResolvedValue({ data: null, error: { message: 'column imagem_url_mobile does not exist' } }),
+        select: vi.fn((cols?: string) => {
+          if (cols && cols.includes('imagem_url_mobile')) {
+            return {
+              eq: vi.fn().mockReturnValue({
+                order: vi.fn().mockReturnValue({
+                  limit: vi.fn().mockResolvedValue({ data: null, error: { message: 'column imagem_url_mobile does not exist' } }),
+                }),
+              }),
+            };
+          }
+          return {
+            eq: vi.fn().mockReturnValue({
+              order: vi.fn().mockReturnValue({
+                limit: vi.fn().mockResolvedValue({ data: [], error: null }),
+              }),
+            }),
+          };
+        }),
       }),
     } as any;
     const data = await fetchActiveBanners(client);

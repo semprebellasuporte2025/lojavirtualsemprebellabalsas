@@ -8,6 +8,7 @@ import { getCachedBanners, setCachedBanners, clearBannerCache } from './bannerCa
 import { logBanner } from '../../../lib/logger';
 // import { toSupabaseRenderUrl } from './bannerUrlUtils';
 import { handleImageError } from '../../../utils/imageFallback';
+import React from 'react';
 
 interface Banner {
   id: string;
@@ -22,6 +23,15 @@ interface Banner {
 }
 
 // Helpers movidos para bannerUrlUtils.ts
+
+export const BannerTitle: React.FC<{ titulo?: string }> = ({ titulo }) => {
+  if (!titulo || titulo.trim() === '') return null;
+  return (
+    <h2 className="text-2xl md:text-4xl font-bold mb-2 md:mb-4 text-[#FFFFFF] text-shadow">
+      {titulo}
+    </h2>
+  );
+};
 
 export default function BannerSlider() {
   const [banners, setBanners] = useState<Banner[]>([]);
@@ -451,11 +461,7 @@ export default function BannerSlider() {
             {/* Conteúdo do banner */}
             <div className="absolute inset-0 flex items-end justify-start p-12 md:p-24 pb-16 md:pb-24">
               <div className="max-w-lg">
-                {banner.titulo && (
-                  <h2 className="text-2xl md:text-4xl font-bold mb-2 md:mb-4 text-white text-shadow">
-                    {banner.titulo}
-                  </h2>
-                )}
+                <BannerTitle titulo={banner.titulo} />
                 {banner.subtitulo && (
                   <p className="text-lg md:text-xl mb-4 md:mb-6 text-white text-shadow opacity-90">
                     {banner.subtitulo}

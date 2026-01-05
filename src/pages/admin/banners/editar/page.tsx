@@ -212,8 +212,8 @@ export default function AdminBannersEditarPage() {
           .getPublicUrl(fileNameMobile);
         imageUrlMobile = urlMobileData.publicUrl;
       }
-      // Gera título automático se o campo estiver vazio
-      const titulo = formData.titulo.trim() || `Banner ${new Date().toLocaleDateString('pt-BR')} ${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+      // Usa o título informado; permite vazio para ocultar na vitrine
+      const titulo = formData.titulo.trim();
 
       // Monta payload de atualização
       const payload: any = {
