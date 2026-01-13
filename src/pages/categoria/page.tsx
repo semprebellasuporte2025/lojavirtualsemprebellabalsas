@@ -25,6 +25,9 @@ export default function CategoriaPage() {
   const [filtroTamanho, setFiltroTamanho] = useState<string[]>([]);
   const [filtroCor, setFiltroCor] = useState<string[]>([]);
   const [filtroCategoria, setFiltroCategoria] = useState<string[]>([]);
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
+  const PRODUCTS_PER_PAGE = 24;
 
   const [categorias, setCategorias] = useState<{ id: string; nome: string }[]>([]);
   const [cores, setCores] = useState<{ nome: string; hex: string }[]>([]);
@@ -63,7 +66,7 @@ export default function CategoriaPage() {
   }, [categoria, navigate]);
 
   useEffect(() => {
-    carregarProdutos();
+    carregarProdutos(0, true);
   }, [categoria, searchParams]);
 
   const carregarFiltros = async () => {
@@ -110,7 +113,7 @@ export default function CategoriaPage() {
 
 
 
-  const carregarProdutos = async () => {
+  const carregarProdutos = async (pageNumber = 0, shouldReset = false) => {
     try {
       setLoading(true);
 
@@ -141,16 +144,25 @@ export default function CategoriaPage() {
         .select(`*, categorias(nome), variantes_produto(cor, cor_hex, tamanho)`)
         .eq('ativo', true)
         .eq('nome_invisivel', false);
-      
-      if (isDestaque) {
+
+      const buscaTerm = searchParams.get('busca');
+
+      if (buscaTerm) {
+        // Busca textual por nome ou descrição (case insensitive)
+        query = query.or(`nome.ilike.%${buscaTerm}%,descricao.ilike.%${buscaTerm}%`);
+      } else if (isDestaque) {
         query = query.eq('destaque', true);
       } else if (categoriaId) {
         query = query.eq('categoria_id', categoriaId);
       }
 
+      const from = pageNumber * PRODUCTS_PER_PAGE;
+      // Buscar um item a mais para saber se tem próxima página
+      const to = from + PRODUCTS_PER_PAGE;
+
       const { data, error } = await query
         .order('created_at', { ascending: false })
-        .limit(24);
+        .range(from, to);
 
       // Fallback caso a view falhe
       let result = data as Produto[] | null;
@@ -163,14 +175,18 @@ export default function CategoriaPage() {
         if (!/nome_invisivel/i.test(msg) || !/does not exist|column/i.test(msg)) {
           fallback = fallback.eq('nome_invisivel', false);
         }
-        if (isDestaque) {
+
+        const buscaTerm = searchParams.get('busca');
+        if (buscaTerm) {
+          fallback = fallback.or(`nome.ilike.%${buscaTerm}%,descricao.ilike.%${buscaTerm}%`);
+        } else if (isDestaque) {
           fallback = fallback.eq('destaque', true);
         } else if (categoriaId) {
           fallback = fallback.eq('categoria_id', categoriaId);
         }
         const { data: fallbackData, error: fallbackError } = await fallback
           .order('created_at', { ascending: false })
-          .limit(24);
+          .range(from, to);
         if (fallbackError) throw fallbackError;
         let temp = fallbackData as Produto[];
         if (/nome_invisivel/i.test(msg) && /does not exist|column/i.test(msg)) {
@@ -179,7 +195,14 @@ export default function CategoriaPage() {
         result = temp;
       }
 
-      setProdutos(result || []);
+      // Logica de paginação com item extra
+      const fetchedCount = (result || []).length;
+      const hasNextPage = fetchedCount > PRODUCTS_PER_PAGE;
+      const productsToSet = hasNextPage ? (result || []).slice(0, PRODUCTS_PER_PAGE) : (result || []);
+
+      setProdutos(prev => shouldReset ? productsToSet : [...prev, ...productsToSet]);
+      setHasMore(hasNextPage);
+      setPage(pageNumber);
     } catch (error) {
       console.error('Erro ao carregar produtos:', error);
     } finally {
@@ -259,8 +282,8 @@ export default function CategoriaPage() {
       categoria: setFiltroCategoria,
     }[filtro];
 
-    setter((prev: string[]) => 
-      prev.includes(valor) 
+    setter((prev: string[]) =>
+      prev.includes(valor)
         ? prev.filter(item => item !== valor)
         : [...prev, valor]
     );
@@ -269,8 +292,8 @@ export default function CategoriaPage() {
   return (
     <>
       <SEOHead
-        title={categoria ? `${categoria} - Loja de Moda` : 'Todos os Produtos - Loja de Moda'}
-        description={`Confira nossa coleção completa de ${categoria || 'produtos'}. Qualidade e estilo com os melhores preços.`}
+        title={searchParams.get('busca') ? `Busca: ${searchParams.get('busca')} - Loja de Moda` : categoria ? `${categoria} - Loja de Moda` : 'Todos os Produtos - Loja de Moda'}
+        description={searchParams.get('busca') ? `Resultados da busca por ${searchParams.get('busca')}` : `Confira nossa coleção completa de ${categoria || 'produtos'}. Qualidade e estilo com os melhores preços.`}
       />
       <div className="min-h-screen bg-white">
         <Header />
@@ -459,11 +482,10 @@ export default function CategoriaPage() {
                         <button
                           key={tamanho}
                           onClick={() => handleFiltroChange('tamanho', tamanho)}
-                          className={`flex-shrink-0 px-3 py-2 rounded-full border text-sm transition-colors whitespace-nowrap ${
-                            selected
-                              ? 'bg-pink-600 text-white border-pink-600'
-                              : 'bg-white text-gray-700 border-gray-300 hover:border-gray-400'
-                          }`}
+                          className={`flex-shrink-0 px-3 py-2 rounded-full border text-sm transition-colors whitespace-nowrap ${selected
+                            ? 'bg-pink-600 text-white border-pink-600'
+                            : 'bg-white text-gray-700 border-gray-300 hover:border-gray-400'
+                            }`}
                           aria-pressed={selected}
                         >
                           {tamanho}
@@ -506,9 +528,9 @@ export default function CategoriaPage() {
                               const promo = Number((produto as any).preco_promocional);
                               const hasDiscount = Number.isFinite(price) && Number.isFinite(promo) && promo > 0 && promo < price;
                               return hasDiscount ? (
-                              <div className="absolute top-3 left-3 bg-red-500 text-white px-2 py-1 rounded text-xs font-bold z-10">
-                                -{Math.round(((price - promo) / price) * 100)}%
-                              </div>
+                                <div className="absolute top-3 left-3 bg-red-500 text-white px-2 py-1 rounded text-xs font-bold z-10">
+                                  -{Math.round(((price - promo) / price) * 100)}%
+                                </div>
                               ) : null;
                             })()}
                             <img
@@ -532,7 +554,7 @@ export default function CategoriaPage() {
 
                           <div className="p-4">
                             <p className="text-xs text-gray-500 mb-1 uppercase tracking-wide">{produto.categorias?.nome || categoria}</p>
-                            
+
                             <h3 className="text-sm font-medium text-gray-800 mb-1 line-clamp-2">
                               {produto.nome}
                             </h3>
@@ -553,7 +575,7 @@ export default function CategoriaPage() {
                             <div className="flex gap-2 mb-4">
                               {produto.variantes_produto && produto.variantes_produto.length > 0 ? (
                                 produto.variantes_produto.map((variante, index) => (
-                                  <div 
+                                  <div
                                     key={index}
                                     className="w-5 h-5 rounded-full border border-gray-300 cursor-pointer"
                                     style={{ backgroundColor: variante.cor_hex }}
@@ -571,18 +593,18 @@ export default function CategoriaPage() {
                                 const promo = Number((produto as any).preco_promocional);
                                 const hasDiscount = Number.isFinite(price) && Number.isFinite(promo) && promo > 0 && promo < price;
                                 return hasDiscount ? (
-                                <div className="flex items-center gap-2">
-                                  <span className="text-gray-400 line-through text-sm">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-gray-400 line-through text-sm">
+                                      R$ {price.toFixed(2)}
+                                    </span>
+                                    <span className="text-xl font-bold text-pink-600">
+                                      R$ {promo.toFixed(2)}
+                                    </span>
+                                  </div>
+                                ) : (
+                                  <span className="text-xl font-bold text-gray-800">
                                     R$ {price.toFixed(2)}
                                   </span>
-                                  <span className="text-xl font-bold text-pink-600">
-                                    R$ {promo.toFixed(2)}
-                                  </span>
-                                </div>
-                                ) : (
-                                <span className="text-xl font-bold text-gray-800">
-                                  R$ {price.toFixed(2)}
-                                </span>
                                 );
                               })()}
                             </div>
@@ -600,6 +622,17 @@ export default function CategoriaPage() {
                     </div>
                   )}
                 </>
+              )}
+
+              {!loading && hasMore && produtos.length > 0 && (
+                <div className="flex justify-center mt-8">
+                  <button
+                    onClick={() => carregarProdutos(page + 1, false)}
+                    className="px-6 py-3 bg-white border border-pink-600 text-pink-600 font-semibold rounded hover:bg-pink-50 transition-colors"
+                  >
+                    Carregar Mais
+                  </button>
+                </div>
               )}
             </main>
           </div>

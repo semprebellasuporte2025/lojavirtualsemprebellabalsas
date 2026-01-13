@@ -58,7 +58,7 @@ export default function HomePage() {
     const checkCategoriesWithProducts = async () => {
       const categoriesToCheck = [
         'Vestidos',
-        'Blusas', 
+        'Blusas',
         'Calças',
         'Saias',
         'Fitness',
@@ -91,7 +91,7 @@ export default function HomePage() {
         .select('*, categorias(nome), variantes_produto(cor, cor_hex)')
         .eq('ativo', true)
         .eq('nome_invisivel', false)
-        .eq('recem_chegado', true)
+        // .eq('recem_chegado', true) REMOVIDO: Mostrar todos os recentes
         .order('created_at', { ascending: false })
         .limit(12)
         .abortSignal(signal);
@@ -107,32 +107,20 @@ export default function HomePage() {
             .from('produtos')
             .select('*, categorias(nome), variantes_produto(cor, cor_hex)')
             .eq('ativo', true)
-            .eq('recem_chegado', true)
+            // .eq('recem_chegado', true) REMOVIDO
             .gt('estoque', 0)
             .order('created_at', { ascending: false })
             .limit(12)
             .abortSignal(signal);
+
           if (!err2 && !signal.aborted) {
             const safe = (data2 || []).filter((p: any) => p?.ativo === true && p?.nome_invisivel !== true);
             setRecentProducts(bumpTesteFirst(safe as Produto[]));
             return;
           }
         }
-        // Fallback quando a coluna recem_chegado não existe
-        if (/recem_chegado/i.test(msg) && /does not exist|column/i.test(msg)) {
-          const { data: data3, error: err3 } = await supabase
-            .from('produtos')
-            .select('*, categorias(nome), variantes_produto(cor, cor_hex)')
-            .eq('ativo', true)
-            .eq('nome_invisivel', false)
-            .order('created_at', { ascending: false })
-            .limit(12)
-            .abortSignal(signal);
-          if (!err3 && !signal.aborted) {
-            setRecentProducts(bumpTesteFirst((data3 || []) as Produto[]));
-            return;
-          }
-        }
+        // REMOVIDO bloco de fallback de recem_chegado pois não estamos mais usando esse filtro
+        throw error;
         throw error;
       }
 
@@ -184,150 +172,150 @@ export default function HomePage() {
       />
       <div className="min-h-screen bg-white">
         <Header />
-        
-          <BannerSlider />
-          <Categories />
-          
-          {!loading && recentProducts.length > 0 && (
-            <section className="py-6 md:py-10 bg-gray-50">
-              <div className="container mx-auto px-6 sm:px-12 md:px-20 lg:px-28 xl:px-36 2xl:px-48">
-                <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-3xl font-bold text-gray-800">Recém Chegados</h2>
-                  {hasMoreRecent && (
-                    <button
-                      onClick={handleVerMaisRecentes}
-                      className="px-6 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-colors whitespace-nowrap"
-                    >
-                      Ver Mais
-                    </button>
-                  )}
-                </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-5">
-                  {displayRecentProducts.map((produto) => {
-                    const cores = getCoresUnicas(produto.variantes_produto || []);
-                    const categoriaNome = produto.categorias?.nome || 'Produtos';
-                    const price = Number((produto as any).preco);
-                    const promo = Number((produto as any).preco_promocional);
-                    const hasDiscount = Number.isFinite(price) && Number.isFinite(promo) && promo > 0 && promo < price;
-                    
-                    return (
-                      <div
-                        key={produto.id}
-                        onClick={() => handleProductClick(produto)}
-                        className="bg-white rounded-lg overflow-hidden hover:shadow-xl transition-shadow group border border-gray-200 cursor-pointer"
-                      >
-                        <div className="relative overflow-hidden bg-gray-50">
-                          {hasDiscount && (
-                            <div className="absolute top-3 left-3 bg-red-500 text-white px-2 py-1 rounded text-xs font-bold z-10">
-                              -{Math.round(((price - promo) / price) * 100)}%
-                            </div>
-                          )}
-                          {produto.recem_chegado === true && (
-                            <div className="absolute top-3 right-3 bg-green-600 text-white px-2 py-1 rounded text-xs font-bold z-10">
-                              Recém Chegado
-                            </div>
-                          )}
-                          <img
-                            src={produto.imagens?.[0] || '/placeholder-product.svg'}
-                            alt={produto.nome}
-                            className="w-full h-72 sm:h-96 object-cover object-top group-hover:scale-105 transition-transform duration-300 bg-gray-50"
-                            loading="lazy"
-                            decoding="async"
-                            onAbort={(e) => {
-                              const img = e.currentTarget as HTMLImageElement;
-                              img.onerror = null;
-                              img.src = '/placeholder-product.svg';
-                            }}
-                            onError={(e) => {
-                              const img = e.currentTarget as HTMLImageElement;
-                              img.onerror = null;
-                              img.src = '/placeholder-product.svg';
-                            }}
-                          />
+        <BannerSlider />
+        <Categories />
+
+        {!loading && recentProducts.length > 0 && (
+          <section className="py-6 md:py-10 bg-gray-50">
+            <div className="container mx-auto px-6 sm:px-12 md:px-20 lg:px-28 xl:px-36 2xl:px-48">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-3xl font-bold text-gray-800">Recém Chegados</h2>
+                {hasMoreRecent && (
+                  <button
+                    onClick={handleVerMaisRecentes}
+                    className="px-6 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-colors whitespace-nowrap"
+                  >
+                    Ver Mais
+                  </button>
+                )}
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-5">
+                {displayRecentProducts.map((produto) => {
+                  const cores = getCoresUnicas(produto.variantes_produto || []);
+                  const categoriaNome = produto.categorias?.nome || 'Produtos';
+                  const price = Number((produto as any).preco);
+                  const promo = Number((produto as any).preco_promocional);
+                  const hasDiscount = Number.isFinite(price) && Number.isFinite(promo) && promo > 0 && promo < price;
+
+                  return (
+                    <div
+                      key={produto.id}
+                      onClick={() => handleProductClick(produto)}
+                      className="bg-white rounded-lg overflow-hidden hover:shadow-xl transition-shadow group border border-gray-200 cursor-pointer"
+                    >
+                      <div className="relative overflow-hidden bg-gray-50">
+                        {hasDiscount && (
+                          <div className="absolute top-3 left-3 bg-red-500 text-white px-2 py-1 rounded text-xs font-bold z-10">
+                            -{Math.round(((price - promo) / price) * 100)}%
+                          </div>
+                        )}
+                        {produto.recem_chegado === true && (
+                          <div className="absolute top-3 right-3 bg-green-600 text-white px-2 py-1 rounded text-xs font-bold z-10">
+                            Recém Chegado
+                          </div>
+                        )}
+                        <img
+                          src={produto.imagens?.[0] || '/placeholder-product.svg'}
+                          alt={produto.nome}
+                          className="w-full h-72 sm:h-96 object-cover object-top group-hover:scale-105 transition-transform duration-300 bg-gray-50"
+                          loading="lazy"
+                          decoding="async"
+                          onAbort={(e) => {
+                            const img = e.currentTarget as HTMLImageElement;
+                            img.onerror = null;
+                            img.src = '/placeholder-product.svg';
+                          }}
+                          onError={(e) => {
+                            const img = e.currentTarget as HTMLImageElement;
+                            img.onerror = null;
+                            img.src = '/placeholder-product.svg';
+                          }}
+                        />
+                      </div>
+
+                      <div className="px-2 py-3">
+                        <p className="text-xs text-gray-500 mb-1 uppercase tracking-wide">{categoriaNome}</p>
+
+                        <h3 className="text-sm font-medium text-gray-800 mb-1 line-clamp-2">
+                          {produto.nome}
+                        </h3>
+
+                        <div className="flex items-center gap-1 mb-1">
+                          <div className="flex text-yellow-400">
+                            {[...Array(Math.round((produto as any).average_rating || 0))].map((_, i) => (
+                              <i key={i} className="ri-star-fill text-xs"></i>
+                            ))}
+                            {[...Array(5 - Math.round((produto as any).average_rating || 0))].map((_, i) => (
+                              <i key={i} className="ri-star-line text-xs"></i>
+                            ))}
+                          </div>
+                          <span className="text-xs text-gray-500 ml-1">({(produto as any).review_count || 0})</span>
                         </div>
 
-                        <div className="px-2 py-3">
-                          <p className="text-xs text-gray-500 mb-1 uppercase tracking-wide">{categoriaNome}</p>
-                          
-                          <h3 className="text-sm font-medium text-gray-800 mb-1 line-clamp-2">
-                            {produto.nome}
-                          </h3>
-
-                          <div className="flex items-center gap-1 mb-1">
-                            <div className="flex text-yellow-400">
-                              {[...Array(Math.round((produto as any).average_rating || 0))].map((_, i) => (
-                                <i key={i} className="ri-star-fill text-xs"></i>
-                              ))}
-                              {[...Array(5 - Math.round((produto as any).average_rating || 0))].map((_, i) => (
-                                <i key={i} className="ri-star-line text-xs"></i>
+                        {cores.length > 0 && (
+                          <>
+                            <p className="text-xs text-gray-600 mb-1">Cores disponíveis:</p>
+                            <div className="flex gap-3 mb-2">
+                              {cores.map((cor, index) => (
+                                <div key={index} className="relative group">
+                                  <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-0.5 rounded-full bg-white text-gray-800 border border-gray-300 text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none shadow-sm">
+                                    {cor.cor}
+                                  </span>
+                                  <div
+                                    className="w-5 h-5 rounded-full border border-gray-300 cursor-pointer"
+                                    style={{ backgroundColor: cor.cor_hex }}
+                                    aria-label={cor.cor}
+                                  ></div>
+                                </div>
                               ))}
                             </div>
-                            <span className="text-xs text-gray-500 ml-1">({(produto as any).review_count || 0})</span>
-                          </div>
+                          </>
+                        )}
 
-                          {cores.length > 0 && (
-                            <>
-                              <p className="text-xs text-gray-600 mb-1">Cores disponíveis:</p>
-                              <div className="flex gap-3 mb-2">
-                                {cores.map((cor, index) => (
-                                  <div key={index} className="relative group">
-                                    <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-0.5 rounded-full bg-white text-gray-800 border border-gray-300 text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none shadow-sm">
-                                      {cor.cor}
-                                    </span>
-                                    <div
-                                      className="w-5 h-5 rounded-full border border-gray-300 cursor-pointer"
-                                      style={{ backgroundColor: cor.cor_hex }}
-                                      aria-label={cor.cor}
-                                    ></div>
-                                  </div>
-                                ))}
-                              </div>
-                            </>
-                          )}
-
-                          <div className="mt-2">
-                            {hasDiscount ? (
-                              <div className="flex items-center gap-2">
-                                <span className="text-gray-400 line-through text-sm">
-                                  R$ {price.toFixed(2)}
-                                </span>
-                                <span className="text-xl font-bold text-pink-600">
-                                  R$ {promo.toFixed(2)}
-                                </span>
-                              </div>
-                            ) : (
-                              <span className="text-xl font-bold text-gray-800">
+                        <div className="mt-2">
+                          {hasDiscount ? (
+                            <div className="flex items-center gap-2">
+                              <span className="text-gray-400 line-through text-sm">
                                 R$ {price.toFixed(2)}
                               </span>
-                            )}
-                          </div>
-
-                          <Link
-                            to={buildProductUrl({ id: produto.id, nome: produto.nome, slug: (produto as any).slug })}
-                            onClick={(e) => { e.stopPropagation(); }}
-                            className="w-full block text-center py-2.5 bg-pink-600 text-white text-sm font-semibold rounded hover:bg-pink-700 transition-colors whitespace-nowrap"
-                          >
-                            Ver Detalhes
-                          </Link>
+                              <span className="text-xl font-bold text-pink-600">
+                                R$ {promo.toFixed(2)}
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="text-xl font-bold text-gray-800">
+                              R$ {price.toFixed(2)}
+                            </span>
+                          )}
                         </div>
+
+                        <Link
+                          to={buildProductUrl({ id: produto.id, nome: produto.nome, slug: (produto as any).slug })}
+                          onClick={(e) => { e.stopPropagation(); }}
+                          className="w-full block text-center py-2.5 bg-pink-600 text-white text-sm font-semibold rounded hover:bg-pink-700 transition-colors whitespace-nowrap"
+                        >
+                          Ver Detalhes
+                        </Link>
                       </div>
-                    );
-                  })}
-                </div>
+                    </div>
+                  );
+                })}
               </div>
-            </section>
-          )}
-          
-          <BestSellers />
-          {categoriesToShow.map(category => (
-            <CategorySection 
-              key={category}
-              title={category} 
-              categoryName={category} 
-            />
-          ))}
-          <Newsletter />
+            </div>
+          </section>
+        )}
+
+        <BestSellers />
+        {categoriesToShow.map(category => (
+          <CategorySection
+            key={category}
+            title={category}
+            categoryName={category}
+          />
+        ))}
+        <Newsletter />
 
         <Footer />
       </div>

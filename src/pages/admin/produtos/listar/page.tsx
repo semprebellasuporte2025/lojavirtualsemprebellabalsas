@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../../../../hooks/useToast';
 import { supabase } from '../../../../lib/supabase';
-import type { Produto } from '../../../../lib/supabase';
+import type { Produto, Categoria } from '../../../../lib/supabase';
 import AdminLayout from '../../../../components/feature/AdminLayout';
 import { buildProductUrl } from '../../../../utils/productUrl';
 import ConfirmationModal from '../../../../components/feature/modal/ConfirmationModal';
@@ -13,6 +13,7 @@ export default function ListarProdutosPage() {
   const { showToast } = useToast();
 
   const [produtos, setProdutos] = useState<Produto[]>([]);
+  const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [loading, setLoading] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -26,7 +27,22 @@ export default function ListarProdutosPage() {
 
   useEffect(() => {
     carregarProdutos();
+    carregarCategorias();
   }, []);
+
+  const carregarCategorias = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('categorias')
+        .select('*')
+        .order('nome');
+
+      if (error) throw error;
+      setCategorias(data || []);
+    } catch (error) {
+      console.error('Erro ao carregar categorias:', error);
+    }
+  };
 
   const carregarProdutos = async () => {
     try {
@@ -68,15 +84,15 @@ export default function ListarProdutosPage() {
 
   const filteredProdutos = produtos.filter(produto => {
     const matchSearch = produto.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                       (produto.variantes_produto && produto.variantes_produto.some(variante => 
-                         variante.sku && variante.sku.toLowerCase().includes(searchTerm.toLowerCase())
-                       ));
+      (produto.variantes_produto && produto.variantes_produto.some(variante =>
+        variante.sku && variante.sku.toLowerCase().includes(searchTerm.toLowerCase())
+      ));
     const matchCategoria = !filterCategoria || produto.categoria_id === filterCategoria;
-    const matchStatus = !filterStatus || 
-                       (filterStatus === 'ativo' && produto.ativo) ||
-                       (filterStatus === 'inativo' && !produto.ativo) ||
-                       (filterStatus === 'destaque' && produto.destaque) ||
-                       (filterStatus === 'sem-estoque' && calcularEstoqueTotal(produto) === 0);
+    const matchStatus = !filterStatus ||
+      (filterStatus === 'ativo' && produto.ativo) ||
+      (filterStatus === 'inativo' && !produto.ativo) ||
+      (filterStatus === 'destaque' && produto.destaque) ||
+      (filterStatus === 'sem-estoque' && calcularEstoqueTotal(produto) === 0);
     return matchSearch && matchCategoria && matchStatus;
   });
 
@@ -227,9 +243,9 @@ export default function ListarProdutosPage() {
     if (produtoToDelete) {
       try {
         setIsLoading(true);
-        
+
         const resultado = await deleteProdutoCascata(produtoToDelete);
-        
+
         if (resultado.success) {
           setProdutos(produtos.filter(p => p.id !== produtoToDelete));
           showToast(resultado.message, 'success');
@@ -256,7 +272,7 @@ export default function ListarProdutosPage() {
 
       if (error) throw error;
 
-      setProdutos(produtos.map(p => 
+      setProdutos(produtos.map(p =>
         p.id === id ? { ...p, ativo: !ativo } : p
       ));
       showToast('Status alterado com sucesso!', 'success');
@@ -313,9 +329,8 @@ export default function ListarProdutosPage() {
           <div className="flex gap-2">
             <button
               onClick={() => setViewMode('table')}
-              className={`px-3 py-2 rounded-lg text-sm whitespace-nowrap transition-colors ${
-                viewMode === 'table' ? 'bg-pink-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
+              className={`px-3 py-2 rounded-lg text-sm whitespace-nowrap transition-colors ${viewMode === 'table' ? 'bg-pink-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
               title="Modo Lista"
             >
               <i className="ri-table-2 mr-1"></i>
@@ -323,9 +338,8 @@ export default function ListarProdutosPage() {
             </button>
             <button
               onClick={() => setViewMode('grid')}
-              className={`px-3 py-2 rounded-lg text-sm whitespace-nowrap transition-colors ${
-                viewMode === 'grid' ? 'bg-pink-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
+              className={`px-3 py-2 rounded-lg text-sm whitespace-nowrap transition-colors ${viewMode === 'grid' ? 'bg-pink-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
               title="Modo Grade"
             >
               <i className="ri-grid-line mr-1"></i>
@@ -357,10 +371,9 @@ export default function ListarProdutosPage() {
               className="w-full px-4 py-2 pr-8 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent dark:bg-gray-700 dark:text-white appearance-none cursor-pointer"
             >
               <option value="">Todas Categorias</option>
-              <option value="Vestidos">Vestidos</option>
-              <option value="Blusas">Blusas</option>
-              <option value="Calças">Calças</option>
-              <option value="Acessórios">Acessórios</option>
+              {categorias.map(cat => (
+                <option key={cat.id} value={cat.id}>{cat.nome}</option>
+              ))}
             </select>
             <i className="ri-arrow-down-s-line absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none"></i>
           </div>
@@ -397,17 +410,17 @@ export default function ListarProdutosPage() {
               </thead>
               <tbody>
                 {paginatedProdutos.map((produto) => (
-                  <tr 
-                    key={produto.id} 
+                  <tr
+                    key={produto.id}
                     onClick={() => handleRowClick(produto)}
                     className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
                   >
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-3">
-                        <img 
-                          src={produto.imagens?.[0] || '/placeholder-small.svg'} 
-                          alt={produto.nome} 
-                          className="w-12 h-12 object-cover rounded" 
+                        <img
+                          src={produto.imagens?.[0] || '/placeholder-small.svg'}
+                          alt={produto.nome}
+                          className="w-12 h-12 object-cover rounded"
                         />
                         <div>
                           <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{produto.nome}</p>
@@ -461,11 +474,10 @@ export default function ListarProdutosPage() {
                           e.stopPropagation();
                           toggleStatus(produto.id, produto.ativo);
                         }}
-                        className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap cursor-pointer ${
-                          produto.ativo
+                        className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap cursor-pointer ${produto.ativo
                             ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
                             : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                        }`}
+                          }`}
                       >
                         {produto.ativo ? 'Ativo' : 'Inativo'}
                       </button>
@@ -533,11 +545,10 @@ export default function ListarProdutosPage() {
                     <h3 className="text-lg font-semibold text-gray-800 dark:text-white">{produto.nome}</h3>
                     <button
                       onClick={() => toggleStatus(produto.id, produto.ativo)}
-                      className={`px-2 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${
-                        produto.ativo
+                      className={`px-2 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${produto.ativo
                           ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
                           : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                      }`}
+                        }`}
                     >
                       {produto.ativo ? 'Ativo' : 'Inativo'}
                     </button>
@@ -545,37 +556,37 @@ export default function ListarProdutosPage() {
                   <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{produto.categorias?.nome || '-'}</p>
                   <p className="text-lg font-bold text-pink-600 dark:text-pink-400">R$ {produto.preco.toFixed(2)}</p>
                   <div className="flex justify-end gap-2 mt-4">
-                        <a
-                          href={buildProductUrl({ id: produto.id, nome: produto.nome, slug: (produto as any).slug })}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={(e) => e.stopPropagation()}
-                          className="text-gray-500 hover:text-gray-700"
-                          title="Ver"
-                        >
-                          <i className="ri-eye-line"></i>
-                        </a>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            navigate(`/paineladmin/produtos/editar/${produto.id}`);
-                          }}
-                          className="text-blue-500 hover:text-blue-700"
-                          title="Editar"
-                        >
-                          <i className="ri-pencil-line"></i>
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDelete(produto.id);
-                          }}
-                          className="text-red-500 hover:text-red-700"
-                          title="Excluir"
-                        >
-                          <i className="ri-delete-bin-line"></i>
-                        </button>
-                      </div>
+                    <a
+                      href={buildProductUrl({ id: produto.id, nome: produto.nome, slug: (produto as any).slug })}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      className="text-gray-500 hover:text-gray-700"
+                      title="Ver"
+                    >
+                      <i className="ri-eye-line"></i>
+                    </a>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/paineladmin/produtos/editar/${produto.id}`);
+                      }}
+                      className="text-blue-500 hover:text-blue-700"
+                      title="Editar"
+                    >
+                      <i className="ri-pencil-line"></i>
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(produto.id);
+                      }}
+                      className="text-red-500 hover:text-red-700"
+                      title="Excluir"
+                    >
+                      <i className="ri-delete-bin-line"></i>
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
@@ -613,11 +624,10 @@ export default function ListarProdutosPage() {
                 <button
                   onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                   disabled={currentPage === 1}
-                  className={`px-3 py-2 rounded-lg whitespace-nowrap transition-colors cursor-pointer ${
-                    currentPage === 1
+                  className={`px-3 py-2 rounded-lg whitespace-nowrap transition-colors cursor-pointer ${currentPage === 1
                       ? 'bg-gray-100 text-gray-400 dark:bg-gray-700 dark:text-gray-500'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-white'
-                  }`}
+                    }`}
                   title="Anterior"
                 >
                   <i className="ri-arrow-left-s-line mr-1"></i>
@@ -627,11 +637,10 @@ export default function ListarProdutosPage() {
                 <button
                   onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                   disabled={currentPage === totalPages}
-                  className={`px-3 py-2 rounded-lg whitespace-nowrap transition-colors cursor-pointer ${
-                    currentPage === totalPages
+                  className={`px-3 py-2 rounded-lg whitespace-nowrap transition-colors cursor-pointer ${currentPage === totalPages
                       ? 'bg-gray-100 text-gray-400 dark:bg-gray-700 dark:text-gray-500'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-white'
-                  }`}
+                    }`}
                   title="Próxima"
                 >
                   Próxima

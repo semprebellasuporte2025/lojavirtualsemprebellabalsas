@@ -4,9 +4,10 @@ import { useNavigate, Link, NavLink, useLocation } from 'react-router-dom';
 import { useCart } from '../../hooks/useCart';
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
-import type { Categoria } from '../../lib/supabase';
+import type { Categoria, Produto } from '../../lib/supabase';
 import { filterCategoriesWithProducts } from '../../utils/categoryFilter';
 import { generateSlug } from '../../utils/formatters';
+import { buildProductUrl } from '../../utils/productUrl';
 
 export default function Header() {
   // Usa seletor puro para evitar qualquer efeito colateral ao obter a contagem
@@ -18,6 +19,46 @@ export default function Header() {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [categoriasLoading, setCategoriasLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [searchResults, setSearchResults] = useState<Produto[]>([]);
+  const [showResults, setShowResults] = useState(false);
+
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(async () => {
+      if (searchTerm.trim().length >= 2) {
+        try {
+          const { data } = await supabase
+            .from('produtos')
+            .select('id, nome, preco, preco_promocional, imagens, slug')
+            .eq('ativo', true)
+            .ilike('nome', `%${searchTerm.trim()}%`)
+            .limit(5);
+
+          setSearchResults(data || []);
+          setShowResults(true);
+        } catch (error) {
+          console.error('Erro na busca live:', error);
+        }
+      } else {
+        setSearchResults([]);
+        setShowResults(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchTerm]);
+
+  const handleSearch = () => {
+    setShowResults(false);
+    if (!searchTerm.trim()) return;
+    navigate(`/categoria?busca=${encodeURIComponent(searchTerm.trim())}`);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
+  };
 
   useEffect(() => {
     const carregarCategorias = async () => {
@@ -28,7 +69,7 @@ export default function Header() {
           .eq('ativa', true)
           .order('nome', { ascending: true });
         if (error) throw error;
-        
+
         // Filtrar categorias que possuem produtos ativos
         const categoriasComProdutos = await filterCategoriesWithProducts(data || []);
         setCategorias(categoriasComProdutos);
@@ -83,7 +124,7 @@ export default function Header() {
         <div className="container mx-auto px-4 sm:px-6 md:px-8 lg:px-12 xl:px-16 2xl:px-20">
           <div className="flex items-center justify-between py-4">
             {/* Logo */}
-            <button 
+            <button
               onClick={() => navigate('/')}
               className="text-3xl font-bold text-pink-600 cursor-pointer"
               style={{ fontFamily: '"Pacifico", serif' }}
@@ -97,11 +138,56 @@ export default function Header() {
                 <input
                   type="text"
                   placeholder="Buscar produtos..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onKeyDown={handleKeyDown}
                   className="w-full px-4 py-2 pr-10 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-pink-600 text-sm"
                 />
-                <button className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-pink-600 cursor-pointer">
+                <button
+                  onClick={handleSearch}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-pink-600 cursor-pointer"
+                >
                   <i className="ri-search-line text-xl"></i>
                 </button>
+
+                {/* Dropdown de Resultados */}
+                {showResults && searchResults.length > 0 && (
+                  <div className="absolute top-full left-0 w-full bg-white border border-gray-200 rounded-lg shadow-lg mt-1 z-50 overflow-hidden">
+                    {searchResults.map((produto) => (
+                      <div
+                        key={produto.id}
+                        onClick={() => {
+                          navigate(buildProductUrl({ id: produto.id, nome: produto.nome, slug: produto.slug }));
+                          setShowResults(false);
+                          setSearchTerm('');
+                        }}
+                        className="flex items-center gap-3 p-3 hover:bg-gray-50 cursor-pointer border-b last:border-b-0 border-gray-100"
+                      >
+                        <img
+                          src={produto.imagens?.[0] || '/placeholder-small.svg'}
+                          alt={produto.nome}
+                          className="w-10 h-10 object-cover rounded bg-gray-100"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-800 truncate">{produto.nome}</p>
+                          <div className="text-xs">
+                            {produto.preco_promocional ? (
+                              <span className="text-pink-600 font-semibold">R$ {produto.preco_promocional.toFixed(2)}</span>
+                            ) : (
+                              <span className="text-gray-600 font-semibold">R$ {produto.preco.toFixed(2)}</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    <div
+                      onClick={handleSearch}
+                      className="p-2 text-center text-xs font-semibold text-pink-600 bg-gray-50 hover:bg-gray-100 cursor-pointer transition-colors"
+                    >
+                      Ver todos os resultados
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -129,20 +215,20 @@ export default function Header() {
                 </button>
                 {isDropdownOpen && (
                   <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
-                    <Link 
-                      to="/minha-conta" 
+                    <Link
+                      to="/minha-conta"
                       className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                       onClick={() => setIsDropdownOpen(false)}
                     >
                       Minha Conta
                     </Link>
                     {user && (
-                      <button 
+                      <button
                         onClick={async () => {
                           await signOut();
                           setIsDropdownOpen(false);
                           navigate('/');
-                        }} 
+                        }}
                         className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                       >
                         Sair
@@ -161,7 +247,7 @@ export default function Header() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 lg:px-12 xl:px-16 2xl:px-20">
           <ul className="flex flex-col md:flex-row md:items-center md:justify-center md:space-x-8 py-4">
             <li>
-              <button 
+              <button
                 onClick={() => navigate('/')}
                 className="block py-2 text-gray-700 hover:text-pink-600 font-medium cursor-pointer whitespace-nowrap"
               >
@@ -174,8 +260,7 @@ export default function Header() {
                 <NavLink
                   to={`/categoria/${cat.slug || generateSlug(cat.nome)}`}
                   className={({ isActive }) =>
-                    `block py-2 font-medium cursor-pointer whitespace-nowrap ${
-                      isActive ? 'text-pink-600 font-semibold border-b-2 border-pink-600' : 'text-gray-700 hover:text-pink-600'
+                    `block py-2 font-medium cursor-pointer whitespace-nowrap ${isActive ? 'text-pink-600 font-semibold border-b-2 border-pink-600' : 'text-gray-700 hover:text-pink-600'
                     }`
                   }
                 >
@@ -184,14 +269,14 @@ export default function Header() {
               </li>
             ))}
             <li>
-              <button 
+              <button
                 onClick={() => navigate('/contato')}
                 className="block py-2 text-gray-700 hover:text-pink-600 font-medium cursor-pointer whitespace-nowrap"
               >
                 Contato
               </button>
             </li>
-            
+
           </ul>
         </div>
       </nav>
