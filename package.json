@@ -56,13 +56,14 @@
   "name": "react",
   "private": true,
   "scripts": {
-    "build": "vite build",
+    "build": "npm run generate:sitemap && vite build",
     "build:vercel": "vite build && echo 'Build completed successfully'",
     "postbuild": "node tools/postbuild.mjs",
     "dev": "vite --strictPort",
     "preview": "vite preview",
     "test": "vitest",
     "test:run": "vitest run",
+    "generate:sitemap": "node scripts/generate-sitemap.js",
     "migrate:slugs": "node scripts/migrar-uuids-para-slugs.js",
     "test:stock": "node scripts/test-checkout-stock.js"
   },
