@@ -1,26 +1,74 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders } from '../shared/cors.ts';
+import { authenticateUser, isActiveAdmin } from '../shared/auth.ts';
+
+const ALLOWED_ROLES = new Set(['admin', 'atendente']);
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+    return new Response('ok', { headers: corsHeaders });
+  }
+
+  if (req.method !== 'POST') {
+    return new Response(
+      JSON.stringify({ error: 'Método não permitido' }),
+      { status: 405, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
   }
 
   try {
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    )
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+    const anonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 
-    const { nome, email, senha, tipo, departamento, cargo } = await req.json()
+    if (!supabaseUrl || !anonKey || !serviceRoleKey) {
+      return new Response(
+        JSON.stringify({ error: 'Configuração inválida do Supabase' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const auth = await authenticateUser(req, supabaseUrl, anonKey);
+    if (!auth) {
+      return new Response(
+        JSON.stringify({ error: 'Não autenticado' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const supabaseClient = createClient(supabaseUrl, serviceRoleKey);
+
+    const callerIsAdmin = await isActiveAdmin(supabaseClient, auth.user);
+    if (!callerIsAdmin) {
+      return new Response(
+        JSON.stringify({ error: 'Acesso negado: apenas administradores ativos podem cadastrar usuários' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const body = await req.json();
+    const nome = String(body?.nome || '').trim();
+    const email = String(body?.email || '').trim().toLowerCase();
+    const senha = String(body?.senha || '');
+    const rawTipo = String(body?.tipo || 'admin').trim().toLowerCase();
+    const tipo = ALLOWED_ROLES.has(rawTipo) ? rawTipo : 'admin';
+    const departamento = String(body?.departamento || 'Administração').trim();
+    const cargo = String(body?.cargo || 'Administrador').trim();
+
+    if (!nome || !email || senha.length < 6) {
+      return new Response(
+        JSON.stringify({ error: 'Informe nome, email válido e senha com ao menos 6 caracteres' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Verificar se o usuário já existe
     const { data: existingUser } = await supabaseClient
       .from('usuarios_admin')
       .select('id')
       .eq('email', email)
-      .single()
+      .maybeSingle();
 
     if (existingUser) {
       return new Response(
@@ -39,7 +87,7 @@ serve(async (req) => {
       email_confirm: true,
       user_metadata: {
         nome: nome,
-        tipo: 'admin'
+        tipo: tipo
       }
     })
 
@@ -62,9 +110,9 @@ serve(async (req) => {
         id: authUser.user.id,
         nome: nome,
         email: email,
-        tipo: (tipo || 'admin'),
-        departamento: (departamento || 'Administração'),
-        cargo: (cargo || 'Administrador'),
+        tipo,
+        departamento,
+        cargo,
         ativo: true,
       })
       .select()

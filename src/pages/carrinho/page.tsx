@@ -1,6 +1,5 @@
-
 import SEOHead from '../../components/feature/SEOHead';
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import Header from '../../components/feature/Header';
 import Footer from '../../components/feature/Footer';
 import CartItem from './components/CartItem';
@@ -13,10 +12,8 @@ import { useVariantStockMap } from '../../hooks/useVariantStockMap';
 
 export default function CarrinhoPage() {
   const navigate = useNavigate();
-  const { items, updateQuantity, removeItem } = useCart();
-  const [shippingCost, setShippingCost] = useState(0);
-  const [shippingMethod, setShippingMethod] = useState('');
-  
+  const { items, shipping, setShipping, updateQuantity, removeItem } = useCart();
+
   // Extrair IDs dos produtos para buscar estoque (usando useMemo para evitar loops)
   const productIds = useMemo(() => {
     return items.map(item => {
@@ -26,7 +23,7 @@ export default function CarrinhoPage() {
       return parts[0]; // Primeira parte é o ID do produto
     });
   }, [items]);
-  
+
   const { stockInfo } = useProductStock(productIds);
   const { map: variantStockMap } = useVariantStockMap(productIds);
 
@@ -63,12 +60,9 @@ export default function CarrinhoPage() {
     removeItem(id);
   };
 
-  const handleShippingCalculated = (cost: number, method: string) => {
-    setShippingCost(cost);
-    setShippingMethod(method);
+  const handleShippingCalculated = (cost: number, method: string, cep?: string) => {
+    setShipping(method ? { cost, method, cep } : null);
   };
-
-  // Fluxo de finalização de compra desativado temporariamente
 
   const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
@@ -81,7 +75,7 @@ export default function CarrinhoPage() {
       />
       <div className="min-h-screen flex flex-col bg-gray-50">
         <Header />
-        
+
         <main className="flex-1 py-12">
           <div className="container mx-auto px-4">
             <h1 className="text-3xl font-bold mb-2">Carrinho de Compras</h1>
@@ -109,7 +103,7 @@ export default function CarrinhoPage() {
                     const variantMax = variantStockMap.get(variantKey);
                     const productMax = stockMap.get(productId);
                     const maxStock = (variantMax !== undefined) ? variantMax : productMax;
-                    
+
                     return (
                       <CartItem
                         key={item.id}
@@ -132,13 +126,13 @@ export default function CarrinhoPage() {
 
                 {/* Summary */}
                 <div className="space-y-6">
-                  <ShippingCalculator 
-                    onShippingCalculated={handleShippingCalculated} 
+                  <ShippingCalculator
+                    onShippingCalculated={handleShippingCalculated}
                     subtotal={subtotal}
                   />
                   <CartSummary
                     subtotal={subtotal}
-                    shipping={{ price: shippingCost, name: shippingMethod }}
+                    shipping={{ price: shipping?.cost ?? null, name: shipping?.method ?? '' }}
                   />
                 </div>
               </div>

@@ -10,7 +10,7 @@ interface ShippingOption {
 }
 
 interface ShippingCalculatorProps {
-  onShippingCalculated: (cost: number, method: string) => void;
+  onShippingCalculated: (cost: number, method: string, cep?: string) => void;
   subtotal: number;
 }
 
@@ -60,7 +60,7 @@ export default function ShippingCalculator({ onShippingCalculated, subtotal }: S
     } else {
       localStorage.removeItem('last-cart-cep');
     }
-    if (formatted.length < 9) {
+    if (formatted.length < 8) {
       setShippingOptions([]);
       setSelectedOption(null);
       setAddress('');
@@ -129,7 +129,7 @@ export default function ShippingCalculator({ onShippingCalculated, subtotal }: S
         if (data.opcoesFrete.length > 0) {
           const firstOption = data.opcoesFrete[0];
           setSelectedOption(firstOption);
-          onShippingCalculated(firstOption.valor, firstOption.nome);
+          onShippingCalculated(firstOption.valor, firstOption.nome, cep.replace('-', ''));
         }
       } else {
         throw new Error('Resposta inválida da API');
@@ -150,7 +150,7 @@ export default function ShippingCalculator({ onShippingCalculated, subtotal }: S
 
   const selectShippingOption = (option: ShippingOption) => {
     setSelectedOption(option);
-    onShippingCalculated(option.valor, option.nome);
+    onShippingCalculated(option.valor, option.nome, cep.replace('-', ''));
   };
 
   return (

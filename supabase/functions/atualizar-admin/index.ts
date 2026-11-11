@@ -1,32 +1,57 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from '../shared/cors.ts';
+import { authenticateUser, isActiveAdmin } from '../shared/auth.ts';
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
 
+  if (req.method !== "POST") {
+    return new Response(
+      JSON.stringify({ error: "Método não permitido" }),
+      { status: 405, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
   try {
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
+    const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
     const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
-    if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
+    if (!SUPABASE_URL || !SUPABASE_ANON_KEY || !SERVICE_ROLE_KEY) {
       return new Response(
-        JSON.stringify({ error: "Configuração inválida do Supabase (URL/Service Role)" }),
+        JSON.stringify({ error: "Configuração inválida do Supabase (URL/Anon/Service Role)" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const auth = await authenticateUser(req, SUPABASE_URL, SUPABASE_ANON_KEY);
+    if (!auth) {
+      return new Response(
+        JSON.stringify({ error: "Não autenticado" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
+    const callerIsAdmin = await isActiveAdmin(supabase, auth.user);
+    if (!callerIsAdmin) {
+      return new Response(
+        JSON.stringify({ error: "Acesso negado: apenas administradores ativos podem atualizar credenciais" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const body = await req.json().catch(() => ({}));
     const email = String(body?.email || "").trim().toLowerCase();
     const novaSenha = String(body?.senha || body?.nova_senha || "").trim();
 
-    if (!email || !novaSenha) {
+    if (!email || novaSenha.length < 6) {
       return new Response(
-        JSON.stringify({ error: "Informe 'email' e 'senha' (nova_senha)" }),
+        JSON.stringify({ error: "Informe 'email' e 'senha' (mínimo 6 caracteres)" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -92,7 +117,7 @@ serve(async (req) => {
           .update({ user_id: foundUser.id, ativo: true, tipo: "admin" })
           .eq("email", email);
       } else {
-        // Inserir novo registro admin
+        // Inserir novo registro admin (sem definir data_admissao para compatibilidade se removida)
         const insertPayload: Record<string, any> = {
           id: foundUser.id, // Mantém compatibilidade com função antiga
           user_id: foundUser.id,
@@ -101,7 +126,6 @@ serve(async (req) => {
           tipo: "admin",
           departamento: "Administração",
           cargo: "Administrador",
-          data_admissao: new Date().toISOString().split("T")[0],
           ativo: true,
         };
 

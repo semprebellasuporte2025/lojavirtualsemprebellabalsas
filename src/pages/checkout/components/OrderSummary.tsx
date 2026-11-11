@@ -1,8 +1,8 @@
 import { useMemo } from 'react';
-import { useCart } from '@/hooks/useCart';
+import { calculateCartTotals, useCart } from '@/hooks/useCart';
 
 export default function OrderSummary() {
-  const { items, paymentMethod } = useCart();
+  const { items, paymentMethod, shipping, coupon } = useCart();
 
   const subtotal = useMemo(() => {
     return items.reduce((sum, item) => sum + item.price * item.quantity, 0);
@@ -12,7 +12,18 @@ export default function OrderSummary() {
     return items.reduce((sum, item) => sum + item.quantity, 0);
   }, [items]);
 
-  const pixDiscount = paymentMethod === 'pix' ? subtotal * 0.10 : 0;
+  const { pixDiscount, couponDiscount, total } = useMemo(
+    () =>
+      calculateCartTotals({
+        subtotal,
+        paymentMethod,
+        shippingCost: shipping?.cost ?? 0,
+        coupon,
+      }),
+    [subtotal, paymentMethod, shipping?.cost, coupon]
+  );
+
+  const formatCurrency = (val: number) => `R$ ${val.toFixed(2).replace('.', ',')}`;
 
   return (
     <div className="bg-white rounded-lg shadow-sm border p-6">
@@ -26,18 +37,31 @@ export default function OrderSummary() {
 
         <div className="flex justify-between text-gray-600">
           <span>Subtotal</span>
-          <span>R$ {subtotal.toFixed(2).replace('.', ',')}</span>
+          <span>{formatCurrency(subtotal)}</span>
         </div>
 
         <div className="flex justify-between text-gray-600">
-          <span>Frete</span>
-          <span>A calcular</span>
+          <span>Frete{shipping?.method ? ` (${shipping.method})` : ''}</span>
+          <span>
+            {shipping?.method
+              ? shipping.cost === 0
+                ? 'GRÁTIS'
+                : formatCurrency(shipping.cost)
+              : 'A calcular'}
+          </span>
         </div>
 
         {pixDiscount > 0 && (
           <div className="flex justify-between text-green-600">
             <span>Desconto PIX (10%)</span>
-            <span>- R$ {pixDiscount.toFixed(2).replace('.', ',')}</span>
+            <span>- {formatCurrency(pixDiscount)}</span>
+          </div>
+        )}
+
+        {couponDiscount > 0 && coupon && (
+          <div className="flex justify-between text-green-600">
+            <span>Desconto Cupom ({coupon.nome})</span>
+            <span>- {formatCurrency(couponDiscount)}</span>
           </div>
         )}
 
@@ -50,7 +74,7 @@ export default function OrderSummary() {
 
         <div className="flex justify-between text-lg font-semibold">
           <span>Total a Pagar</span>
-          <span>R$ {(subtotal - pixDiscount).toFixed(2).replace('.', ',')}</span>
+          <span>{formatCurrency(total)}</span>
         </div>
 
         {/* Ações (mobile): posicionadas entre Total e garantias */}

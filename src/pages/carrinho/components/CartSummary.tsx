@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/useToast';
-import { useCart } from '@/hooks/useCart';
+import { calculateCartTotals, useCart } from '@/hooks/useCart';
 
 interface CartSummaryProps {
   subtotal: number;
@@ -15,26 +15,26 @@ export default function CartSummary({ subtotal, shipping }: CartSummaryProps) {
   const { showToast } = useToast();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { paymentMethod, setPaymentMethod } = useCart();
-  const [couponCode, setCouponCode] = useState('');
+  const { paymentMethod, setPaymentMethod, coupon, setCoupon } = useCart();
+  const [couponCode, setCouponCode] = useState(() => coupon?.nome || '');
   const [isCheckingCoupon, setIsCheckingCoupon] = useState(false);
   const [couponValid, setCouponValid] = useState(false);
   const [couponData, setCouponData] = useState<{ nome: string; desconto_percentual: number } | null>(null);
-  const [appliedCoupon, setAppliedCoupon] = useState<{ nome: string; desconto_percentual: number } | null>(null);
+  const appliedCoupon = coupon;
 
   const shippingCost = typeof shipping?.price === 'number' ? shipping.price : null;
   const shippingMethod = shipping?.name || '';
 
   const isShippingSelected = !!shippingMethod;
 
-  const pixDiscount = paymentMethod === 'pix' ? subtotal * 0.10 : 0;
-  const couponDiscount = useMemo(() => {
-    if (!appliedCoupon) return 0;
-    const pct = Number(appliedCoupon.desconto_percentual) || 0;
-    return subtotal * (pct / 100);
-  }, [subtotal, appliedCoupon]);
-  const discount = pixDiscount + couponDiscount;
-  const total = subtotal + (shippingCost ?? 0) - discount;
+  const { pixDiscount, couponDiscount, total } = useMemo(() => calculateCartTotals({ subtotal, paymentMethod, shippingCost, coupon: appliedCoupon }), [subtotal, paymentMethod, shippingCost, appliedCoupon]);
+
+
+
+
+
+
+
 
   // validação de cupom com debounce
   useEffect(() => {
@@ -44,7 +44,7 @@ export default function CartSummary({ subtotal, shipping }: CartSummaryProps) {
       setIsCheckingCoupon(false);
       setCouponValid(false);
       setCouponData(null);
-      setAppliedCoupon(null);
+      setCoupon(null);
       return;
     }
     setIsCheckingCoupon(true);
@@ -96,7 +96,7 @@ export default function CartSummary({ subtotal, shipping }: CartSummaryProps) {
 
   const handleApplyCoupon = async () => {
     if (!couponValid || !couponData) return;
-    setAppliedCoupon({ ...couponData });
+    setCoupon({ ...couponData });
     showToast(`Cupom ${couponData.nome} aplicado (-${couponData.desconto_percentual}%).`, 'success', 3000);
   };
 
@@ -201,7 +201,7 @@ export default function CartSummary({ subtotal, shipping }: CartSummaryProps) {
           <input
             type="text"
             value={couponCode}
-            onChange={(e) => { setCouponCode(e.target.value); setAppliedCoupon(null); }}
+            onChange={(e) => { setCouponCode(e.target.value); setCoupon(null); }}
             placeholder="Digite o código"
             className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent text-sm"
           />

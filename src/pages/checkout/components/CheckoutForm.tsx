@@ -7,7 +7,7 @@ import type { CheckoutData, CheckoutStep } from '../types.ts';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/useToast';
 import { maskCEP, maskCPF, maskPhone, validateCEP, validateCPF, validateEmail, validatePhone } from '@/utils/validation';
-import { useCart } from '@/hooks/useCart';
+import { calculateCartTotals, useCart } from '@/hooks/useCart';
 import { createOrder } from '@/lib/orders.ts';
 
 interface CheckoutFormProps {
@@ -25,7 +25,7 @@ export default function CheckoutForm({
   isProcessing,
   setIsProcessing
 }: CheckoutFormProps) {
-  const { items, paymentMethod: cartPaymentMethod, setPaymentMethod } = useCart();
+  const { items, paymentMethod: cartPaymentMethod, setPaymentMethod, shipping: cartShipping, coupon: cartCoupon } = useCart();
   const { showToast } = useToast();
   const [currentStep, setCurrentStep] = useState<CheckoutStep>('customer');
   const [lastCartCep, setLastCartCep] = useState('');
@@ -311,9 +311,9 @@ export default function CheckoutForm({
       // Calcular totais
       const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
       const formaPagamento = checkoutData.payment.metodo;
-      const desconto = formaPagamento === 'pix' ? subtotal * 0.10 : 0; // 10% apenas sobre produtos
-      const frete = 0; // Frete a calcular em fluxo futuro (sem desconto)
-      const total = subtotal + frete - desconto;
+      const { totalDiscount: desconto, shippingCost: frete, total } = calculateCartTotals({ subtotal, paymentMethod: formaPagamento, shippingCost: cartShipping?.cost ?? 0, coupon: cartCoupon });
+
+
 
       // String para salvar em pedidos.endereco_entrega (DB espera string)
       const enderecoEntregaStr = [

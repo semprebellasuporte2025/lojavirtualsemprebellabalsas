@@ -1,9 +1,17 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from '../shared/cors.ts';
+import {
+  authenticateUser,
+  constantTimeEqual,
+  getActiveStaffRole,
+  getBearerToken,
+  userOwnsOrder,
+} from '../shared/auth.ts';
 
 // Segredos lidos do ambiente (configurados via `supabase functions secrets set`)
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
+const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
 const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 // Aceita dois nomes para compatibilidade: ORDER_WEBHOOK_URL ou WEBHOOK_URL
 const WEBHOOK_URL = Deno.env.get('ORDER_WEBHOOK_URL') ?? Deno.env.get('WEBHOOK_URL') ?? '';
@@ -27,13 +35,9 @@ serve(async (req: Request) => {
     return new Response("ok", { headers: corsHeaders });
   }
 
-  // Verificação de autenticação
-  const authHeader = req.headers.get("Authorization");
-  const expectedToken = `Bearer ${WEBHOOK_AUTH_TOKEN}`;
-  
-  if (WEBHOOK_AUTH_TOKEN && (!authHeader || authHeader !== expectedToken)) {
-    return new Response(JSON.stringify({ error: "Não autorizado" }), {
-      status: 401,
+  if (req.method !== "POST") {
+    return new Response(JSON.stringify({ error: "Método não permitido" }), {
+      status: 405,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
@@ -52,6 +56,24 @@ serve(async (req: Request) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    // Autenticação: aceita token interno de máquina (WEBHOOK_AUTH_TOKEN) OU JWT de usuário Supabase
+    const bearerToken = getBearerToken(req);
+    const hasValidServiceToken = Boolean(
+      WEBHOOK_AUTH_TOKEN && bearerToken && constantTimeEqual(bearerToken, WEBHOOK_AUTH_TOKEN)
+    );
+
+    const auth = hasValidServiceToken
+      ? null
+      : await authenticateUser(req, SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    if (!hasValidServiceToken && !auth) {
+      return new Response(JSON.stringify({ error: "Não autorizado" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const body: InvokeBody = await req.json();
     const pedidoId = body.pedido_id || body.pedidoId;
     const numeroPedido = body.numero_pedido || body.numeroPedido;
@@ -84,6 +106,17 @@ serve(async (req: Request) => {
         status: 404,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    if (!hasValidServiceToken && auth) {
+      const staffRole = await getActiveStaffRole(supabase, auth.user);
+      const ownsOrder = staffRole ? true : await userOwnsOrder(supabase, auth.user, pedido.cliente_id);
+      if (!ownsOrder) {
+        return new Response(JSON.stringify({ error: "Acesso negado a este pedido" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     }
 
     // Buscar itens do pedido

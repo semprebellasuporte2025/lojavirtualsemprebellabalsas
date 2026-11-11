@@ -1,7 +1,6 @@
 import { corsHeaders } from '../shared/cors.ts';
-
-// Adicionar importação do Supabase para validação JWT
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient, type User } from 'https://esm.sh/@supabase/supabase-js@2';
+import { authenticateUser, getActiveStaffRole, userOwnsOrder } from '../shared/auth.ts';
 
 type PixRequest = {
   method: 'pix';
@@ -41,9 +40,11 @@ type PayRequest = PixRequest | CardRequest;
 const MP_PAYMENTS_API = 'https://api.mercadopago.com/v1/payments';
 const MP_PREFERENCES_API = 'https://api.mercadopago.com/checkout/preferences';
 
-// Configuração do Supabase para validação JWT (usar ANON_KEY)
+// Configuração do Supabase para validação JWT e consulta segura de pedidos
 const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
 const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') || '';
+const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+const configuredWebhookUrl = Deno.env.get('MP_WEBHOOK_URL') || '';
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
@@ -66,18 +67,6 @@ Deno.serve(async (req: Request) => {
     });
   }
 
-  // Validar autenticação do usuário
-  const authHeader = req.headers.get('Authorization');
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return new Response(JSON.stringify({ success: false, error: 'Token de autenticação não fornecido' }), {
-      status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-  }
-
-  const userToken = authHeader.replace('Bearer ', '');
-  
-  // Verificar configuração básica
   if (!supabaseUrl || !supabaseAnonKey) {
     return new Response(
       JSON.stringify({ success: false, error: 'Configuração do Supabase ausente (URL/ANON_KEY)' }),
@@ -85,22 +74,16 @@ Deno.serve(async (req: Request) => {
     );
   }
 
+  let authenticatedUser: User;
   try {
-    // Criar cliente Supabase com ANON_KEY
-    const supabase = createClient(supabaseUrl, supabaseAnonKey);
-
-    // Verificar se o token é válido pegando o usuário com header de autorização personalizado
-    const { data: { user }, error: authError } = await supabase.auth.getUser(userToken);
-    
-    if (authError || !user) {
-      console.error('Erro na autenticação:', authError);
+    const auth = await authenticateUser(req, supabaseUrl, supabaseAnonKey);
+    if (!auth) {
       return new Response(JSON.stringify({ success: false, error: 'Token inválido ou usuário não autenticado' }), {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-
-    console.log('Usuário autenticado com sucesso:', user.email);
+    authenticatedUser = auth.user;
   } catch (authError) {
     console.error('Erro ao validar token:', authError);
     return new Response(JSON.stringify({ success: false, error: 'Erro ao validar autenticação' }), {
@@ -111,15 +94,69 @@ Deno.serve(async (req: Request) => {
 
   try {
     const body: PayRequest = await req.json();
-    const amount = Number(body.amount);
-    if (!amount || amount <= 0) {
+    const clientAmount = Number(body.amount);
+    if (!clientAmount || clientAmount <= 0 || !Number.isFinite(clientAmount)) {
       return new Response(JSON.stringify({ success: false, error: 'Valor inválido' }), {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    const description = body.description || `Pedido ${body.orderNumber ?? ''}`.trim();
+    let finalAmount = Number(clientAmount.toFixed(2));
+    const orderNumber = typeof body.orderNumber === 'string' ? body.orderNumber.trim() : '';
+
+    if (orderNumber && supabaseServiceRoleKey) {
+      const serviceClient = createClient(supabaseUrl, supabaseServiceRoleKey);
+      const { data: pedido, error: pedidoErr } = await serviceClient
+        .from('pedidos')
+        .select('id, numero_pedido, cliente_id, total, status')
+        .eq('numero_pedido', orderNumber)
+        .maybeSingle();
+
+      if (pedidoErr || !pedido) {
+        return new Response(JSON.stringify({ success: false, error: 'Pedido não encontrado para pagamento' }), {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      const staffRole = await getActiveStaffRole(serviceClient, authenticatedUser);
+      const isOwner = staffRole ? true : await userOwnsOrder(serviceClient, authenticatedUser, pedido.cliente_id);
+      if (!isOwner) {
+        return new Response(JSON.stringify({ success: false, error: 'Acesso negado para pagar este pedido' }), {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      const orderStatus = String(pedido.status || '').toLowerCase();
+      if (orderStatus === 'pago' || orderStatus === 'cancelado') {
+        return new Response(
+          JSON.stringify({ success: false, error: `Pedido já está com status '${pedido.status}'` }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const serverTotal = Number(pedido.total);
+      if (!Number.isFinite(serverTotal) || serverTotal <= 0) {
+        return new Response(JSON.stringify({ success: false, error: 'Total do pedido inválido no servidor' }), {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      if (Math.abs(serverTotal - clientAmount) > 0.05) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'Valor informado diverge do total registrado no pedido' }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      finalAmount = Number(serverTotal.toFixed(2));
+    }
+
+    const notificationUrl = configuredWebhookUrl || `${supabaseUrl.replace(/\/$/, '')}/functions/v1/mercado-pago-webhook`;
+    const description = body.description || `Pedido ${orderNumber}`.trim();
 
     const commonPayer = {
       email: body.payer?.email,
@@ -140,7 +177,7 @@ Deno.serve(async (req: Request) => {
             {
               title: description,
               quantity: 1,
-              unit_price: amount,
+              unit_price: finalAmount,
             },
           ],
           payer: commonPayer,
@@ -149,7 +186,8 @@ Deno.serve(async (req: Request) => {
             failure: body.redirectUrl,
             pending: body.redirectUrl,
           },
-          external_reference: body.orderNumber,
+          external_reference: orderNumber || undefined,
+          notification_url: notificationUrl,
           payment_methods: {
             // Define PIX como padrão e exclui tipos não-PIX (não é permitido excluir account_money)
             default_payment_method_id: 'pix',
@@ -165,10 +203,12 @@ Deno.serve(async (req: Request) => {
         // Checkout Transparente com geração de QR Code dentro do app
         apiUrl = MP_PAYMENTS_API;
         payload = {
-          transaction_amount: amount,
+          transaction_amount: finalAmount,
           description,
           payer: commonPayer,
           payment_method_id: 'pix',
+          external_reference: orderNumber || undefined,
+          notification_url: notificationUrl,
         };
       }
     } else if (body.method === 'card') {
@@ -176,7 +216,7 @@ Deno.serve(async (req: Request) => {
         // Checkout Transparente com token
         apiUrl = MP_PAYMENTS_API;
         payload = {
-          transaction_amount: amount,
+          transaction_amount: finalAmount,
           description,
           payer: commonPayer,
           binary_mode: true,
@@ -185,6 +225,8 @@ Deno.serve(async (req: Request) => {
           payment_method_id: body.paymentMethodId,
           issuer_id: body.issuerId,
           capture: true,
+          external_reference: orderNumber || undefined,
+          notification_url: notificationUrl,
         };
       } else if (body.redirectUrl) {
         // Checkout Pro com redirecionamento
@@ -194,7 +236,7 @@ Deno.serve(async (req: Request) => {
             {
               title: description,
               quantity: 1,
-              unit_price: amount,
+              unit_price: finalAmount,
             },
           ],
           payer: commonPayer,
@@ -204,7 +246,8 @@ Deno.serve(async (req: Request) => {
             pending: body.redirectUrl,
           },
           auto_return: 'approved',
-          external_reference: body.orderNumber,
+          external_reference: orderNumber || undefined,
+          notification_url: notificationUrl,
           // Excluir PIX no fluxo de cartão conforme docs de Checkout Pro
           // Referência: payment_methods.excluded_payment_methods / excluded_payment_types
           payment_methods: {
