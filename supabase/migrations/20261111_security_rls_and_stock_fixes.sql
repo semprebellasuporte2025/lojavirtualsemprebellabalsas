@@ -6,6 +6,14 @@
 
 BEGIN;
 
+-- 0. Garantir que o script está sendo executado no projeto correto (cproxdqrraiujnewbsvp)
+DO $$
+BEGIN
+  IF to_regclass('public.usuarios_admin') IS NULL THEN
+    RAISE EXCEPTION 'Tabela public.usuarios_admin não encontrada. Verifique se o SQL Editor está conectado ao projeto Supabase correto (cproxdqrraiujnewbsvp).';
+  END IF;
+END $$;
+
 -- 1. Funções auxiliares de autorização (SECURITY DEFINER sem recursão de RLS)
 DO $$
 DECLARE
