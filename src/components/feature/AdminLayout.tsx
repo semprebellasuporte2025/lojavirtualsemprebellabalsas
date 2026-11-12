@@ -31,7 +31,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
   // Estados de carregamento e redirecionamento imediatos para evitar tela em branco
   if (loading) {
-    return <AdminPreloader message="Carregando painel administrativo..." />;
+    return <AdminPreloader />;
   }
 
   if (!user) {

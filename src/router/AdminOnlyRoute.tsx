@@ -6,7 +6,7 @@ const AdminOnlyRoute = () => {
   const { isAdmin, isAtendente, isUsuario, loading } = useAuth();
 
   if (loading) {
-    return <AdminPreloader message="Verificando credenciais de acesso..." />;
+    return <AdminPreloader />;
   }
 
   if (isAdmin || isUsuario) {

@@ -5,7 +5,7 @@ import AdminPreloader from '../components/feature/AdminPreloader';
 
 // Componente de loading
 const LoadingFallback = () => (
-  <AdminPreloader message="Carregando visualização..." />
+  <AdminPreloader />
 );
 
 // Lazy loading dos componentes - corrigido
