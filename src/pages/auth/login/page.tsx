@@ -4,6 +4,7 @@ import Footer from '../../../components/feature/Footer';
 import SEOHead from '../../../components/feature/SEOHead';
 import { useAuth } from '../../../hooks/useAuth';
 import { useCart } from '../../../hooks/useCart';
+import { useLoginSecurity } from '../../../hooks/useLoginSecurity';
 import { determinePostLoginRedirect, shouldRedirect } from '../../../utils/redirect';
 
 export default function LoginPage() {
@@ -17,6 +18,9 @@ export default function LoginPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+
+  // Controle de segurança e bloqueio de tentativas de login
+  const security = useLoginSecurity(formData.email);
 
   // Fallback robusto para redirecionamento
   const forceRedirect = (path: string) => {
@@ -58,6 +62,12 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (security.isLocked) {
+      setError(`Acesso bloqueado por segurança! Aguarde ${security.formattedRemainingTime} para tentar novamente.`);
+      return;
+    }
+
     setSubmitting(true);
     setError('');
 
@@ -67,11 +77,21 @@ export default function LoginPage() {
       
       if (error) {
         console.error('[Login] Erro no login:', error);
-        setError(error.message || 'Falha ao fazer login');
+        const updated = security.handleFailedAttempt();
+        if (updated.isLocked) {
+          setError(`Acesso bloqueado por segurança! Você errou a senha por 3 vezes consecutivas. Aguarde ${security.formattedRemainingTime || '15 minutos'} para tentar novamente.`);
+        } else if (updated.failedAttempts === 1) {
+          setError('Senha incorreta! Você ainda tem mais 2 tentativas antes do bloqueio da conta.');
+        } else if (updated.failedAttempts === 2) {
+          setError('Senha incorreta! Atenção: você só tem mais 1 tentativa antes do bloqueio da conta!');
+        } else {
+          setError(error.message || 'Falha ao fazer login');
+        }
         return;
       }
       
       console.log('[Login] Login realizado com sucesso');
+      security.handleSuccess();
 
       if (rememberMe) {
         localStorage.setItem('rememberMe', 'true');
@@ -231,11 +251,25 @@ export default function LoginPage() {
                 <div className="max-w-md mx-auto bg-white shadow-sm rounded-lg p-6 border border-gray-100">
                   <h2 className="text-2xl font-bold text-gray-900 mb-6">Entrar</h2>
 
-                  {error && (
-                    <div className="mb-4 p-3 bg-red-100 border border-red-300 text-red-700 rounded-lg text-sm" role="alert" aria-live="polite">
-                      {error}
+                  {security.isLocked ? (
+                    <div className="mb-5 p-4 bg-red-50 border-2 border-red-300 text-red-800 rounded-xl text-sm flex items-start gap-3 shadow-sm" role="alert">
+                      <i className="ri-lock-2-fill text-xl text-red-600 mt-0.5"></i>
+                      <div>
+                        <p className="font-bold text-red-900">Acesso Bloqueado por Segurança</p>
+                        <p className="mt-1 text-xs text-red-700">
+                          Você excedeu o limite de 3 tentativas com senha incorreta.
+                        </p>
+                        <p className="mt-2 text-xs font-semibold text-red-800">
+                          Tente novamente em: <span className="font-mono bg-red-100 text-red-900 px-2 py-0.5 rounded border border-red-200">{security.formattedRemainingTime}</span>
+                        </p>
+                      </div>
                     </div>
-                  )}
+                  ) : error ? (
+                    <div className="mb-4 p-3 bg-red-50 border border-red-300 text-red-700 rounded-lg text-sm flex items-center gap-2" role="alert" aria-live="polite">
+                      <i className="ri-error-warning-fill text-lg text-red-500 shrink-0"></i>
+                      <span>{error}</span>
+                    </div>
+                  ) : null}
 
                   <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
@@ -245,9 +279,14 @@ export default function LoginPage() {
                         id="login-email"
                         name="email"
                         required
+                        disabled={submitting || security.isLocked}
                         value={formData.email}
                         onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 focus:bg-white focus:ring-2 focus:ring-pink-500 focus:border-transparent text-sm"
+                        className={`w-full px-3 py-2 border rounded-lg text-sm transition-colors ${
+                          security.isLocked
+                            ? 'border-gray-200 bg-gray-100 cursor-not-allowed opacity-60'
+                            : 'border-gray-300 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-pink-500 focus:border-transparent'
+                        }`}
                         placeholder="seu@email.com"
                         autoComplete="email"
                         autoFocus
@@ -262,23 +301,48 @@ export default function LoginPage() {
                           id="login-password"
                           name="password"
                           required
+                          disabled={submitting || security.isLocked}
                           value={formData.password}
                           onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 focus:bg-white focus:ring-2 focus:ring-pink-500 focus:border-transparent text-sm pr-10"
+                          className={`w-full px-3 py-2 border rounded-lg text-sm pr-10 transition-colors ${
+                            security.hasPasswordError || security.isLocked
+                              ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-400 bg-red-50/20 text-red-900'
+                              : 'border-gray-300 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-pink-500 focus:border-transparent'
+                          } ${security.isLocked ? 'cursor-not-allowed bg-gray-100 opacity-60' : ''}`}
                           placeholder="Mínimo 6 caracteres"
                           minLength={6}
                           autoComplete="current-password"
                         />
                         <button
                           type="button"
+                          disabled={security.isLocked}
                           onClick={() => setShowPassword((prev) => !prev)}
-                          className="absolute inset-y-0 right-2 flex items-center text-gray-500 hover:text-gray-700 cursor-pointer"
+                          className="absolute inset-y-0 right-2 flex items-center text-gray-500 hover:text-gray-700 cursor-pointer disabled:opacity-40"
                           aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
                           aria-pressed={showPassword}
                         >
                           <i className={showPassword ? 'ri-eye-off-line text-lg' : 'ri-eye-line text-lg'}></i>
                         </button>
                       </div>
+
+                      {/* Mensagens de aviso e contador abaixo do input de senha */}
+                      {security.hasPasswordError && !security.isLocked && (
+                        <p className="mt-1.5 text-xs text-red-600 font-medium flex items-center gap-1.5 animate-slide-up">
+                          <i className="ri-error-warning-fill text-sm text-red-500"></i>
+                          <span>
+                            Senha incorreta. Restam <strong>{security.attemptsLeft}</strong> {security.attemptsLeft === 1 ? 'tentativa' : 'tentativas'} antes do bloqueio.
+                          </span>
+                        </p>
+                      )}
+
+                      {security.isLocked && (
+                        <p className="mt-1.5 text-xs text-red-600 font-medium flex items-center gap-1.5">
+                          <i className="ri-lock-2-fill text-sm text-red-600"></i>
+                          <span>
+                            Conta bloqueada por segurança. Aguarde <strong>{security.formattedRemainingTime}</strong>.
+                          </span>
+                        </p>
+                      )}
                     </div>
 
                     <div className="flex items-center justify-between">
@@ -286,8 +350,9 @@ export default function LoginPage() {
                         <input
                           type="checkbox"
                           checked={rememberMe}
+                          disabled={security.isLocked}
                           onChange={(e) => setRememberMe(e.target.checked)}
-                          className="mr-2 rounded border-gray-300 text-pink-600 focus:ring-pink-500"
+                          className="mr-2 rounded border-gray-300 text-pink-600 focus:ring-pink-500 disabled:opacity-50"
                         />
                         Lembrar-me
                       </label>
@@ -299,10 +364,15 @@ export default function LoginPage() {
 
                     <button
                       type="submit"
-                      disabled={submitting}
-                      className="w-full bg-pink-600 text-white py-3 rounded-lg font-medium hover:bg-pink-700 transition-colors disabled:opacity-50 whitespace-nowrap cursor-pointer"
+                      disabled={submitting || security.isLocked}
+                      className="w-full bg-pink-600 text-white py-3 rounded-lg font-medium hover:bg-pink-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap cursor-pointer shadow-sm"
                     >
-                      {submitting ? (
+                      {security.isLocked ? (
+                        <div className="flex items-center justify-center gap-2">
+                          <i className="ri-lock-2-fill text-lg"></i>
+                          Bloqueado ({security.formattedRemainingTime})
+                        </div>
+                      ) : submitting ? (
                         <div className="flex items-center justify-center">
                           <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
                           Processando...
