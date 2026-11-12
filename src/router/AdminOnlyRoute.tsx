@@ -1,11 +1,12 @@
 import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import AdminPreloader from '../components/feature/AdminPreloader';
 
 const AdminOnlyRoute = () => {
   const { isAdmin, isAtendente, isUsuario, loading } = useAuth();
 
   if (loading) {
-    return <div>Carregando...</div>;
+    return <AdminPreloader message="Verificando credenciais de acesso..." />;
   }
 
   if (isAdmin || isUsuario) {
