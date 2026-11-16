@@ -1,42 +1,34 @@
 import React, { useState, useEffect } from 'react';
-import { Power, AlertTriangle, CheckCircle2, ShieldAlert } from 'lucide-react';
+import { Power, CheckCircle2, ShieldAlert } from 'lucide-react';
+import { supabase } from '../../lib/supabase';
 
 interface SettingsMaintenanceProps {
-  // Callback opcional caso o componente pai queira ser notificado
   onToggle?: (newState: boolean) => void;
 }
 
 export default function SettingsMaintenance({ onToggle }: SettingsMaintenanceProps) {
-  // Estado local para controle do switch
   const [isMaintenanceMode, setIsMaintenanceMode] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
   const [saving, setSaving] = useState<boolean>(false);
 
-  // ============================================================================
-  // 🔌 ONDE PLUGAR SUA CONSULTA INICIAL AO BANCO DE DADOS / ESTADO GLOBAL
-  // ============================================================================
   useEffect(() => {
     async function loadMaintenanceStatus() {
       try {
         setLoading(true);
 
-        /* 
-          EXEMPLO 1: Via Supabase
-          const { data, error } = await supabase
-            .from('configuracoes_sistema')
-            .select('valor')
-            .eq('chave', 'modo_manutencao')
-            .single();
-          if (data) setIsMaintenanceMode(data.valor === 'true');
+        // Consulta status diretamente do Supabase
+        const { data } = await supabase
+          .from('configuracoes_sistema')
+          .select('valor')
+          .eq('chave', 'modo_manutencao')
+          .maybeSingle();
 
-          EXEMPLO 2: Via Zustand / Context API
-          const isMaintenance = useMaintenanceStore.getState().isMaintenanceMode;
-          setIsMaintenanceMode(isMaintenance);
-        */
-
-        // Fallback / Padrão local (localStorage) para funcionamento imediato:
-        const saved = localStorage.getItem('site_maintenance_mode') === 'true';
-        setIsMaintenanceMode(saved);
+        if (data) {
+          setIsMaintenanceMode(data.valor === 'true');
+        } else {
+          const saved = localStorage.getItem('site_maintenance_mode') === 'true';
+          setIsMaintenanceMode(saved);
+        }
       } catch (err) {
         console.error('Erro ao carregar status do modo de manutenção:', err);
       } finally {
@@ -47,34 +39,37 @@ export default function SettingsMaintenance({ onToggle }: SettingsMaintenancePro
     loadMaintenanceStatus();
   }, []);
 
-  // Alternar o modo de manutenção
   const handleToggle = async () => {
     const nextState = !isMaintenanceMode;
     setSaving(true);
 
     try {
-      // ============================================================================
-      // 🔌 ONDE PLUGAR A ATUALIZAÇÃO NO BANCO DE DADOS (SUPABASE / API / ZUSTAND)
-      // ============================================================================
-      /*
-        EXEMPLO SUPABASE:
-        const { error } = await supabase
-          .from('configuracoes_sistema')
-          .upsert({ chave: 'modo_manutencao', valor: String(nextState) });
-        if (error) throw error;
-      */
+      // 1. Grava no banco de dados para sincronizar imediatamente com guia anônima e outros dispositivos
+      const { error } = await supabase
+        .from('configuracoes_sistema')
+        .upsert(
+          {
+            chave: 'modo_manutencao',
+            valor: String(nextState),
+            descricao: 'Modo de Manutenção do Site',
+            updated_at: new Date().toISOString()
+          },
+          { onConflict: 'chave' }
+        );
 
-      // Salva localmente para persistência imediata
+      if (error) {
+        console.warn('Erro ao salvar no banco, mantendo localmente:', error);
+      }
+
+      // 2. Grava no localStorage para cache rápido
       localStorage.setItem('site_maintenance_mode', String(nextState));
-      
-      // Notifica outras abas/componentes via evento CustomEvent
       window.dispatchEvent(new Event('maintenance_mode_changed'));
 
       setIsMaintenanceMode(nextState);
       if (onToggle) onToggle(nextState);
     } catch (err) {
       console.error('Erro ao salvar alteração do modo de manutenção:', err);
-      alert('Falha ao atualizar o modo de manutenção. Tente novamente.');
+      alert('Falha ao atualizar o modo de manutenção.');
     } finally {
       setSaving(false);
     }
