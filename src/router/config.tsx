@@ -30,38 +30,37 @@ const FormasPagamentoPage = lazy(() => import('../pages/formas-pagamento/page'))
 const PrivacidadePage = lazy(() => import('../pages/privacidade/page'));
 const ObrigadoInscricaoPage = lazy(() => import('../pages/obrigado-inscricao'));
 
-// Admin pages
-const AdminDashboardPage = lazy(() => import('../pages/admin/dashboard/page'));
-const AdminProdutosCadastrarPage = lazy(() => import('../pages/admin/produtos/cadastrar/page'));
-const AdminProdutosListarPage = lazy(() => import('../pages/admin/produtos/listar/page'));
-const AdminProdutosEditarPage = lazy(() => import('../pages/admin/produtos/editar/page'));
-const AdminCategoriasCadastrarPage = lazy(() => import('../pages/admin/categorias/cadastrar/page'));
-const AdminCategoriasListarPage = lazy(() => import('../pages/admin/categorias/listar/page'));
-const AdminCategoriasEditarPage = lazy(() => import('../pages/admin/categorias/editar/page'));
-const AdminClientesCadastrarPage = lazy(() => import('../pages/admin/clientes/cadastrar/page'));
-const AdminClientesListarPage = lazy(() => import('../pages/admin/clientes/listar/page'));
-const AdminClientesEditarPage = lazy(() => import('../pages/admin/clientes/editar/page'));
-const AdminEstoqueEntradaPage = lazy(() => import('../pages/admin/estoque/entrada/page'));
-const AdminEstoqueListarPage = lazy(() => import('../pages/admin/estoque/listar/page'));
-const AdminVendasListarPage = lazy(() => import('../pages/admin/vendas/listar/page'));
-const AdminCuponsCadastrarPage = lazy(() => import('../pages/admin/cupons/cadastrar/page'));
-const AdminCuponsListarPage = lazy(() => import('../pages/admin/cupons/listar/page'));
-const AdminCuponsEditarPage = lazy(() => import('../pages/admin/cupons/editar/page'));
-const AdminLinkInstagramCadastrarPage = lazy(() => import('../pages/admin/link-instagram/cadastrar/page'));
-const AdminLinkInstagramListarPage = lazy(() => import('../pages/admin/link-instagram/listar/page'));
-const AdminLinkInstagramEditarPage = lazy(() => import('../pages/admin/link-instagram/editar/page'));
-const AdminLinkInstagramImagemTopoCadastrarPage = lazy(() => import('../pages/admin/link-instagram/imagem-topo/page'));
-const AdminBannersCadastrarPage = lazy(() => import('../pages/admin/banners/cadastrar/page'));
-const AdminBannersListarPage = lazy(() => import('../pages/admin/banners/listar/page'));
-const AdminBannersEditarPage = lazy(() => import('../pages/admin/banners/editar/page'));
-const AdminUsuariosCadastrarPage = lazy(() => import('../pages/admin/usuarios/cadastrar/page'));
-const AdminUsuariosListarPage = lazy(() => import('../pages/admin/usuarios/listar/page'));
-const AdminContaPage = lazy(() => import('../pages/admin/conta/page'));
-const AdminConfiguracoesGeraisPage = lazy(() => import('../pages/admin/configuracoes/gerais/page'));
-const AdminConfiguracoesIntegracaoPage = lazy(() => import('../pages/admin/configuracoes/integracao/page'));
-// Removidos: páginas de Configurações/Notificações, Configurações/Sistema e Ajuda
-const AdminDebugUploadPage = lazy(() => import('../pages/admin/debug-upload'));
-const AdminDebugColorVariationsPage = lazy(() => import('../pages/admin/debug-color-variations'));
+// Admin pages (importados diretamente para transições 100% instantâneas entre menus)
+import AdminDashboardPage from '../pages/admin/dashboard/page';
+import AdminProdutosCadastrarPage from '../pages/admin/produtos/cadastrar/page';
+import AdminProdutosListarPage from '../pages/admin/produtos/listar/page';
+import AdminProdutosEditarPage from '../pages/admin/produtos/editar/page';
+import AdminCategoriasCadastrarPage from '../pages/admin/categorias/cadastrar/page';
+import AdminCategoriasListarPage from '../pages/admin/categorias/listar/page';
+import AdminCategoriasEditarPage from '../pages/admin/categorias/editar/page';
+import AdminClientesCadastrarPage from '../pages/admin/clientes/cadastrar/page';
+import AdminClientesListarPage from '../pages/admin/clientes/listar/page';
+import AdminClientesEditarPage from '../pages/admin/clientes/editar/page';
+import AdminEstoqueEntradaPage from '../pages/admin/estoque/entrada/page';
+import AdminEstoqueListarPage from '../pages/admin/estoque/listar/page';
+import AdminVendasListarPage from '../pages/admin/vendas/listar/page';
+import AdminCuponsCadastrarPage from '../pages/admin/cupons/cadastrar/page';
+import AdminCuponsListarPage from '../pages/admin/cupons/listar/page';
+import AdminCuponsEditarPage from '../pages/admin/cupons/editar/page';
+import AdminLinkInstagramCadastrarPage from '../pages/admin/link-instagram/cadastrar/page';
+import AdminLinkInstagramListarPage from '../pages/admin/link-instagram/listar/page';
+import AdminLinkInstagramEditarPage from '../pages/admin/link-instagram/editar/page';
+import AdminLinkInstagramImagemTopoCadastrarPage from '../pages/admin/link-instagram/imagem-topo/page';
+import AdminBannersCadastrarPage from '../pages/admin/banners/cadastrar/page';
+import AdminBannersListarPage from '../pages/admin/banners/listar/page';
+import AdminBannersEditarPage from '../pages/admin/banners/editar/page';
+import AdminUsuariosCadastrarPage from '../pages/admin/usuarios/cadastrar/page';
+import AdminUsuariosListarPage from '../pages/admin/usuarios/listar/page';
+import AdminContaPage from '../pages/admin/conta/page';
+import AdminConfiguracoesGeraisPage from '../pages/admin/configuracoes/gerais/page';
+import AdminConfiguracoesIntegracaoPage from '../pages/admin/configuracoes/integracao/page';
+import AdminDebugUploadPage from '../pages/admin/debug-upload';
+import AdminDebugColorVariationsPage from '../pages/admin/debug-color-variations';
 
 import ProtectedRoute from './ProtectedRoute';
 import AdminOnlyRoute from './AdminOnlyRoute';
@@ -156,99 +155,99 @@ const routes: RouteObject[] = [
     children: [
       {
         path: '',
-        element: <Suspense fallback={<LoadingFallback />}><AdminDashboardPage /></Suspense>,
+        element: <AdminDashboardPage />,
       },
       {
         path: 'dashboard',
-        element: <Suspense fallback={<LoadingFallback />}><AdminDashboardPage /></Suspense>,
+        element: <AdminDashboardPage />,
       },
       {
         path: 'produtos/cadastrar',
-        element: <Suspense fallback={<LoadingFallback />}><AdminProdutosCadastrarPage /></Suspense>,
+        element: <AdminProdutosCadastrarPage />,
       },
       {
         path: 'produtos/listar',
-        element: <Suspense fallback={<LoadingFallback />}><AdminProdutosListarPage /></Suspense>,
+        element: <AdminProdutosListarPage />,
       },
       {
         path: 'produtos/editar/:id',
-        element: <Suspense fallback={<LoadingFallback />}><AdminProdutosEditarPage /></Suspense>,
+        element: <AdminProdutosEditarPage />,
       },
       {
         path: 'categorias/cadastrar',
-        element: <Suspense fallback={<LoadingFallback />}><AdminCategoriasCadastrarPage /></Suspense>,
+        element: <AdminCategoriasCadastrarPage />,
       },
       {
         path: 'categorias/listar',
-        element: <Suspense fallback={<LoadingFallback />}><AdminCategoriasListarPage /></Suspense>,
+        element: <AdminCategoriasListarPage />,
       },
       {
         path: 'categorias/editar/:id',
-        element: <Suspense fallback={<LoadingFallback />}><AdminCategoriasEditarPage /></Suspense>,
+        element: <AdminCategoriasEditarPage />,
       },
       {
         path: 'clientes/cadastrar',
-        element: <Suspense fallback={<LoadingFallback />}><AdminClientesCadastrarPage /></Suspense>,
+        element: <AdminClientesCadastrarPage />,
       },
       {
         path: 'clientes/listar',
-        element: <Suspense fallback={<LoadingFallback />}><AdminClientesListarPage /></Suspense>,
+        element: <AdminClientesListarPage />,
       },
       {
         path: 'clientes/editar/:id',
-        element: <Suspense fallback={<LoadingFallback />}><AdminClientesEditarPage /></Suspense>,
+        element: <AdminClientesEditarPage />,
       },
       {
         path: 'estoque/entrada',
-        element: <Suspense fallback={<LoadingFallback />}><AdminEstoqueEntradaPage /></Suspense>,
+        element: <AdminEstoqueEntradaPage />,
       },
       {
         path: 'estoque/listar',
-        element: <Suspense fallback={<LoadingFallback />}><AdminEstoqueListarPage /></Suspense>,
+        element: <AdminEstoqueListarPage />,
       },
       {
         path: 'vendas/listar',
-        element: <Suspense fallback={<LoadingFallback />}><AdminVendasListarPage /></Suspense>,
+        element: <AdminVendasListarPage />,
       },
       {
         path: 'cupons/cadastrar',
-        element: <Suspense fallback={<LoadingFallback />}><AdminCuponsCadastrarPage /></Suspense>,
+        element: <AdminCuponsCadastrarPage />,
       },
       {
         path: 'cupons/listar',
-        element: <Suspense fallback={<LoadingFallback />}><AdminCuponsListarPage /></Suspense>,
+        element: <AdminCuponsListarPage />,
       },
       {
         path: 'cupons/editar/:id',
-        element: <Suspense fallback={<LoadingFallback />}><AdminCuponsEditarPage /></Suspense>,
+        element: <AdminCuponsEditarPage />,
       },
       {
         path: 'link-instagram/cadastrar',
-        element: <Suspense fallback={<LoadingFallback />}><AdminLinkInstagramCadastrarPage /></Suspense>,
+        element: <AdminLinkInstagramCadastrarPage />,
       },
       {
         path: 'link-instagram/listar',
-        element: <Suspense fallback={<LoadingFallback />}><AdminLinkInstagramListarPage /></Suspense>,
+        element: <AdminLinkInstagramListarPage />,
       },
       {
         path: 'link-instagram/editar/:id',
-        element: <Suspense fallback={<LoadingFallback />}><AdminLinkInstagramEditarPage /></Suspense>,
+        element: <AdminLinkInstagramEditarPage />,
       },
       {
         path: 'link-instagram/imagem-topo',
-        element: <Suspense fallback={<LoadingFallback />}><AdminLinkInstagramImagemTopoCadastrarPage /></Suspense>,
+        element: <AdminLinkInstagramImagemTopoCadastrarPage />,
       },
       {
         path: 'banners/cadastrar',
-        element: <Suspense fallback={<LoadingFallback />}><AdminBannersCadastrarPage /></Suspense>,
+        element: <AdminBannersCadastrarPage />,
       },
       {
         path: 'banners/listar',
-        element: <Suspense fallback={<LoadingFallback />}><AdminBannersListarPage /></Suspense>,
+        element: <AdminBannersListarPage />,
       },
       {
         path: 'banners/editar/:id',
-        element: <Suspense fallback={<LoadingFallback />}><AdminBannersEditarPage /></Suspense>,
+        element: <AdminBannersEditarPage />,
       },
       // Admin-only group: Usuários e Configurações (gerais)
       {
@@ -256,21 +255,21 @@ const routes: RouteObject[] = [
         children: [
           {
             path: 'usuarios/cadastrar',
-            element: <Suspense fallback={<LoadingFallback />}><AdminUsuariosCadastrarPage /></Suspense>,
+            element: <AdminUsuariosCadastrarPage />,
           },
           {
             path: 'usuarios/listar',
-            element: <Suspense fallback={<LoadingFallback />}><AdminUsuariosListarPage /></Suspense>,
+            element: <AdminUsuariosListarPage />,
           },
           {
             path: 'configuracoes/gerais',
-            element: <Suspense fallback={<LoadingFallback />}><AdminConfiguracoesGeraisPage /></Suspense>,
+            element: <AdminConfiguracoesGeraisPage />,
           },
         ]
       },
       {
         path: 'conta',
-        element: <Suspense fallback={<LoadingFallback />}><AdminContaPage /></Suspense>,
+        element: <AdminContaPage />,
       },
     ]
   },
@@ -281,18 +280,18 @@ const routes: RouteObject[] = [
     children: [
       {
         path: 'integracao',
-        element: <Suspense fallback={<LoadingFallback />}><AdminConfiguracoesIntegracaoPage /></Suspense>,
+        element: <AdminConfiguracoesIntegracaoPage />,
       },
     ]
   },
   // Removida rota: /paineladmin/ajuda
   {
     path: '/paineladmin/debug-upload',
-    element: <Suspense fallback={<LoadingFallback />}><AdminDebugUploadPage /></Suspense>,
+    element: <AdminDebugUploadPage />,
   },
   {
     path: '/paineladmin/debug-color-variations',
-    element: <Suspense fallback={<LoadingFallback />}><AdminDebugColorVariationsPage /></Suspense>,
+    element: <AdminDebugColorVariationsPage />,
   },
   {
     path: '*',
