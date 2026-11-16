@@ -65,84 +65,92 @@ import AdminDebugColorVariationsPage from '../pages/admin/debug-color-variations
 import ProtectedRoute from './ProtectedRoute';
 import AdminOnlyRoute from './AdminOnlyRoute';
 import AdminAliasRedirect from './AdminAliasRedirect';
+import MaintenanceGuard from './MaintenanceGuard';
 
 const routes: RouteObject[] = [
+  // Rotas públicas protegidas pelo Modo de Manutenção (se ativo, apenas admin navega)
   {
-    path: '/',
-    element: <Suspense fallback={<LoadingFallback />}><HomePage /></Suspense>,
+    element: <MaintenanceGuard />,
+    children: [
+      {
+        path: '/',
+        element: <Suspense fallback={<LoadingFallback />}><HomePage /></Suspense>,
+      },
+      {
+        path: '/carrinho',
+        element: <Suspense fallback={<LoadingFallback />}><CarrinhoPage /></Suspense>,
+      },
+      {
+        path: '/checkout',
+        element: <Suspense fallback={<LoadingFallback />}><CheckoutPage /></Suspense>,
+      },
+      {
+        path: '/categoria/:categoria',
+        element: <Suspense fallback={<LoadingFallback />}><CategoriaPage /></Suspense>,
+      },
+      {
+        path: '/categoria',
+        element: <Suspense fallback={<LoadingFallback />}><CategoriaPage /></Suspense>,
+      },
+      {
+        path: '/produto/:slug',
+        element: <Suspense fallback={<LoadingFallback />}><ProductPage /></Suspense>,
+      },
+      {
+        path: '/product/:slug',
+        element: <Suspense fallback={<LoadingFallback />}><ProductPage /></Suspense>,
+      },
+      {
+        path: '/webhook-tester',
+        element: <Suspense fallback={<LoadingFallback />}><WebhookTesterPage /></Suspense>,
+      },
+      {
+        path: '/link',
+        element: <Suspense fallback={<LoadingFallback />}><LinkPage /></Suspense>,
+      },
+      {
+        path: '/minha-conta',
+        element: <Suspense fallback={<LoadingFallback />}><MinhaContaPage /></Suspense>,
+      },
+      {
+        path: '/pdv',
+        element: <Suspense fallback={<LoadingFallback />}><PDVPage /></Suspense>,
+      },
+      {
+        path: '/auth/register',
+        element: <Suspense fallback={<LoadingFallback />}><AuthRegisterPage /></Suspense>,
+      },
+      // Páginas institucionais
+      {
+        path: '/sobre-nos',
+        element: <Suspense fallback={<LoadingFallback />}><SobreNosPage /></Suspense>,
+      },
+      {
+        path: '/contato',
+        element: <Suspense fallback={<LoadingFallback />}><ContatoPage /></Suspense>,
+      },
+      {
+        path: '/frete-entrega',
+        element: <Suspense fallback={<LoadingFallback />}><FreteEntregaPage /></Suspense>,
+      },
+      {
+        path: '/formas-pagamento',
+        element: <Suspense fallback={<LoadingFallback />}><FormasPagamentoPage /></Suspense>,
+      },
+      {
+        path: '/privacidade',
+        element: <Suspense fallback={<LoadingFallback />}><PrivacidadePage /></Suspense>,
+      },
+      {
+        path: '/obrigado-inscricao',
+        element: <Suspense fallback={<LoadingFallback />}><ObrigadoInscricaoPage /></Suspense>,
+      },
+    ]
   },
-  {
-    path: '/carrinho',
-    element: <Suspense fallback={<LoadingFallback />}><CarrinhoPage /></Suspense>,
-  },
-  {
-    path: '/checkout',
-    element: <Suspense fallback={<LoadingFallback />}><CheckoutPage /></Suspense>,
-  },
-  {
-    path: '/categoria/:categoria',
-    element: <Suspense fallback={<LoadingFallback />}><CategoriaPage /></Suspense>,
-  },
-  {
-    path: '/categoria',
-    element: <Suspense fallback={<LoadingFallback />}><CategoriaPage /></Suspense>,
-  },
-  {
-    path: '/produto/:slug',
-    element: <Suspense fallback={<LoadingFallback />}><ProductPage /></Suspense>,
-  },
-  {
-    path: '/product/:slug',
-    element: <Suspense fallback={<LoadingFallback />}><ProductPage /></Suspense>,
-  },
-  {
-    path: '/webhook-tester',
-    element: <Suspense fallback={<LoadingFallback />}><WebhookTesterPage /></Suspense>,
-  },
-  {
-    path: '/link',
-    element: <Suspense fallback={<LoadingFallback />}><LinkPage /></Suspense>,
-  },
-  {
-    path: '/minha-conta',
-    element: <Suspense fallback={<LoadingFallback />}><MinhaContaPage /></Suspense>,
-  },
-  {
-    path: '/pdv',
-    element: <Suspense fallback={<LoadingFallback />}><PDVPage /></Suspense>,
-  },
+  // Rota de login livre (para que o administrador consiga logar mesmo com o site em manutenção)
   {
     path: '/auth/login',
     element: <Suspense fallback={<LoadingFallback />}><AuthLoginPage /></Suspense>,
-  },
-  {
-    path: '/auth/register',
-    element: <Suspense fallback={<LoadingFallback />}><AuthRegisterPage /></Suspense>,
-  },
-  // Páginas institucionais
-  {
-    path: '/sobre-nos',
-    element: <Suspense fallback={<LoadingFallback />}><SobreNosPage /></Suspense>,
-  },
-  {
-    path: '/contato',
-    element: <Suspense fallback={<LoadingFallback />}><ContatoPage /></Suspense>,
-  },
-  {
-    path: '/frete-entrega',
-    element: <Suspense fallback={<LoadingFallback />}><FreteEntregaPage /></Suspense>,
-  },
-  {
-    path: '/formas-pagamento',
-    element: <Suspense fallback={<LoadingFallback />}><FormasPagamentoPage /></Suspense>,
-  },
-  {
-    path: '/privacidade',
-    element: <Suspense fallback={<LoadingFallback />}><PrivacidadePage /></Suspense>,
-  },
-  {
-    path: '/obrigado-inscricao',
-    element: <Suspense fallback={<LoadingFallback />}><ObrigadoInscricaoPage /></Suspense>,
   },
   // Admin routes
   {

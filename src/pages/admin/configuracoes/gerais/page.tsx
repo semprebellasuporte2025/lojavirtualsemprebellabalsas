@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import AdminLayout from '../../../../components/feature/AdminLayout';
 import { useToast } from '../../../../hooks/useToast';
+import SettingsMaintenance from '../../../../components/admin/SettingsMaintenance';
 
 export default function ConfiguracoesGeraisPage() {
   const { toast, showToast, hideToast } = useToast();
@@ -68,6 +69,11 @@ export default function ConfiguracoesGeraisPage() {
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Configurações Gerais</h1>
           <p className="text-gray-600 dark:text-gray-400">Configure as informações básicas da empresa</p>
+        </div>
+
+        {/* Seção de Controle do Modo de Manutenção */}
+        <div className="mb-6">
+          <SettingsMaintenance />
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
