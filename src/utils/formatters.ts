@@ -48,7 +48,7 @@ export const getStatusColor = (status: string) => {
  * e remove caracteres especiais
  */
 export const generateSlug = (text: string): string => {
-  return text
+  return (text || '')
     .toLowerCase()
     .normalize('NFD') // Normaliza para decompor acentos
     .replace(/[\u0300-\u036f]/g, '') // Remove diacríticos

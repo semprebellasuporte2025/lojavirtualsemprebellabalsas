@@ -3,6 +3,7 @@ import { Outlet, useLocation } from 'react-router-dom';
 import MaintenancePage from '../pages/maintenance/MaintenancePage';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
+import AdminPreloader from '../components/feature/AdminPreloader';
 
 interface MaintenanceGuardProps {
   children?: React.ReactNode;
@@ -79,14 +80,26 @@ export default function MaintenanceGuard({ children }: MaintenanceGuardProps) {
   // Exceção de segurança para rota de login
   const isAuthRoute = location.pathname.startsWith('/auth/login');
 
-  if (authLoading || maintenanceLoading) {
-    return null;
+  // Enquanto consulta o status de manutenção no banco
+  if (maintenanceLoading) {
+    return <AdminPreloader message="Carregando..." />;
   }
 
-  // Regra de bloqueio estrita
-  if (isMaintenanceMode && !isUserAdmin && !isAuthRoute) {
-    return <MaintenancePage />;
+  // Se o site NÃO está em modo de manutenção, libera a loja imediatamente sem travar em authLoading
+  if (!isMaintenanceMode) {
+    return children ? <>{children}</> : <Outlet />;
   }
 
-  return children ? <>{children}</> : <Outlet />;
+  // Se o site ESTÁ em manutenção, exibe preloader durante a verificação de credencial de admin
+  if (authLoading) {
+    return <AdminPreloader message="Verificando acesso administrativo..." />;
+  }
+
+  // Se for administrador autenticado ou tela de login, libera acesso normal
+  if (isUserAdmin || isAuthRoute) {
+    return children ? <>{children}</> : <Outlet />;
+  }
+
+  // Caso contrário, bloqueia e exibe a tela de manutenção
+  return <MaintenancePage />;
 }
