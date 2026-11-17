@@ -46,6 +46,11 @@ export default class AppErrorBoundary extends React.Component<AppErrorBoundaryPr
             <p className="text-sm text-gray-600 mb-4">
               Tente novamente. Se o problema persistir, atualize a página.
             </p>
+            {this.state.error && (
+              <pre className="text-left bg-red-50 text-red-700 p-3 rounded text-xs overflow-auto max-w-lg max-h-40 mb-4 whitespace-pre-wrap font-mono">
+                {this.state.error.message || String(this.state.error)}
+              </pre>
+            )}
             <div className="flex items-center justify-center gap-3">
               <button
                 onClick={this.handleRetry}

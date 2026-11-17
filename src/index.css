@@ -71,4 +71,13 @@
     );
     animation: shimmer 1.5s infinite;
   }
+
+  /* Ocultar barra de rolagem mantendo o recurso de rolagem */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
 }

@@ -61,6 +61,7 @@ import AdminConfiguracoesGeraisPage from '../pages/admin/configuracoes/gerais/pa
 import AdminConfiguracoesIntegracaoPage from '../pages/admin/configuracoes/integracao/page';
 import AdminDebugUploadPage from '../pages/admin/debug-upload';
 import AdminDebugColorVariationsPage from '../pages/admin/debug-color-variations';
+import AdminLayout from '../components/feature/AdminLayout';
 
 import ProtectedRoute from './ProtectedRoute';
 import AdminOnlyRoute from './AdminOnlyRoute';
@@ -162,144 +163,141 @@ const routes: RouteObject[] = [
     element: <ProtectedRoute />,
     children: [
       {
-        path: '',
-        element: <AdminDashboardPage />,
-      },
-      {
-        path: 'dashboard',
-        element: <AdminDashboardPage />,
-      },
-      {
-        path: 'produtos/cadastrar',
-        element: <AdminProdutosCadastrarPage />,
-      },
-      {
-        path: 'produtos/listar',
-        element: <AdminProdutosListarPage />,
-      },
-      {
-        path: 'produtos/editar/:id',
-        element: <AdminProdutosEditarPage />,
-      },
-      {
-        path: 'categorias/cadastrar',
-        element: <AdminCategoriasCadastrarPage />,
-      },
-      {
-        path: 'categorias/listar',
-        element: <AdminCategoriasListarPage />,
-      },
-      {
-        path: 'categorias/editar/:id',
-        element: <AdminCategoriasEditarPage />,
-      },
-      {
-        path: 'clientes/cadastrar',
-        element: <AdminClientesCadastrarPage />,
-      },
-      {
-        path: 'clientes/listar',
-        element: <AdminClientesListarPage />,
-      },
-      {
-        path: 'clientes/editar/:id',
-        element: <AdminClientesEditarPage />,
-      },
-      {
-        path: 'estoque/entrada',
-        element: <AdminEstoqueEntradaPage />,
-      },
-      {
-        path: 'estoque/listar',
-        element: <AdminEstoqueListarPage />,
-      },
-      {
-        path: 'vendas/listar',
-        element: <AdminVendasListarPage />,
-      },
-      {
-        path: 'cupons/cadastrar',
-        element: <AdminCuponsCadastrarPage />,
-      },
-      {
-        path: 'cupons/listar',
-        element: <AdminCuponsListarPage />,
-      },
-      {
-        path: 'cupons/editar/:id',
-        element: <AdminCuponsEditarPage />,
-      },
-      {
-        path: 'link-instagram/cadastrar',
-        element: <AdminLinkInstagramCadastrarPage />,
-      },
-      {
-        path: 'link-instagram/listar',
-        element: <AdminLinkInstagramListarPage />,
-      },
-      {
-        path: 'link-instagram/editar/:id',
-        element: <AdminLinkInstagramEditarPage />,
-      },
-      {
-        path: 'link-instagram/imagem-topo',
-        element: <AdminLinkInstagramImagemTopoCadastrarPage />,
-      },
-      {
-        path: 'banners/cadastrar',
-        element: <AdminBannersCadastrarPage />,
-      },
-      {
-        path: 'banners/listar',
-        element: <AdminBannersListarPage />,
-      },
-      {
-        path: 'banners/editar/:id',
-        element: <AdminBannersEditarPage />,
-      },
-      // Admin-only group: Usuários e Configurações (gerais)
-      {
-        element: <AdminOnlyRoute />,
+        element: <AdminLayout />,
         children: [
           {
-            path: 'usuarios/cadastrar',
-            element: <AdminUsuariosCadastrarPage />,
+            path: '',
+            element: <AdminDashboardPage />,
           },
           {
-            path: 'usuarios/listar',
-            element: <AdminUsuariosListarPage />,
+            path: 'dashboard',
+            element: <AdminDashboardPage />,
           },
           {
-            path: 'configuracoes/gerais',
-            element: <AdminConfiguracoesGeraisPage />,
+            path: 'produtos/cadastrar',
+            element: <AdminProdutosCadastrarPage />,
+          },
+          {
+            path: 'produtos/listar',
+            element: <AdminProdutosListarPage />,
+          },
+          {
+            path: 'produtos/editar/:id',
+            element: <AdminProdutosEditarPage />,
+          },
+          {
+            path: 'categorias/cadastrar',
+            element: <AdminCategoriasCadastrarPage />,
+          },
+          {
+            path: 'categorias/listar',
+            element: <AdminCategoriasListarPage />,
+          },
+          {
+            path: 'categorias/editar/:id',
+            element: <AdminCategoriasEditarPage />,
+          },
+          {
+            path: 'clientes/cadastrar',
+            element: <AdminClientesCadastrarPage />,
+          },
+          {
+            path: 'clientes/listar',
+            element: <AdminClientesListarPage />,
+          },
+          {
+            path: 'clientes/editar/:id',
+            element: <AdminClientesEditarPage />,
+          },
+          {
+            path: 'estoque/entrada',
+            element: <AdminEstoqueEntradaPage />,
+          },
+          {
+            path: 'estoque/listar',
+            element: <AdminEstoqueListarPage />,
+          },
+          {
+            path: 'vendas/listar',
+            element: <AdminVendasListarPage />,
+          },
+          {
+            path: 'cupons/cadastrar',
+            element: <AdminCuponsCadastrarPage />,
+          },
+          {
+            path: 'cupons/listar',
+            element: <AdminCuponsListarPage />,
+          },
+          {
+            path: 'cupons/editar/:id',
+            element: <AdminCuponsEditarPage />,
+          },
+          {
+            path: 'link-instagram/cadastrar',
+            element: <AdminLinkInstagramCadastrarPage />,
+          },
+          {
+            path: 'link-instagram/listar',
+            element: <AdminLinkInstagramListarPage />,
+          },
+          {
+            path: 'link-instagram/editar/:id',
+            element: <AdminLinkInstagramEditarPage />,
+          },
+          {
+            path: 'link-instagram/imagem-topo',
+            element: <AdminLinkInstagramImagemTopoCadastrarPage />,
+          },
+          {
+            path: 'banners/cadastrar',
+            element: <AdminBannersCadastrarPage />,
+          },
+          {
+            path: 'banners/listar',
+            element: <AdminBannersListarPage />,
+          },
+          {
+            path: 'banners/editar/:id',
+            element: <AdminBannersEditarPage />,
+          },
+          // Admin-only group: Usuários e Configurações (gerais e integração)
+          {
+            element: <AdminOnlyRoute />,
+            children: [
+              {
+                path: 'usuarios/cadastrar',
+                element: <AdminUsuariosCadastrarPage />,
+              },
+              {
+                path: 'usuarios/listar',
+                element: <AdminUsuariosListarPage />,
+              },
+              {
+                path: 'configuracoes/gerais',
+                element: <AdminConfiguracoesGeraisPage />,
+              },
+              {
+                path: 'configuracoes/integracao',
+                element: <AdminConfiguracoesIntegracaoPage />,
+              },
+            ]
+          },
+          {
+            path: 'conta',
+            element: <AdminContaPage />,
+          },
+          {
+            path: 'debug-upload',
+            element: <AdminDebugUploadPage />,
+          },
+          {
+            path: 'debug-color-variations',
+            element: <AdminDebugColorVariationsPage />,
           },
         ]
-      },
-      {
-        path: 'conta',
-        element: <AdminContaPage />,
-      },
+      }
     ]
-  },
-  // Admin-only group para Configurações fora do agrupamento principal
-  {
-    path: '/paineladmin/configuracoes',
-    element: <AdminOnlyRoute />,
-    children: [
-      {
-        path: 'integracao',
-        element: <AdminConfiguracoesIntegracaoPage />,
-      },
-    ]
-  },
-  // Removida rota: /paineladmin/ajuda
-  {
-    path: '/paineladmin/debug-upload',
-    element: <AdminDebugUploadPage />,
-  },
-  {
-    path: '/paineladmin/debug-color-variations',
-    element: <AdminDebugColorVariationsPage />,
   },
   {
     path: '*',
