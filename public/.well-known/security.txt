@@ -1,0 +1,5 @@
+# Security Policy for Sempre Bella Balsas
+Contact: mailto:contato@semprebellabalsas.com.br
+Preferred-Languages: pt, en
+Canonical: https://semprebellabalsas.com.br/.well-known/security.txt
+Policy: https://semprebellabalsas.com.br/privacidade
